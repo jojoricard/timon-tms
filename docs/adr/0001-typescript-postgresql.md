@@ -2,7 +2,7 @@
 title: "Language and database"
 subtitle: "Architecture decision record"
 reference: TIMON-ADR-001
-version: "1.0"
+version: "1.1"
 date: "October 5, 2026"
 status: "Accepted"
 ---
@@ -17,7 +17,7 @@ Planning is the core of Timon. The dispatcher drags an order onto a unit and mus
 
 | Criterion | TypeScript | C# / .NET | Python | Go |
 | --- | --- | --- | --- | --- |
-| Rules shared by front and back end | Yes, same package | No, written twice | No, written twice | No, written twice |
+| Rules shared by front and back end | Yes, same package | Only with a Blazor (WebAssembly) interface | Only through Pyodide (WebAssembly, heavy) | Only through WebAssembly |
 | Rich domain model | Good (discriminated unions) | Very good | Fair | Weak (no sum types) |
 | Future route optimisation | Separate service | Native OR-Tools | Native OR-Tools | Limited |
 | Self-hosting | Docker | Docker | Docker | Single binary |
@@ -28,7 +28,7 @@ PostgreSQL is chosen whatever the language: an exclusion constraint `EXCLUDE USI
 
 > **Decision:** TypeScript across the whole project (interface, API and a shared `domain` package), PostgreSQL for the database.
 >
-> **Why:** it is the only option where I write the conflict rules once and use them on both sides. PostgreSQL adds a safety net: the exclusion constraint blocks an overlap even if the code lets it through.
+> **Why:** it is the only option where the conflict rules are written once and run natively on both sides, with the interface ecosystem I want (React); the others need a WebAssembly front end to share them. PostgreSQL adds a safety net: the exclusion constraint blocks an overlap even if the code lets it through.
 
 ## Consequences
 
