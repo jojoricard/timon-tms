@@ -1,0 +1,269 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Timon — Brand guidelines</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:ital,wght@0,400;0,500;0,600;0,700;1,400&family=IBM+Plex+Sans+Condensed:wght@500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+<style>
+@page{size:297mm 210mm;margin:0}
+:root{--surface:#FBFAF8;--raised:#FFFFFF;--sunken:#F2F0EC;--line:#E3E0DA;--ink:#1B1F22;--muted:#5F6670;--petrol:#0E5B63;--petrol-tint:#DCEBEC;--brass:#8A6220;--chrome:#15181A;--ok:#2A7448;--warn:#9A5B00;--cf:#B3261E;--ch:#6A4C9C;
+--sans:'IBM Plex Sans',system-ui,sans-serif;--cond:'IBM Plex Sans Condensed','IBM Plex Sans',sans-serif;--mono:'IBM Plex Mono',ui-monospace,monospace}
+*{box-sizing:border-box}
+html,body{margin:0;background:#D9D6D0}
+body{font-family:var(--sans);color:var(--ink);-webkit-print-color-adjust:exact;print-color-adjust:exact}
+.page{position:relative;width:297mm;height:210mm;margin:0 auto 12px;background:var(--surface);overflow:hidden;page-break-after:always;break-after:page;padding:20mm 22mm 18mm}
+@media print{body{background:none}.page{margin:0}}
+.folio{position:absolute;left:22mm;right:22mm;bottom:9mm;display:flex;justify-content:space-between;font:500 8.5pt var(--mono);color:var(--muted);letter-spacing:.02em}
+.kicker{font:600 8.5pt var(--sans);letter-spacing:.12em;text-transform:uppercase;color:var(--petrol);margin:0 0 3mm}
+h1{margin:0;font-weight:600;font-size:30pt;line-height:1.1;letter-spacing:-.02em}
+h2{margin:0;font-weight:600;font-size:13pt;line-height:1.3}
+p{margin:0;font-size:10.5pt;line-height:1.5}
+.lead{font-size:13pt;line-height:1.45;color:var(--ink);max-width:150mm}
+.mut{color:var(--muted)}
+.mono{font-family:var(--mono)}
+.grid{display:grid;gap:8mm}
+.card{background:var(--raised);border-radius:3mm;box-shadow:0 0 0 .3mm var(--line);padding:7mm}
+.tag{display:inline-block;padding:.6mm 2.2mm;border-radius:1.2mm;background:var(--sunken);font:500 8.5pt var(--sans)}
+img.shot{display:block;width:100%;border-radius:2mm;box-shadow:0 0 0 .3mm var(--line),0 2mm 6mm rgba(27,31,34,.08)}
+.cap{font:500 8.5pt var(--sans);color:var(--muted);margin-top:2.5mm}
+.mark{display:block}
+</style>
+</head>
+<body>
+
+<!-- 1 · Couverture -->
+<section class="page" style="padding:0;background:var(--surface)">
+  <svg viewBox="0 0 297 210" width="100%" height="100%" style="position:absolute;inset:0" aria-hidden="true">
+    <g stroke="#E3E0DA" stroke-width=".25">
+      <line x1="150" y1="0" x2="150" y2="210"/><line x1="168" y1="0" x2="168" y2="210"/><line x1="186" y1="0" x2="186" y2="210"/>
+    </g>
+    <rect x="128" y="34" width="34" height="9" rx="1.6" fill="#DCEBEC"/><rect x="166" y="34" width="22" height="9" rx="1.6" fill="#0E5B63"/>
+    <rect x="140" y="52" width="40" height="9" rx="1.6" fill="#DCEBEC"/>
+    <rect x="122" y="70" width="22" height="9" rx="1.6" fill="#DCEBEC"/><rect x="148" y="70" width="40" height="9" rx="1.6" fill="#0E5B63"/>
+    <rect x="134" y="88" width="52" height="9" rx="1.6" fill="#DCEBEC"/>
+    <rect x="126" y="106" width="30" height="9" rx="1.6" fill="#DCEBEC"/><rect x="160" y="106" width="28" height="9" rx="1.6" fill="#0E5B63"/>
+    <rect x="144" y="124" width="44" height="9" rx="1.6" fill="#DCEBEC"/>
+    <rect x="130" y="142" width="26" height="9" rx="1.6" fill="#DCEBEC"/><rect x="160" y="142" width="28" height="9" rx="1.6" fill="#0E5B63"/>
+    <rect x="192" y="0" width="105" height="210" fill="#0E5B63"/>
+    <rect x="206" y="34" width="62" height="20" rx="1.6" fill="#DCEBEC"/>
+    <rect x="206" y="106" width="34" height="27" rx="1.6" fill="#15181A"/>
+    <rect x="176.3" y="0" width="1.1" height="210" fill="#8A6220"/><circle cx="176.85" cy="5" r="2.4" fill="#8A6220"/>
+  </svg>
+  <div style="position:absolute;left:22mm;bottom:28mm;">
+    <svg viewBox="0 -702 2794 718" width="358.0" height="92" aria-label="Timon" style="display:block;"><path d="M555 -581H356V0H224V-581H26V-698H555Z M693.0 -598Q654.0 -598 636.0 -616.5Q618.0 -635 618.0 -662V-682Q618.0 -710 636.0 -728.0Q654.0 -746 693.0 -746Q732.0 -746 750.0 -728.0Q768.0 -710 768.0 -682V-662Q768.0 -635 750.0 -616.5Q732.0 -598 693.0 -598ZM629.0 0V-522H757.0V0Z M1007.0 0H879.0V-522H1007.0V-435H1012.0Q1027.0 -476 1060.5 -505.0Q1094.0 -534 1152.0 -534Q1206.0 -534 1245.5 -508.0Q1285.0 -482 1303.0 -429H1305.0Q1319.0 -472 1361.0 -503.0Q1403.0 -534 1465.0 -534Q1541.0 -534 1583.0 -480.5Q1625.0 -427 1625.0 -330V0H1497.0V-317Q1497.0 -373 1476.5 -401.0Q1456.0 -429 1413.0 -429Q1388.0 -429 1365.5 -419.5Q1343.0 -410 1329.5 -391.5Q1316.0 -373 1316.0 -345V0H1188.0V-317Q1188.0 -373 1167.0 -401.0Q1146.0 -429 1104.0 -429Q1080.0 -429 1057.5 -419.5Q1035.0 -410 1021.0 -391.5Q1007.0 -373 1007.0 -345Z M2408.0 0H2280.0V-522H2408.0V-435H2413.0Q2429.0 -477 2463.5 -505.5Q2498.0 -534 2559.0 -534Q2639.0 -534 2682.5 -480.5Q2726.0 -427 2726.0 -330V0H2598.0V-317Q2598.0 -372 2578.0 -400.5Q2558.0 -429 2512.0 -429Q2486.0 -429 2462.0 -419.5Q2438.0 -410 2423.0 -391.5Q2408.0 -373 2408.0 -345Z" fill="#1B1F22"/><circle cx="1949.5" cy="-261.0" r="226.0" fill="none" stroke="#8A6220" stroke-width="92.0"/></svg>
+    <div style="font-size:14pt;margin-top:7mm">Brand guidelines</div>
+    <div class="mono mut" style="font-size:9pt;margin-top:2mm">Version 1.0 · October 2026</div>
+  </div>
+</section>
+
+<!-- 2 · Principes -->
+<section class="page">
+  <div class="kicker">01 · Principles</div>
+  <h1 style="max-width:190mm">The planning is the interface.</h1>
+  <p class="lead mut" style="margin-top:5mm">Timon is open all day on a dispatcher's screen. Everything around the planning stays quiet, so that colour on screen always means something.</p>
+  <div class="grid" style="grid-template-columns:repeat(4,1fr);margin-top:16mm">
+    <div><div class="mono" style="font-size:22pt;color:var(--petrol);font-weight:500">1</div><h2 style="margin-top:3mm">Show the trade</h2><p class="mut" style="margin-top:2mm">A row is a real driver with his tractor, his trailer and his deadlines. Not a calendar slot.</p></div>
+    <div><div class="mono" style="font-size:22pt;color:var(--petrol);font-weight:500">2</div><h2 style="margin-top:3mm">Never miss a conflict</h2><p class="mut" style="margin-top:2mm">A conflict is drawn, named, and always comes with a solution and its cost.</p></div>
+    <div><div class="mono" style="font-size:22pt;color:var(--petrol);font-weight:500">3</div><h2 style="margin-top:3mm">Dense, not cramped</h2><p class="mut" style="margin-top:2mm">Thirty resources on one screen, readable at a glance. Figures line up.</p></div>
+    <div><div class="mono" style="font-size:22pt;color:var(--petrol);font-weight:500">4</div><h2 style="margin-top:3mm">One accent at a time</h2><p class="mut" style="margin-top:2mm">Petrol acts. Brass marks the time. Nothing else competes for attention.</p></div>
+  </div>
+  <div style="position:absolute;left:22mm;right:22mm;bottom:17mm;height:62mm;border-radius:3mm 3mm 0 0;overflow:hidden;box-shadow:0 0 0 .3mm var(--line)"><img src="../mockups/planning.png" style="width:100%;display:block;margin-top:-2mm"></div>
+  <div class="folio"><span>Timon · Brand guidelines</span><span>02</span></div>
+</section>
+
+<!-- 3 · Le nom et le signe -->
+<section class="page">
+  <div class="grid" style="grid-template-columns:0.9fr 1.1fr;height:100%;align-items:center;gap:12mm">
+    <div>
+      <div class="kicker">02 · Name and logo</div>
+      <h1>The ring that<br>holds it together.</h1>
+      <p class="lead mut" style="margin-top:6mm">In French, a <i>timon</i> is the drawbar that ties a team to its wagon. The logo keeps the one part that holds everything: the coupling ring, set in brass in place of the o.</p>
+      <div style="display:flex;gap:9mm;margin-top:11mm;align-items:center">
+        <svg viewBox="0 0 64 64" width="64" height="64" role="img" aria-label="Timon"><circle cx="26" cy="32" r="11.5" fill="none" stroke="#8A6220" stroke-width="6"/><path d="M40.5 32H52" stroke="#1B1F22" stroke-width="6" stroke-linecap="round"/></svg>
+        <p class="mut" style="font-size:9.5pt">At small sizes the ring takes back its drawbar.<br>That is the icon: favicon, app tile, avatar.</p>
+      </div>
+    </div>
+    <div class="card" style="height:150mm;display:flex;align-items:center;justify-content:center;padding:10mm"><svg viewBox="-140 -868 3074 1050" width="100%" style="display:block">
+  <g stroke="#9CC5C8" stroke-width="5" stroke-dasharray="18 14">
+    <line x1="-140" y1="0" x2="2934" y2="0"/><line x1="-140" y1="-522" x2="2934" y2="-522"/><line x1="-140" y1="-698" x2="2934" y2="-698"/>
+  </g>
+  <path d="M555 -581H356V0H224V-581H26V-698H555Z M693.0 -598Q654.0 -598 636.0 -616.5Q618.0 -635 618.0 -662V-682Q618.0 -710 636.0 -728.0Q654.0 -746 693.0 -746Q732.0 -746 750.0 -728.0Q768.0 -710 768.0 -682V-662Q768.0 -635 750.0 -616.5Q732.0 -598 693.0 -598ZM629.0 0V-522H757.0V0Z M1007.0 0H879.0V-522H1007.0V-435H1012.0Q1027.0 -476 1060.5 -505.0Q1094.0 -534 1152.0 -534Q1206.0 -534 1245.5 -508.0Q1285.0 -482 1303.0 -429H1305.0Q1319.0 -472 1361.0 -503.0Q1403.0 -534 1465.0 -534Q1541.0 -534 1583.0 -480.5Q1625.0 -427 1625.0 -330V0H1497.0V-317Q1497.0 -373 1476.5 -401.0Q1456.0 -429 1413.0 -429Q1388.0 -429 1365.5 -419.5Q1343.0 -410 1329.5 -391.5Q1316.0 -373 1316.0 -345V0H1188.0V-317Q1188.0 -373 1167.0 -401.0Q1146.0 -429 1104.0 -429Q1080.0 -429 1057.5 -419.5Q1035.0 -410 1021.0 -391.5Q1007.0 -373 1007.0 -345Z M2408.0 0H2280.0V-522H2408.0V-435H2413.0Q2429.0 -477 2463.5 -505.5Q2498.0 -534 2559.0 -534Q2639.0 -534 2682.5 -480.5Q2726.0 -427 2726.0 -330V0H2598.0V-317Q2598.0 -372 2578.0 -400.5Q2558.0 -429 2512.0 -429Q2486.0 -429 2462.0 -419.5Q2438.0 -410 2423.0 -391.5Q2408.0 -373 2408.0 -345Z" fill="#1B1F22"/>
+  <circle cx="1949.5" cy="-261.0" r="226.0" fill="none" stroke="#8A6220" stroke-width="92.0"/>
+  <circle cx="1949.5" cy="-261.0" r="272.0" fill="none" stroke="#0E5B63" stroke-width="4" stroke-dasharray="10 10"/>
+  <g font-family="IBM Plex Mono, monospace" font-size="64" fill="#5F6670">
+    <text x="2944" y="12" text-anchor="end">baseline</text>
+    <text x="2944" y="-536" text-anchor="end">x-height</text>
+    <text x="2944" y="-712" text-anchor="end">cap height</text>
+    <text x="1950" y="132" text-anchor="middle">ring = x-height + overshoot · stroke = stem</text>
+  </g>
+</svg></div>
+  </div>
+  <div class="folio"><span>Timon · Brand guidelines</span><span>03</span></div>
+</section>
+
+<!-- 4 · Usage du logo -->
+<section class="page">
+  <div class="kicker">03 · Logo</div>
+  <h1>Use it plainly.</h1>
+  <div class="grid" style="grid-template-columns:1.25fr 1fr 1fr;margin-top:10mm">
+    <div style="border-radius:3mm;background:var(--raised);height:58mm;display:flex;align-items:center;justify-content:center;gap:6mm;box-shadow:0 0 0 .3mm var(--line)"><svg viewBox="0 -702 2794 718" width="179.0" height="46" aria-label="Timon" style="display:block;"><path d="M555 -581H356V0H224V-581H26V-698H555Z M693.0 -598Q654.0 -598 636.0 -616.5Q618.0 -635 618.0 -662V-682Q618.0 -710 636.0 -728.0Q654.0 -746 693.0 -746Q732.0 -746 750.0 -728.0Q768.0 -710 768.0 -682V-662Q768.0 -635 750.0 -616.5Q732.0 -598 693.0 -598ZM629.0 0V-522H757.0V0Z M1007.0 0H879.0V-522H1007.0V-435H1012.0Q1027.0 -476 1060.5 -505.0Q1094.0 -534 1152.0 -534Q1206.0 -534 1245.5 -508.0Q1285.0 -482 1303.0 -429H1305.0Q1319.0 -472 1361.0 -503.0Q1403.0 -534 1465.0 -534Q1541.0 -534 1583.0 -480.5Q1625.0 -427 1625.0 -330V0H1497.0V-317Q1497.0 -373 1476.5 -401.0Q1456.0 -429 1413.0 -429Q1388.0 -429 1365.5 -419.5Q1343.0 -410 1329.5 -391.5Q1316.0 -373 1316.0 -345V0H1188.0V-317Q1188.0 -373 1167.0 -401.0Q1146.0 -429 1104.0 -429Q1080.0 -429 1057.5 -419.5Q1035.0 -410 1021.0 -391.5Q1007.0 -373 1007.0 -345Z M2408.0 0H2280.0V-522H2408.0V-435H2413.0Q2429.0 -477 2463.5 -505.5Q2498.0 -534 2559.0 -534Q2639.0 -534 2682.5 -480.5Q2726.0 -427 2726.0 -330V0H2598.0V-317Q2598.0 -372 2578.0 -400.5Q2558.0 -429 2512.0 -429Q2486.0 -429 2462.0 -419.5Q2438.0 -410 2423.0 -391.5Q2408.0 -373 2408.0 -345Z" fill="#1B1F22"/><circle cx="1949.5" cy="-261.0" r="226.0" fill="none" stroke="#8A6220" stroke-width="92.0"/></svg></div>
+    <div style="border-radius:3mm;background:var(--chrome);height:58mm;display:flex;align-items:center;justify-content:center;gap:6mm;"><svg viewBox="0 -702 2794 718" width="116.7" height="30" aria-label="Timon" style="display:block;"><path d="M555 -581H356V0H224V-581H26V-698H555Z M693.0 -598Q654.0 -598 636.0 -616.5Q618.0 -635 618.0 -662V-682Q618.0 -710 636.0 -728.0Q654.0 -746 693.0 -746Q732.0 -746 750.0 -728.0Q768.0 -710 768.0 -682V-662Q768.0 -635 750.0 -616.5Q732.0 -598 693.0 -598ZM629.0 0V-522H757.0V0Z M1007.0 0H879.0V-522H1007.0V-435H1012.0Q1027.0 -476 1060.5 -505.0Q1094.0 -534 1152.0 -534Q1206.0 -534 1245.5 -508.0Q1285.0 -482 1303.0 -429H1305.0Q1319.0 -472 1361.0 -503.0Q1403.0 -534 1465.0 -534Q1541.0 -534 1583.0 -480.5Q1625.0 -427 1625.0 -330V0H1497.0V-317Q1497.0 -373 1476.5 -401.0Q1456.0 -429 1413.0 -429Q1388.0 -429 1365.5 -419.5Q1343.0 -410 1329.5 -391.5Q1316.0 -373 1316.0 -345V0H1188.0V-317Q1188.0 -373 1167.0 -401.0Q1146.0 -429 1104.0 -429Q1080.0 -429 1057.5 -419.5Q1035.0 -410 1021.0 -391.5Q1007.0 -373 1007.0 -345Z M2408.0 0H2280.0V-522H2408.0V-435H2413.0Q2429.0 -477 2463.5 -505.5Q2498.0 -534 2559.0 -534Q2639.0 -534 2682.5 -480.5Q2726.0 -427 2726.0 -330V0H2598.0V-317Q2598.0 -372 2578.0 -400.5Q2558.0 -429 2512.0 -429Q2486.0 -429 2462.0 -419.5Q2438.0 -410 2423.0 -391.5Q2408.0 -373 2408.0 -345Z" fill="#ECEAE6"/><circle cx="1949.5" cy="-261.0" r="226.0" fill="none" stroke="#D4A452" stroke-width="92.0"/></svg></div>
+    <div style="border-radius:3mm;background:var(--sunken);height:58mm;display:flex;align-items:center;justify-content:center;gap:6mm;"><svg viewBox="0 0 64 64" width="64" height="64" role="img" aria-label="Timon"><rect width="64" height="64" rx="14.1" fill="#15181A"/><circle cx="26" cy="32" r="11.5" fill="none" stroke="#D4A452" stroke-width="6"/><path d="M40.5 32H52" stroke="#ECEAE6" stroke-width="6" stroke-linecap="round"/></svg><svg viewBox="0 0 64 64" width="32" height="32" role="img" aria-label="Timon"><rect width="64" height="64" rx="14.1" fill="#15181A"/><circle cx="26" cy="32" r="11.5" fill="none" stroke="#D4A452" stroke-width="6"/><path d="M40.5 32H52" stroke="#ECEAE6" stroke-width="6" stroke-linecap="round"/></svg><svg viewBox="0 0 64 64" width="16" height="16" role="img" aria-label="Timon"><rect width="64" height="64" rx="14.1" fill="#15181A"/><circle cx="26" cy="32" r="11.5" fill="none" stroke="#D4A452" stroke-width="6"/><path d="M40.5 32H52" stroke="#ECEAE6" stroke-width="6" stroke-linecap="round"/></svg></div>
+  </div>
+  <div class="grid" style="grid-template-columns:1.25fr 1fr 1fr;margin-top:3mm">
+    <p class="cap" style="margin:0">On light surfaces: ink letters, brass ring.</p>
+    <p class="cap" style="margin:0">On the dark application bar: light letters, light brass ring.</p>
+    <p class="cap" style="margin:0">The icon, from 64 down to 16 px.</p>
+  </div>
+  <div style="display:grid;grid-template-columns:1fr 3fr;gap:8mm;margin-top:12mm;align-items:start">
+    <div>
+      <h2>Clear space and size</h2>
+      <p class="mut" style="margin-top:2mm">Keep the ring's diameter free on every side. The logo is never narrower than 72 px; below that, use the icon.</p>
+    </div>
+    <div class="grid" style="grid-template-columns:repeat(4,1fr);gap:5mm">
+      <div><div style="height:30mm;border-radius:2mm;background:var(--raised);box-shadow:0 0 0 .3mm var(--line);display:flex;align-items:center;justify-content:center"><svg viewBox="0 -702 2794 718" width="85.6" height="22" aria-label="Timon" style="display:block;"><path d="M555 -581H356V0H224V-581H26V-698H555Z M693.0 -598Q654.0 -598 636.0 -616.5Q618.0 -635 618.0 -662V-682Q618.0 -710 636.0 -728.0Q654.0 -746 693.0 -746Q732.0 -746 750.0 -728.0Q768.0 -710 768.0 -682V-662Q768.0 -635 750.0 -616.5Q732.0 -598 693.0 -598ZM629.0 0V-522H757.0V0Z M1007.0 0H879.0V-522H1007.0V-435H1012.0Q1027.0 -476 1060.5 -505.0Q1094.0 -534 1152.0 -534Q1206.0 -534 1245.5 -508.0Q1285.0 -482 1303.0 -429H1305.0Q1319.0 -472 1361.0 -503.0Q1403.0 -534 1465.0 -534Q1541.0 -534 1583.0 -480.5Q1625.0 -427 1625.0 -330V0H1497.0V-317Q1497.0 -373 1476.5 -401.0Q1456.0 -429 1413.0 -429Q1388.0 -429 1365.5 -419.5Q1343.0 -410 1329.5 -391.5Q1316.0 -373 1316.0 -345V0H1188.0V-317Q1188.0 -373 1167.0 -401.0Q1146.0 -429 1104.0 -429Q1080.0 -429 1057.5 -419.5Q1035.0 -410 1021.0 -391.5Q1007.0 -373 1007.0 -345Z M2408.0 0H2280.0V-522H2408.0V-435H2413.0Q2429.0 -477 2463.5 -505.5Q2498.0 -534 2559.0 -534Q2639.0 -534 2682.5 -480.5Q2726.0 -427 2726.0 -330V0H2598.0V-317Q2598.0 -372 2578.0 -400.5Q2558.0 -429 2512.0 -429Q2486.0 -429 2462.0 -419.5Q2438.0 -410 2423.0 -391.5Q2408.0 -373 2408.0 -345Z" fill="#1B1F22"/><circle cx="1949.5" cy="-261.0" r="226.0" fill="none" stroke="#0E5B63" stroke-width="92.0"/></svg></div><p class="cap"><b style="color:var(--cf)">✕</b> Recolour the ring</p></div>
+      <div><div style="height:30mm;border-radius:2mm;background:var(--raised);box-shadow:0 0 0 .3mm var(--line);display:flex;align-items:center;justify-content:center"><svg viewBox="0 -702 2794 718" width="101.2" height="26" aria-label="Timon" preserveAspectRatio="none" style="display:block;width:150px;height:22px"><path d="M555 -581H356V0H224V-581H26V-698H555Z M693.0 -598Q654.0 -598 636.0 -616.5Q618.0 -635 618.0 -662V-682Q618.0 -710 636.0 -728.0Q654.0 -746 693.0 -746Q732.0 -746 750.0 -728.0Q768.0 -710 768.0 -682V-662Q768.0 -635 750.0 -616.5Q732.0 -598 693.0 -598ZM629.0 0V-522H757.0V0Z M1007.0 0H879.0V-522H1007.0V-435H1012.0Q1027.0 -476 1060.5 -505.0Q1094.0 -534 1152.0 -534Q1206.0 -534 1245.5 -508.0Q1285.0 -482 1303.0 -429H1305.0Q1319.0 -472 1361.0 -503.0Q1403.0 -534 1465.0 -534Q1541.0 -534 1583.0 -480.5Q1625.0 -427 1625.0 -330V0H1497.0V-317Q1497.0 -373 1476.5 -401.0Q1456.0 -429 1413.0 -429Q1388.0 -429 1365.5 -419.5Q1343.0 -410 1329.5 -391.5Q1316.0 -373 1316.0 -345V0H1188.0V-317Q1188.0 -373 1167.0 -401.0Q1146.0 -429 1104.0 -429Q1080.0 -429 1057.5 -419.5Q1035.0 -410 1021.0 -391.5Q1007.0 -373 1007.0 -345Z M2408.0 0H2280.0V-522H2408.0V-435H2413.0Q2429.0 -477 2463.5 -505.5Q2498.0 -534 2559.0 -534Q2639.0 -534 2682.5 -480.5Q2726.0 -427 2726.0 -330V0H2598.0V-317Q2598.0 -372 2578.0 -400.5Q2558.0 -429 2512.0 -429Q2486.0 -429 2462.0 -419.5Q2438.0 -410 2423.0 -391.5Q2408.0 -373 2408.0 -345Z" fill="#1B1F22"/><circle cx="1949.5" cy="-261.0" r="226.0" fill="none" stroke="#8A6220" stroke-width="92.0"/></svg></div><p class="cap"><b style="color:var(--cf)">✕</b> Stretch or distort</p></div>
+      <div><div style="height:30mm;border-radius:2mm;background:var(--raised);box-shadow:0 0 0 .3mm var(--line);display:flex;align-items:center;justify-content:center"><span style="font:600 22pt var(--sans);letter-spacing:-.02em">Timon</span></div><p class="cap"><b style="color:var(--cf)">✕</b> Drop the ring for a plain o</p></div>
+      <div><div style="height:30mm;border-radius:2mm;background:repeating-linear-gradient(135deg,#0E5B63 0 6px,#8A6220 6px 12px);display:flex;align-items:center;justify-content:center"><svg viewBox="0 -702 2794 718" width="85.6" height="22" aria-label="Timon" style="display:block;"><path d="M555 -581H356V0H224V-581H26V-698H555Z M693.0 -598Q654.0 -598 636.0 -616.5Q618.0 -635 618.0 -662V-682Q618.0 -710 636.0 -728.0Q654.0 -746 693.0 -746Q732.0 -746 750.0 -728.0Q768.0 -710 768.0 -682V-662Q768.0 -635 750.0 -616.5Q732.0 -598 693.0 -598ZM629.0 0V-522H757.0V0Z M1007.0 0H879.0V-522H1007.0V-435H1012.0Q1027.0 -476 1060.5 -505.0Q1094.0 -534 1152.0 -534Q1206.0 -534 1245.5 -508.0Q1285.0 -482 1303.0 -429H1305.0Q1319.0 -472 1361.0 -503.0Q1403.0 -534 1465.0 -534Q1541.0 -534 1583.0 -480.5Q1625.0 -427 1625.0 -330V0H1497.0V-317Q1497.0 -373 1476.5 -401.0Q1456.0 -429 1413.0 -429Q1388.0 -429 1365.5 -419.5Q1343.0 -410 1329.5 -391.5Q1316.0 -373 1316.0 -345V0H1188.0V-317Q1188.0 -373 1167.0 -401.0Q1146.0 -429 1104.0 -429Q1080.0 -429 1057.5 -419.5Q1035.0 -410 1021.0 -391.5Q1007.0 -373 1007.0 -345Z M2408.0 0H2280.0V-522H2408.0V-435H2413.0Q2429.0 -477 2463.5 -505.5Q2498.0 -534 2559.0 -534Q2639.0 -534 2682.5 -480.5Q2726.0 -427 2726.0 -330V0H2598.0V-317Q2598.0 -372 2578.0 -400.5Q2558.0 -429 2512.0 -429Q2486.0 -429 2462.0 -419.5Q2438.0 -410 2423.0 -391.5Q2408.0 -373 2408.0 -345Z" fill="#1B1F22"/><circle cx="1949.5" cy="-261.0" r="226.0" fill="none" stroke="#8A6220" stroke-width="92.0"/></svg></div><p class="cap"><b style="color:var(--cf)">✕</b> Place it on a busy background</p></div>
+    </div>
+  </div>
+  <div class="folio"><span>Timon · Brand guidelines</span><span>04</span></div>
+</section>
+
+<!-- 5 · Couleurs de marque -->
+<section class="page">
+  <div class="kicker">04 · Colour</div>
+  <h1>Petrol acts, brass tells the time.</h1>
+  <div style="display:grid;grid-template-columns:2fr 1.1fr 1fr 1fr 1fr;gap:4mm;margin-top:11mm;height:92mm">
+    <div style="border-radius:3mm;background:#0E5B63;color:#fff;padding:6mm;display:flex;flex-direction:column;justify-content:flex-end"><div style="font-size:15pt;font-weight:600">Petrol</div><div class="mono" style="font-size:9pt;margin-top:1mm">#0E5B63 · dark #5BB8BC</div><p style="font-size:9.5pt;margin-top:3mm;opacity:.9">Brand and primary action. Orders in progress, selection, links.</p></div>
+    <div style="border-radius:3mm;background:#8A6220;color:#fff;padding:6mm;display:flex;flex-direction:column;justify-content:flex-end"><div style="font-size:15pt;font-weight:600">Brass</div><div class="mono" style="font-size:9pt;margin-top:1mm">#8A6220 · dark #D4A452</div><p style="font-size:9.5pt;margin-top:3mm;opacity:.9">The current time and the logo ring. Nothing else.</p></div>
+    <div style="border-radius:3mm;background:#15181A;color:#ECEAE6;padding:6mm;display:flex;flex-direction:column;justify-content:flex-end"><div style="font-size:15pt;font-weight:600">Chrome</div><div class="mono" style="font-size:9pt;margin-top:1mm">#15181A</div><p style="font-size:9.5pt;margin-top:3mm;opacity:.8">Application bar, in both themes.</p></div>
+    <div style="border-radius:3mm;background:#1B1F22;color:#ECEAE6;padding:6mm;display:flex;flex-direction:column;justify-content:flex-end"><div style="font-size:15pt;font-weight:600">Ink</div><div class="mono" style="font-size:9pt;margin-top:1mm">#1B1F22 · dark #ECEAE6</div><p style="font-size:9.5pt;margin-top:3mm;opacity:.8">Text. 14:1 and more.</p></div>
+    <div style="border-radius:3mm;background:#FBFAF8;box-shadow:inset 0 0 0 .3mm #E3E0DA;padding:6mm;display:flex;flex-direction:column;justify-content:flex-end"><div style="font-size:15pt;font-weight:600">Surface</div><div class="mono mut" style="font-size:9pt;margin-top:1mm">#FBFAF8 · dark #15181A</div><p class="mut" style="font-size:9.5pt;margin-top:3mm">A warm off-white, easier on a full day.</p></div>
+  </div>
+  <div style="display:flex;gap:3mm;margin-top:5mm">
+    <div style="flex:1;height:12mm;border-radius:2mm;background:#DCEBEC"></div><div style="flex:1;height:12mm;border-radius:2mm;background:#2E7A82"></div><div style="flex:1;height:12mm;border-radius:2mm;background:#F2F0EC"></div><div style="flex:1;height:12mm;border-radius:2mm;background:#E3E0DA"></div><div style="flex:1;height:12mm;border-radius:2mm;background:#5F6670"></div>
+  </div>
+  <div style="display:flex;gap:3mm;margin-top:1.5mm" class="mono mut"><span style="flex:1;font-size:8pt">petrol-tint · planned</span><span style="flex:1;font-size:8pt">petrol-remaining · still to do</span><span style="flex:1;font-size:8pt">sunken · well, grids</span><span style="flex:1;font-size:8pt">line · dividers</span><span style="flex:1;font-size:8pt">ink-muted · metadata</span></div>
+  <div class="folio"><span>Timon · Brand guidelines</span><span>05</span></div>
+</section>
+
+<!-- 6 · Statuts -->
+<section class="page">
+  <div class="kicker">05 · Status colours</div>
+  <h1>Colour never speaks alone.</h1>
+  <p class="lead mut" style="margin-top:4mm">Every status pairs a colour with a word, an icon or a pattern, so it reads in black and white and for colour-blind dispatchers.</p>
+  <div class="grid" style="grid-template-columns:repeat(4,1fr);gap:6mm;margin-top:8mm">
+    <div><div style="height:20mm;border-radius:3mm;background:#2A7448;display:flex;align-items:flex-end;padding:4mm;color:#fff;font-weight:600">Delivered, valid</div><div style="height:9mm;border-radius:2mm;background:#E4F2E9;margin-top:2mm;display:flex;align-items:center;padding:0 3mm;color:#2A7448;font:600 9pt var(--sans)">● Delivered</div><p class="mono mut" style="font-size:8.5pt;margin-top:2mm">ok #2A7448</p></div>
+    <div><div style="height:20mm;border-radius:3mm;background:#9A5B00;display:flex;align-items:flex-end;padding:4mm;color:#fff;font-weight:600">Late, expiring</div><div style="height:9mm;border-radius:2mm;background:#FBF0DD;margin-top:2mm;display:flex;align-items:center;padding:0 3mm;color:#9A5B00;font:600 9pt var(--sans)">● Late · +25 min</div><p class="mono mut" style="font-size:8.5pt;margin-top:2mm">warning #9A5B00</p></div>
+    <div><div style="height:20mm;border-radius:3mm;background:#B3261E;display:flex;align-items:flex-end;padding:4mm;color:#fff;font-weight:600">Conflict, expired</div><div style="height:9mm;border-radius:2mm;background:repeating-linear-gradient(135deg,rgba(179,38,30,.5) 0 2px,#FBE9E7 2px 6px);box-shadow:inset 0 0 0 .4mm #B3261E;margin-top:2mm;display:flex;align-items:center;padding:0 3mm;color:#8E1E18;font:600 9pt var(--sans)">◆ Conflict</div><p class="mono mut" style="font-size:8.5pt;margin-top:2mm">conflict #B3261E</p></div>
+    <div><div style="height:20mm;border-radius:3mm;background:#6A4C9C;display:flex;align-items:flex-end;padding:4mm;color:#fff;font-weight:600">Subcontracted</div><div style="height:9mm;border-radius:2mm;background:#EFEAF7;margin-top:2mm;display:flex;align-items:center;padding:0 3mm;color:#6A4C9C;font:600 9pt var(--sans)">● Subcontracted</div><p class="mono mut" style="font-size:8.5pt;margin-top:2mm">chartered #6A4C9C</p></div>
+  </div>
+  <div style="margin-top:7mm"><img class="shot" src="img/orderbar-top.png" style="width:100%"><p class="cap">Order bars: each state has its own edge, fill or hatching, never only a hue.</p></div>
+  <div class="folio"><span>Timon · Brand guidelines</span><span>06</span></div>
+</section>
+
+<!-- 7 · Typographie -->
+<section class="page">
+  <div class="kicker">06 · Typography</div>
+  <h1>One family, three voices.</h1>
+  <div class="grid" style="grid-template-columns:1.3fr 1fr 1fr;gap:10mm;margin-top:10mm">
+    <div>
+      <div style="font-size:72pt;line-height:1;font-weight:600;letter-spacing:-.03em">Aa</div>
+      <h2 style="margin-top:4mm">IBM Plex Sans</h2>
+      <p class="mut" style="margin-top:1.5mm">The interface. Regular, Medium, Semibold.</p>
+      <p style="margin-top:4mm;font-size:13pt;line-height:1.35">Assign the order to an available unit.</p>
+    </div>
+    <div>
+      <div style="font-family:var(--cond);font-size:72pt;line-height:1;font-weight:600;letter-spacing:-.02em">Aa</div>
+      <h2 style="margin-top:4mm">IBM Plex Sans Condensed</h2>
+      <p class="mut" style="margin-top:1.5mm">Inside planning bars, where width is scarce.</p>
+      <p style="margin-top:4mm"><span style="display:inline-block;padding:2mm 3mm;border-radius:1.5mm;background:#DCEBEC;box-shadow:inset .8mm 0 0 #0E5B63;font:600 11pt var(--cond);color:#0B3F45">Grenoble → Chambéry</span></p>
+    </div>
+    <div>
+      <div style="font-family:var(--mono);font-size:72pt;line-height:1;font-weight:500">Aa</div>
+      <h2 style="margin-top:4mm">IBM Plex Mono</h2>
+      <p class="mut" style="margin-top:1.5mm">Plates, references, times, quantities.</p>
+      <p class="mono" style="margin-top:4mm;font-size:11pt;line-height:1.6">AB-123-CD · 07:30<br>CMD-2047 · 22 plt · 16.2 t</p>
+    </div>
+  </div>
+  <div style="margin-top:12mm;border-top:.3mm solid var(--line)">
+    <div style="display:grid;grid-template-columns:42mm 1fr 30mm;align-items:baseline;padding:2.5mm 0;border-bottom:.3mm solid var(--line)"><span class="mono mut" style="font-size:8.5pt">detail-title</span><span style="font-size:21pt;font-weight:600;letter-spacing:-.02em">Vienne → Valence</span><span class="mono mut" style="font-size:8.5pt;text-align:right">28 / 36</span></div>
+    <div style="display:grid;grid-template-columns:42mm 1fr 30mm;align-items:baseline;padding:2.5mm 0;border-bottom:.3mm solid var(--line)"><span class="mono mut" style="font-size:8.5pt">metric</span><span style="font-size:18pt;font-weight:600">6 h 12 <span class="mut" style="font-size:11pt;font-weight:400">/ 9 h</span></span><span class="mono mut" style="font-size:8.5pt;text-align:right">24 / 32</span></div>
+    <div style="display:grid;grid-template-columns:42mm 1fr 30mm;align-items:baseline;padding:2.5mm 0;border-bottom:.3mm solid var(--line)"><span class="mono mut" style="font-size:8.5pt">heading</span><span style="font-size:11.5pt;font-weight:600">Tuesday 7 October</span><span class="mono mut" style="font-size:8.5pt;text-align:right">15 / 22</span></div>
+    <div style="display:grid;grid-template-columns:42mm 1fr 30mm;align-items:baseline;padding:2.5mm 0;border-bottom:.3mm solid var(--line)"><span class="mono mut" style="font-size:8.5pt">body</span><span style="font-size:10.5pt">M. Laurent’s CE licence expires on 6 October.</span><span class="mono mut" style="font-size:8.5pt;text-align:right">14 / 20</span></div>
+    <div style="display:grid;grid-template-columns:42mm 1fr 30mm;align-items:baseline;padding:2.5mm 0"><span class="mono mut" style="font-size:8.5pt">label</span><span style="font-size:8.5pt;font-weight:600;letter-spacing:.06em;color:var(--muted)">DRIVER</span><span class="mono mut" style="font-size:8.5pt;text-align:right">11 / 16</span></div>
+  </div>
+  <div class="folio"><span>Timon · Brand guidelines</span><span>07</span></div>
+</section>
+
+<!-- 8 · Éléments signature -->
+<section class="page">
+  <div class="kicker">07 · Signature elements</div>
+  <h1>What makes a screen look like Timon.</h1>
+  <div class="grid" style="grid-template-columns:1fr 1fr;gap:6mm;margin-top:8mm">
+    <div class="card" style="padding:5mm"><div style="height:36mm;display:flex;align-items:center;justify-content:center;background:var(--surface);border-radius:2mm"><img src="img/UnitLinks.png" style="height:31mm"></div><h2 style="margin-top:3mm">Unit links</h2><p class="mut" style="margin-top:1mm;font-size:9.5pt">Tractor and trailer joined by a short bar, like the drawbar itself. A missing driver is a dashed link.</p></div>
+    <div class="card" style="padding:5mm"><div style="height:36mm;display:flex;align-items:center;justify-content:center;background:var(--surface);border-radius:2mm;padding:0 4mm"><img src="img/sig-time.png" style="width:100%"></div><h2 style="margin-top:3mm">Brass time line and load curve</h2><p class="mut" style="margin-top:1mm;font-size:9.5pt">Now is always brass. The curve shows how busy each two hours are; nights shrink to a quarter.</p></div>
+    <div class="card" style="padding:5mm"><div style="height:36mm;display:flex;align-items:center;justify-content:center;background:var(--surface);border-radius:2mm;padding:0 4mm"><img src="img/sig-conflict.png" style="width:100%"></div><h2 style="margin-top:3mm">Two-lane conflict</h2><p class="mut" style="margin-top:1mm;font-size:9.5pt">Two orders that overlap split the row over a hatched area. The problem is visible before it is read.</p></div>
+    <div class="card" style="padding:5mm"><div style="height:36mm;display:flex;align-items:center;justify-content:center;background:var(--surface);border-radius:2mm"><img src="img/RadioCard.png" style="height:33mm"></div><h2 style="margin-top:3mm">Costed solutions</h2><p class="mut" style="margin-top:1mm;font-size:9.5pt">Each way out of a conflict states its price: empty kilometres, a missed slot, a subcontractor's rate.</p></div>
+  </div>
+  <div class="folio"><span>Timon · Brand guidelines</span><span>08</span></div>
+</section>
+
+<!-- 9 · Composants -->
+<section class="page">
+  <div class="kicker">08 · Components</div>
+  <h1>Built from 28 parts.</h1>
+  <div style="display:grid;grid-template-columns:1.1fr 1fr 1fr;grid-template-rows:auto auto;gap:6mm;margin-top:8mm">
+    <div style="grid-row:span 2"><img class="shot" src="img/OrderCard.png" style="height:118mm;width:auto"><p class="cap">Order card, in the well</p></div>
+    <div><img class="shot" src="img/HoverCard.png"><p class="cap">Hover card</p></div>
+    <div><img class="shot" src="img/ContextMenu.png"><p class="cap">Context menu</p></div>
+    <div><img class="shot" src="img/Meter.png"><p class="cap">Driving-time meters, Regulation (EC) 561/2006</p></div>
+    <div><img class="shot" src="img/BulkBar.png" style="width:72%"><p class="cap">Bulk-action bar</p><img class="shot" src="img/ConflictBanner.png" style="margin-top:4mm"><p class="cap">Conflict banner</p></div>
+  </div>
+  <div class="folio"><span>Timon · Brand guidelines</span><span>09</span></div>
+</section>
+
+<!-- 10 · Écran de planning -->
+<section class="page" style="padding:14mm 18mm 16mm">
+  <div style="display:flex;align-items:baseline;gap:6mm"><div class="kicker" style="margin:0">09 · Screens</div><h2>Planning: the order well, units by family, three days.</h2></div>
+  <img class="shot" src="../mockups/planning.png" style="margin-top:5mm">
+  <div class="folio" style="left:18mm;right:18mm"><span>Timon · Brand guidelines</span><span>10</span></div>
+</section>
+
+<!-- 11 · Autres écrans -->
+<section class="page" style="padding:14mm 18mm 16mm">
+  <div class="kicker">09 · Screens</div>
+  <div class="grid" style="grid-template-columns:1fr 1fr;gap:6mm;margin-top:2mm">
+    <div><img class="shot" src="../mockups/planning-detail-panel.png"><p class="cap">Detail panel over the planning, on an order in conflict</p></div>
+    <div><img class="shot" src="../mockups/planning-dark.png"><p class="cap">Dark theme: the same tokens, one switch</p></div>
+    <div><img class="shot" src="../mockups/order.png"><p class="cap">Order, full page: route, goods, margin, emissions under ISO 14083</p></div>
+    <div><img class="shot" src="../mockups/driver.png"><p class="cap">Driver record: deadlines and driving times</p></div>
+  </div>
+  <div class="folio" style="left:18mm;right:18mm"><span>Timon · Brand guidelines</span><span>11</span></div>
+</section>
+
+<!-- 12 · Ton -->
+<section class="page">
+  <div class="kicker">10 · Voice</div>
+  <h1>Write for a dispatcher in a hurry.</h1>
+  <p class="lead mut" style="margin-top:5mm">French and English from the first screen. Trade words, verbs first, short sentences; formal <i>vous</i> in French. When something cannot be done, say why in a few words.</p>
+  <div style="margin-top:9mm;display:grid;grid-template-columns:1fr 1fr;border-radius:3mm;overflow:hidden;box-shadow:0 0 0 .3mm var(--line)">
+    <div style="background:#E4F2E9;padding:3mm 6mm;font:600 9pt var(--sans);color:#2A7448;letter-spacing:.06em">WRITE</div>
+    <div style="background:#FBE9E7;padding:3mm 6mm;font:600 9pt var(--sans);color:#B3261E;letter-spacing:.06em">AVOID</div>
+    <div style="background:var(--raised);padding:4mm 6mm;border-top:.3mm solid var(--line)"><p style="font-size:12pt">Assign</p><p class="mut" style="font-size:9.5pt;margin-top:1mm">Affecter</p></div>
+    <div style="background:var(--raised);padding:4mm 6mm;border-top:.3mm solid var(--line)"><p class="mut" style="font-size:12pt">Proceed with the assignment</p><p class="mut" style="font-size:9.5pt;margin-top:1mm">Procéder à l'affectation</p></div>
+    <div style="background:var(--raised);padding:4mm 6mm;border-top:.3mm solid var(--line)"><p style="font-size:12pt">No side loading</p><p class="mut" style="font-size:9.5pt;margin-top:1mm">Pas de chargement latéral</p></div>
+    <div style="background:var(--raised);padding:4mm 6mm;border-top:.3mm solid var(--line)"><p class="mut" style="font-size:12pt">Incompatible resource</p><p class="mut" style="font-size:9.5pt;margin-top:1mm">Ressource incompatible</p></div>
+    <div style="background:var(--raised);padding:4mm 6mm;border-top:.3mm solid var(--line)"><p style="font-size:12pt">M. Laurent’s CE licence expires on 6 October. Choose another driver or update the licence.</p><p class="mut" style="font-size:9.5pt;margin-top:1mm">Le permis CE de M. Laurent expire le 6 octobre. Choisissez un autre conducteur ou mettez à jour le permis.</p></div>
+    <div style="background:var(--raised);padding:4mm 6mm;border-top:.3mm solid var(--line)"><p class="mut" style="font-size:12pt">Validation error: invalid qualification.</p><p class="mut" style="font-size:9.5pt;margin-top:1mm">Erreur de validation : qualification invalide.</p></div>
+  </div>
+  <div style="display:grid;grid-template-columns:auto 1fr;gap:2.5mm 6mm;margin-top:8mm;align-items:center">
+    <span class="mono mut" style="font-size:8.5pt">EN</span><div style="display:flex;gap:3mm;flex-wrap:wrap"><span class="tag mono">Tue 7 Oct</span><span class="tag mono">07:30</span><span class="tag mono">4 h 30</span><span class="tag mono">€486.00 excl. VAT</span><span class="tag mono">22 plt · 16.2 t</span><span class="tag mono">97 kg CO₂e</span></div>
+    <span class="mono mut" style="font-size:8.5pt">FR</span><div style="display:flex;gap:3mm;flex-wrap:wrap"><span class="tag mono">mar. 7 oct.</span><span class="tag mono">07:30</span><span class="tag mono">4 h 30</span><span class="tag mono">486,00 € HT</span><span class="tag mono">22 pal · 16,2 t</span><span class="tag mono">97 kg CO₂e</span></div>
+  </div>
+  <div class="folio"><span>Designed by Joris Ricard · Agence JRi</span><span>12</span></div>
+</section>
+
+</body>
+</html>
