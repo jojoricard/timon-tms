@@ -1,0 +1,48 @@
+name: Docs
+
+# Builds the Word and PDF versions of the documentation from the Markdown sources.
+# Every run keeps them as a downloadable artifact; a version tag (v*) attaches them to a release.
+on:
+  push:
+    branches: [main]
+    tags: ['v*']
+    paths: ['docs/**', '.github/workflows/docs.yml']
+  pull_request:
+    paths: ['docs/**', '.github/workflows/docs.yml']
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install pandoc, LibreOffice and the document fonts
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends pandoc libreoffice-writer-nogui fonts-inter fonts-jetbrains-mono
+          fc-cache -f
+
+      - name: Build Word documents
+        run: sh docs/export/build-docs.sh
+
+      - name: Convert to PDF
+        run: soffice --headless --convert-to pdf --outdir build build/*.docx
+
+      - name: Keep the documents as a workflow artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: timon-docs
+          path: build/
+
+      - name: Attach the documents to the release
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            build/*.pdf
+            build/*.docx
+            docs/design/timon-brand-guidelines.pdf
