@@ -2,7 +2,7 @@
 title: "Timon — Project scoping"
 subtitle: "Scoping note"
 reference: TIMON-CAD-001
-version: "0.7"
+version: "0.8"
 date: "October 5, 2026"
 status: "In review"
 ---
@@ -146,20 +146,21 @@ Docs live in the repository (`docs/specs`, `docs/adr`, `docs/design`). The board
 
 | Topic | Decision |
 | --- | --- |
-| Name | **Timon** (repository and domain: `timon-tms`). In French, a *timon* is the drawbar that ties a team to its wagon, and a *timonier* holds the helm: the product holds resources together and helps the dispatcher keep the day on course. |
+| Name | **Timon** (repository: `timon-tms`). A *timon* is the drawbar that ties a team to its wagon; a *timonier* holds the helm |
 | Target | French hauliers with 10 to 100 resources (working assumption) |
 | Positioning | Resource planning at the core, open source, AGPL-3.0 |
 | Units | Validity period; a resource belongs to one unit at a time |
 | Planning granularity | Free slots, to the hour |
 | Emission factors | ADEME Base Empreinte first, actual fuel data later; ISO 14083 method |
 | Stack | TypeScript and PostgreSQL ([ADR-001](adr/0001-typescript-postgresql.md)) |
+| Architecture | Runtime-agnostic packages; Node and PostgreSQL in production, PGlite in the browser for the demo ([ADR-002](adr/0002-target-architecture.md)) |
+| Environments | Local at no cost; demo and pull request previews on Vercel; GitHub flow ([ADR-003](adr/0003-environments-and-hosting.md)) |
 | Language | Repository in English; product interface in French and English from the first screen |
 | Method | Kanban with one spec per feature, GitHub Projects |
-| Visual identity | Petrol and brass, IBM Plex, light and dark themes; logo with the coupling ring as the o ([design](design/README.md)) |
+| Visual identity | Petrol and brass, IBM Plex, light and dark themes ([design](design/README.md)) |
 | Order shape | One pickup and n deliveries, or n pickups and one delivery; any number of products; multi-stop trips are chains of orders |
 | Compatibility | Order requirements against resource capabilities; non-order activities on the planning; washing rules between products later |
-
-Still open: hosting of the public demo, to settle before the end of the first release; maps and truck routing (an ADR before the order screens).
+| Still open | Production hosting, with authentication; maps and truck routing, before the order screens |
 
 <!-- pagebreak -->
 

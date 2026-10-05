@@ -27,6 +27,8 @@ Timon helps a dispatcher plan drivers, tractors, rigid trucks and trailers, assi
 | --- | --- | --- |
 | Project scoping: vision, target, market, regulation, domain model, scope, roadmap, decisions | [scoping.md](docs/scoping.md) | [PDF](https://github.com/jojoricard/timon-tms/releases/latest/download/TIMON-CAD-001-scoping.pdf) |
 | ADR-001: TypeScript and PostgreSQL | [0001-typescript-postgresql.md](docs/adr/0001-typescript-postgresql.md) | [PDF](https://github.com/jojoricard/timon-tms/releases/latest/download/TIMON-ADR-001-language-and-database.pdf) |
+| ADR-002: target architecture, one codebase for the server and an in-browser demo | [0002-target-architecture.md](docs/adr/0002-target-architecture.md) | [PDF](https://github.com/jojoricard/timon-tms/releases/latest/download/TIMON-ADR-002-target-architecture.pdf) |
+| ADR-003: environments and hosting, from the laptop to the public demo | [0003-environments-and-hosting.md](docs/adr/0003-environments-and-hosting.md) | [PDF](https://github.com/jojoricard/timon-tms/releases/latest/download/TIMON-ADR-003-environments-and-hosting.pdf) |
 | Brand guidelines: logo, colour, type, signature elements, screens, voice | [guidelines/](docs/design/guidelines/index.html) | [PDF](docs/design/timon-brand-guidelines.pdf) |
 | Visual identity and mockups | [design/README.md](docs/design/README.md) | |
 
@@ -34,7 +36,7 @@ The Markdown files are the sources. A GitHub Actions workflow builds the Word an
 
 ## Tech stack
 
-TypeScript across the interface, the API and a shared `domain` package; PostgreSQL. See [ADR-001](docs/adr/0001-typescript-postgresql.md).
+TypeScript across the interface, the API and a shared `domain` package; PostgreSQL. React and Vite for the interface, Hono for a REST API with an OpenAPI contract, Drizzle for data access, in a pnpm monorepo. The same API runs on Node in production and in the browser, on PGlite, for the public demo. See [ADR-001](docs/adr/0001-typescript-postgresql.md) and [ADR-002](docs/adr/0002-target-architecture.md).
 
 ## How the project is run
 
