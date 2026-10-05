@@ -2,7 +2,7 @@
 title: "Timon — Project scoping"
 subtitle: "Scoping note"
 reference: TIMON-CAD-001
-version: "0.6"
+version: "0.7"
 date: "October 5, 2026"
 status: "In review"
 ---
@@ -92,6 +92,10 @@ The central object is the **unit**: a combination of resources planned as one, t
 
 **Chartering.** Internal: a subsidiary of the same group runs the order, with intercompany invoicing. External: a subcontractor runs it. In both cases the order keeps its original customer and traceability, and the emissions report is still owed to the customer.
 
+**Orders.** An order has one pickup and several deliveries, or several pickups and one delivery, never several of both; it may carry any number of products. With one side always single, each product's origin and destination stay unambiguous. A trip that collects at three sites and delivers to four is a chain of orders on the same unit, not one order. An incoming request with several pickups and several deliveries is flagged as two merged orders and split after review, never automatically.
+
+**Compatibility and activities.** Orders state requirements (body type, side loading, temperature, tail lift, ADR) and resources declare matching capabilities; the planning only offers compatible units. Rest, maintenance, inspection, washing and training are activities that block a resource on the same time axis as orders.
+
 **Notifications.** Modelled as domain events (order received, assigned, late, delivered, conflict detected) to which channels subscribe. The first release has an in-app channel only; email, SMS and driver push come later without changing the model.
 
 ## First release scope
@@ -103,17 +107,18 @@ The first release succeeds when a dispatcher can plan a week of activity for 30 
 - Company, subsidiaries and users (multi-subsidiary in the model, one active subsidiary in the interface)
 - Reference data: customers, drivers with qualifications, power units, trailers, body types, trade labels
 - Units and their validity periods
-- Orders: manual entry, CSV import and a demo data generator; multiple pickup and delivery points
-- Resource planning: hour-level slots in day and week views, assigning an order to a unit, conflict detection (unavailability, double booking, incompatible body type, missing or expired qualification on the mission date)
+- Orders: manual entry, CSV import and a demo data generator; one pickup and several deliveries, or several pickups and one delivery
+- Resource planning: hour-level slots over one to seven days, assigning an order to a unit, conflict detection (unavailability, double booking, incompatible body type, missing or expired qualification on the mission date) with suggested solutions
+- Requirements and capabilities matching; non-order activities (rest, maintenance, washing, training)
 - Order and mission statuses, change history
 - External subcontracting: subcontractor, purchase price, status
 - Per-service emissions under ISO 14083, with ADEME Base Empreinte default factors
 - In-app notifications on domain events
-- French interface, internationalised from the first screen
+- French and English interface from the first screen
 
-**Later:** internal chartering between subsidiaries, driver app (missions, proof of delivery, delivery note photo, eCMR), customer portal, invoicing and e-invoicing, subcontractor KPIs, email, SMS and push notifications, English interface.
+**Later:** internal chartering between subsidiaries, driver app (missions, proof of delivery, delivery note photo, eCMR), customer portal, invoicing and e-invoicing, subcontractor KPIs, email, SMS and push notifications.
 
-**Out of scope for now:** automatic route optimisation, telematics and live tracking, driving and rest times, customs, multimodal transport.
+**Out of scope for now:** automatic route optimisation, telematics and live tracking, driving and rest times, product sequencing rules (washing between incompatible loads), customs, multimodal transport.
 
 ## Roadmap
 
@@ -148,10 +153,13 @@ Docs live in the repository (`docs/specs`, `docs/adr`, `docs/design`). The board
 | Planning granularity | Free slots, to the hour |
 | Emission factors | ADEME Base Empreinte first, actual fuel data later; ISO 14083 method |
 | Stack | TypeScript and PostgreSQL ([ADR-001](adr/0001-typescript-postgresql.md)) |
-| Language | Repository in English; product interface in French first, internationalised |
+| Language | Repository in English; product interface in French and English from the first screen |
 | Method | Kanban with one spec per feature, GitHub Projects |
+| Visual identity | Petrol and brass, IBM Plex, light and dark themes; logo with the coupling ring as the o ([design](design/README.md)) |
+| Order shape | One pickup and n deliveries, or n pickups and one delivery; any number of products; multi-stop trips are chains of orders |
+| Compatibility | Order requirements against resource capabilities; non-order activities on the planning; washing rules between products later |
 
-Still open: hosting of the public demo, to settle before the end of the first release.
+Still open: hosting of the public demo, to settle before the end of the first release; maps and truck routing (an ADR before the order screens).
 
 <!-- pagebreak -->
 
@@ -169,6 +177,10 @@ Still open: hosting of the public demo, to settle before the end of the first re
 | information GES | emissions report | Legal per-service greenhouse-gas report |
 | lettre de voiture | consignment note (CMR) | |
 | bon de livraison (BL) | delivery note | |
+| chargement / livraison | pickup / delivery | An order has one of them single |
+| puits de commandes | order well | Orders waiting to be assigned |
+| aptitude | capability | What a resource can do; matched against order requirements |
+| activité | activity | Non-order block on a resource: rest, maintenance, washing |
 
 ## Sources
 
