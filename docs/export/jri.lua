@@ -33,8 +33,14 @@ function BlockQuote(bq)
   if first:match("^Décision") or first:match("^Decision") then
     local label = pandoc.Div({pandoc.Para({pandoc.Str(first:match("^Decision") and "DECISION" or "DÉCISION")})},
       pandoc.Attr("", {}, {{"custom-style", "Cartouche titre"}}))
-    local body = pandoc.Div(bq.content, pandoc.Attr("", {}, {{"custom-style", "Cartouche"}}))
-    return {label, body}
+    -- every paragraph of the box keeps with the next one, except the last: the box stays whole
+    -- without dragging what follows onto the next page
+    local content = bq.content
+    local last = table.remove(content)
+    local out = {label}
+    if #content > 0 then table.insert(out, pandoc.Div(content, pandoc.Attr("", {}, {{"custom-style", "Cartouche"}}))) end
+    table.insert(out, pandoc.Div({last}, pandoc.Attr("", {}, {{"custom-style", "Cartouche fin"}})))
+    return out
   end
 end
 
