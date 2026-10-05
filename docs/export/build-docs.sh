@@ -16,3 +16,5 @@ gen() { # $1 = source .md, $2 = output .docx
 }
 gen docs/scoping.md TIMON-CAD-001-scoping.docx
 gen docs/adr/0001-typescript-postgresql.md TIMON-ADR-001-language-and-database.docx
+gen docs/adr/0002-target-architecture.md TIMON-ADR-002-target-architecture.docx
+gen docs/adr/0003-environments-and-hosting.md TIMON-ADR-003-environments-and-hosting.docx
