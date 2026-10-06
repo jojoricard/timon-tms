@@ -13,12 +13,12 @@ Timon helps a dispatcher plan drivers, tractors, rigid trucks and trailers, assi
 
 ## Status
 
-**Foundations in progress.** Scoping, visual identity, architecture and environments are decided and recorded in [`docs/`](docs/). The code skeleton proves the architecture on one thin slice: booking a resource over a period, refused by the database on overlap, running both on Node with PostgreSQL and entirely in the browser.
+**Foundations done, planning release next.** Scoping, visual identity, architecture and environments are decided and recorded in [`docs/`](docs/). The code skeleton proves the architecture on one thin slice: booking a resource over a period, refused by the database on overlap, running both on Node with PostgreSQL and entirely in the browser.
 
 | Phase | Content | Status |
 | --- | --- | --- |
 | 0. Scoping | Vision, target, market, regulation, domain model, roadmap | Done |
-| 1. Foundations | Visual identity and design system, architecture and environments (done); code skeleton and CI | In progress |
+| 1. Foundations | Visual identity and design system, architecture and environments, code skeleton and CI | Done |
 | 2. Planning release | Reference data, units, orders, planning and conflicts, emissions report | Planned |
 | 3–5 | Extended operations, driver app, customer portal | Later |
 
