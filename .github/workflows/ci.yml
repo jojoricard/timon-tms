@@ -1,0 +1,93 @@
+name: CI
+
+# One job, not path-filtered, so it can be the required check on main.
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  ci:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    services:
+      postgres:
+        image: postgres:18
+        env:
+          POSTGRES_USER: timon
+          POSTGRES_PASSWORD: timon
+          POSTGRES_DB: timon_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U timon -d timon_test"
+          --health-interval 2s
+          --health-timeout 3s
+          --health-retries 15
+    steps:
+      - uses: actions/checkout@v7
+
+      # Version taken from packageManager in package.json.
+      - uses: pnpm/action-setup@v6
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+
+      - name: Install
+        run: pnpm install --frozen-lockfile
+
+      - name: Generate (migrations module, design tokens, interface messages)
+        run: pnpm generate
+
+      - name: Lint and format
+        run: pnpm lint
+
+      - name: Type check
+        run: pnpm -r typecheck
+
+      - name: Dependency direction
+        run: pnpm check:deps
+
+      - name: Interface messages complete in every language
+        run: pnpm check:i18n
+
+      - name: Migrations match the schema
+        run: |
+          pnpm --filter @timon/db exec drizzle-kit generate
+          test -z "$(git status --porcelain packages/db/migrations)"
+
+      - name: Tests on PGlite
+        run: pnpm vitest run
+
+      - name: Tests on PostgreSQL 18
+        run: pnpm vitest run
+        env:
+          TEST_DATABASE_URL: postgres://timon:timon@localhost:5432/timon_test
+
+      - name: Build the demo
+        run: pnpm --filter @timon/demo build
+
+      - name: Install Chromium
+        run: pnpm --filter @timon/demo exec playwright install --with-deps chromium
+
+      - name: Smoke test on the demo build
+        run: pnpm test:e2e
+
+      - name: Keep the Playwright report
+        if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: playwright-report
+          path: |
+            apps/demo/playwright-report/
+            apps/demo/test-results/
+          retention-days: 7

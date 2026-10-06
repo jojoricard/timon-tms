@@ -1,0 +1,32 @@
+{
+  "name": "timon",
+  "private": true,
+  "type": "module",
+  "license": "AGPL-3.0-only",
+  "packageManager": "pnpm@10.34.6",
+  "engines": {
+    "node": ">=24 <25"
+  },
+  "scripts": {
+    "generate": "pnpm -r --if-present generate",
+    "dev": "pnpm generate && pnpm --parallel --filter @timon/api --filter @timon/web dev",
+    "dev:demo": "pnpm generate && pnpm --filter @timon/demo dev",
+    "build": "pnpm generate && pnpm --filter @timon/demo build",
+    "test": "pnpm generate && vitest run",
+    "test:e2e": "pnpm --filter @timon/demo test:e2e",
+    "lint": "biome check .",
+    "format": "biome check --write .",
+    "typecheck": "pnpm generate && pnpm -r --parallel typecheck",
+    "check:deps": "node scripts/check-deps.ts",
+    "check:i18n": "node scripts/check-i18n.ts",
+    "db:generate": "pnpm --filter @timon/db db:generate",
+    "db:migrate": "pnpm --filter @timon/api db:migrate",
+    "db:seed": "pnpm --filter @timon/api db:seed"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "2.5.15",
+    "@types/node": "24.19.1",
+    "typescript": "7.0.2",
+    "vitest": "5.0.3"
+  }
+}

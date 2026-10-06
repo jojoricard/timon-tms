@@ -1,0 +1,25 @@
+{
+  "name": "@timon/db",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./testing": "./src/testing.ts"
+  },
+  "scripts": {
+    "generate": "node scripts/embed-migrations.ts",
+    "db:generate": "drizzle-kit generate && node scripts/embed-migrations.ts",
+    "typecheck": "tsc -p ."
+  },
+  "dependencies": {
+    "@timon/app": "workspace:*",
+    "@timon/domain": "workspace:*",
+    "drizzle-orm": "0.45.3"
+  },
+  "devDependencies": {
+    "@electric-sql/pglite": "0.5.8",
+    "@types/pg": "8.23.1",
+    "drizzle-kit": "0.31.11",
+    "pg": "8.23.1"
+  }
+}

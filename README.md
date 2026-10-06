@@ -1,5 +1,6 @@
 # Timon
 
+[![CI](https://github.com/jojoricard/timon-tms/actions/workflows/ci.yml/badge.svg)](https://github.com/jojoricard/timon-tms/actions/workflows/ci.yml)
 [![Docs](https://github.com/jojoricard/timon-tms/actions/workflows/docs.yml/badge.svg)](https://github.com/jojoricard/timon-tms/actions/workflows/docs.yml)
 
 **An open-source transport management system for road hauliers, built around resource planning.**
@@ -12,14 +13,16 @@ Timon helps a dispatcher plan drivers, tractors, rigid trucks and trailers, assi
 
 ## Status
 
-**Scoping and visual identity done, foundations in progress.** No code yet: the project is run end to end, from scoping to delivery, and every decision is recorded in [`docs/`](docs/).
+**Foundations in progress.** Scoping, visual identity, architecture and environments are decided and recorded in [`docs/`](docs/). The code skeleton proves the architecture on one thin slice: booking a resource over a period, refused by the database on overlap, running both on Node with PostgreSQL and entirely in the browser.
 
 | Phase | Content | Status |
 | --- | --- | --- |
 | 0. Scoping | Vision, target, market, regulation, domain model, roadmap | Done |
-| 1. Foundations | Visual identity and design system (done), target architecture, CI | In progress |
+| 1. Foundations | Visual identity and design system, architecture and environments (done); code skeleton and CI | In progress |
 | 2. Planning release | Reference data, units, orders, planning and conflicts, emissions report | Planned |
 | 3–5 | Extended operations, driver app, customer portal | Later |
+
+**Demo:** [timon.agence-jri.com](https://timon.agence-jri.com). It runs entirely in your browser: the API and a PostgreSQL database (PGlite) live in a service worker, and your data stays on your machine.
 
 ## Documentation
 
@@ -33,6 +36,41 @@ Timon helps a dispatcher plan drivers, tractors, rigid trucks and trailers, assi
 | Visual identity and mockups | [design/README.md](docs/design/README.md) | |
 
 The Markdown files are the sources. A GitHub Actions workflow builds the Word and PDF versions on every change and attaches them to each release; locally, `sh docs/export/build-docs.sh` produces the Word files (requires [pandoc](https://pandoc.org/)).
+
+## Run it locally
+
+You need Node 24, pnpm 10 and Docker. The pnpm version is pinned in `package.json`; pnpm switches to it on its own.
+
+```sh
+pnpm install
+cp .env.example .env        # local settings; change POSTGRES_PORT and DATABASE_URL if 5432 is taken
+docker compose up -d        # PostgreSQL 18
+pnpm db:migrate
+pnpm db:seed                # the demo haulier near Lyon
+pnpm dev                    # API on :3000, interface on http://localhost:5173
+```
+
+Without Docker, `pnpm dev:demo` builds and serves the in-browser demo on http://localhost:4173.
+
+| Command | What it does |
+| --- | --- |
+| `pnpm test` | Unit and API tests, on PGlite in-process; set `TEST_DATABASE_URL` to run them on PostgreSQL |
+| `pnpm test:e2e` | Playwright smoke test on the demo build (`pnpm build` first) |
+| `pnpm lint`, `pnpm format` | Biome |
+| `pnpm typecheck` | TypeScript, every package |
+| `pnpm check:deps`, `pnpm check:i18n` | Dependency direction of ADR-002; French and English messages complete |
+| `pnpm db:generate` | New migration from the Drizzle schema |
+
+| Path | Role |
+| --- | --- |
+| `packages/domain` | Rules: periods, overlaps. No I/O |
+| `packages/app` | Use cases and the ports they need |
+| `packages/db` | Drizzle schema, migrations, repositories, demo data |
+| `packages/http` | Hono routes, Zod schemas, OpenAPI contract at `/api/openapi.json` |
+| `packages/ui` | React components on the design tokens |
+| `apps/web` | The interface (React, Vite, TanStack Router and Query, Paraglide) |
+| `apps/api` | Node entry: Hono on node-postgres |
+| `apps/demo` | The interface plus a service worker running the API on PGlite |
 
 ## Tech stack
 

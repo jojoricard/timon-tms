@@ -1,0 +1,108 @@
+{
+  "id": "e9cb06a0-4a39-4fe4-ab32-08297201fe39",
+  "prevId": "4bbfb1ca-221d-4d4a-84a1-d80487072562",
+  "version": "7",
+  "dialect": "postgresql",
+  "tables": {
+    "public.resource": {
+      "name": "resource",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "kind": {
+          "name": "kind",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "name": {
+          "name": "name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.resource_booking": {
+      "name": "resource_booking",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "resource_id": {
+          "name": "resource_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "period": {
+          "name": "period",
+          "type": "tstzrange",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "label": {
+          "name": "label",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "resource_booking_resource_id_resource_id_fk": {
+          "name": "resource_booking_resource_id_resource_id_fk",
+          "tableFrom": "resource_booking",
+          "columnsFrom": [
+            "resource_id"
+          ],
+          "tableTo": "resource",
+          "columnsTo": [
+            "id"
+          ],
+          "onUpdate": "no action",
+          "onDelete": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {
+        "resource_booking_period_bounded": {
+          "name": "resource_booking_period_bounded",
+          "value": "not isempty(\"resource_booking\".\"period\") and lower_inc(\"resource_booking\".\"period\") and not upper_inc(\"resource_booking\".\"period\") and not lower_inf(\"resource_booking\".\"period\") and not upper_inf(\"resource_booking\".\"period\")"
+        }
+      },
+      "isRLSEnabled": false
+    }
+  },
+  "enums": {},
+  "schemas": {},
+  "views": {},
+  "sequences": {},
+  "roles": {},
+  "policies": {},
+  "_meta": {
+    "columns": {},
+    "schemas": {},
+    "tables": {}
+  }
+}

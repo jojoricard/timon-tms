@@ -1,0 +1,22 @@
+{
+  "name": "@timon/api",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "node --watch --env-file-if-exists=../../.env src/main.ts",
+    "start": "node src/main.ts",
+    "db:migrate": "node --env-file-if-exists=../../.env src/migrate.ts",
+    "db:seed": "node --env-file-if-exists=../../.env src/seed.ts",
+    "typecheck": "tsc -p ."
+  },
+  "dependencies": {
+    "@hono/node-server": "2.1.3",
+    "@timon/db": "workspace:*",
+    "@timon/http": "workspace:*",
+    "drizzle-orm": "0.45.3",
+    "pg": "8.23.1"
+  },
+  "devDependencies": {
+    "@types/pg": "8.23.1"
+  }
+}
