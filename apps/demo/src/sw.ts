@@ -21,6 +21,10 @@ async function start() {
 
 self.addEventListener('install', () => void self.skipWaiting());
 self.addEventListener('activate', (event) => event.waitUntil(self.clients.claim()));
+// Sent by the shell when a forced reload left the page uncontrolled.
+self.addEventListener('message', (event) => {
+  if (event.data === 'claim') event.waitUntil(self.clients.claim());
+});
 
 self.addEventListener('fetch', (event) => {
   const url = new URL(event.request.url);

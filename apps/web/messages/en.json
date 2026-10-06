@@ -19,5 +19,6 @@
   "booking_created": "Booking created.",
   "request_failed": "The request failed ({status}).",
   "demo_unavailable": "The demo's database could not start in this browser. Reload the page; if it happens again, try another browser.",
-  "server_unreachable": "The server cannot be reached. Check your connection and try again."
+  "server_unreachable": "The server cannot be reached. Check your connection and try again.",
+  "demo_service_worker_unavailable": "The demo runs entirely in your browser and needs a service worker, which this window does not allow (private browsing, for example). Open the demo in a normal window or in another browser."
 }

@@ -8,10 +8,12 @@ import {
   Outlet,
   RouterProvider,
 } from '@tanstack/react-router';
+import { Banner } from '@timon/ui';
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import { BookingsPage } from './bookings-page.tsx';
 import { LanguageSwitch } from './language-switch.tsx';
+import { m } from './paraglide/messages.js';
 import { getLocale } from './paraglide/runtime.js';
 
 const rootRoute = createRootRoute({
@@ -53,5 +55,19 @@ export function mount(element: HTMLElement) {
         <RouterProvider router={router} />
       </QueryClientProvider>
     </StrictMode>,
+  );
+}
+
+const notices = {
+  'service-worker-unavailable': m.demo_service_worker_unavailable,
+} as const;
+
+/** Renders a single notice in place of the application, when it cannot start. */
+export function mountNotice(element: HTMLElement, notice: keyof typeof notices) {
+  document.documentElement.lang = getLocale();
+  createRoot(element).render(
+    <div className="page">
+      <Banner tone="warning">{notices[notice]()}</Banner>
+    </div>,
   );
 }

@@ -19,5 +19,6 @@
   "booking_created": "Réservation créée.",
   "request_failed": "La requête a échoué ({status}).",
   "demo_unavailable": "La base de données de la démo n'a pas pu démarrer dans ce navigateur. Rechargez la page ; si le problème persiste, essayez un autre navigateur.",
-  "server_unreachable": "Le serveur est injoignable. Vérifiez votre connexion et réessayez."
+  "server_unreachable": "Le serveur est injoignable. Vérifiez votre connexion et réessayez.",
+  "demo_service_worker_unavailable": "La démo fonctionne entièrement dans votre navigateur et a besoin d'un service worker, que cette fenêtre n'autorise pas (navigation privée, par exemple). Ouvrez la démo dans une fenêtre normale ou dans un autre navigateur."
 }
