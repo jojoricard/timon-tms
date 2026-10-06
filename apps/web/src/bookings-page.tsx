@@ -30,6 +30,13 @@ function nextHour(hours: number) {
   return now.add({ hours }).toString({ smallestUnit: 'minute' });
 }
 
+/** The slot right after [start, end), of the same length, as `datetime-local` values. */
+function followingSlot(start: string, end: string) {
+  const from = Temporal.PlainDateTime.from(end);
+  const length = Temporal.PlainDateTime.from(start).until(from);
+  return { start: end, end: from.add(length).toString({ smallestUnit: 'minute' }) };
+}
+
 function safePeriod(start: string, end: string): Period | undefined {
   try {
     return periodOf(toInstant(start), toInstant(end));
@@ -106,6 +113,11 @@ export function BookingsPage() {
       } else {
         await ok(response);
         setOutcome({ tone: 'ok', text: m.booking_created() });
+        // Ready for the next booking: without this, the form would overlap the one just made.
+        const next = followingSlot(start, end);
+        setLabel('');
+        setStart(next.start);
+        setEnd(next.end);
       }
       await queryClient.invalidateQueries({ queryKey: ['bookings', selected] });
     },
