@@ -17,5 +17,7 @@
   "warning_overlap": "Cette période chevauche : {labels}. Le serveur la refusera.",
   "conflict_refused": "Refusé par le serveur : le moyen est déjà réservé sur une partie de cette période ({labels}).",
   "booking_created": "Réservation créée.",
-  "request_failed": "La requête a échoué ({status})."
+  "request_failed": "La requête a échoué ({status}).",
+  "demo_unavailable": "La base de données de la démo n'a pas pu démarrer dans ce navigateur. Rechargez la page ; si le problème persiste, essayez un autre navigateur.",
+  "server_unreachable": "Le serveur est injoignable. Vérifiez votre connexion et réessayez."
 }

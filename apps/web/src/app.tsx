@@ -44,10 +44,12 @@ declare module '@tanstack/react-router' {
 
 /** Renders the application into `element`. Used by the web entry and by the demo shell. */
 export function mount(element: HTMLElement) {
+  // One retry: the demo's service worker restarts its database on the next request.
+  const queryClient = new QueryClient({ defaultOptions: { queries: { retry: 1 } } });
   document.documentElement.lang = getLocale();
   createRoot(element).render(
     <StrictMode>
-      <QueryClientProvider client={new QueryClient()}>
+      <QueryClientProvider client={queryClient}>
         <RouterProvider router={router} />
       </QueryClientProvider>
     </StrictMode>,

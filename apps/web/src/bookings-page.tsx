@@ -2,7 +2,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { findOverlaps, type Period, periodOf, Temporal } from '@timon/domain';
 import { Banner, Button, Field } from '@timon/ui';
 import { type FormEvent, useState } from 'react';
-import { api } from './api.ts';
+import { ApiError, api, ok } from './api.ts';
 import { m } from './paraglide/messages.js';
 import { getLocale } from './paraglide/runtime.js';
 
@@ -38,6 +38,16 @@ function safePeriod(start: string, end: string): Period | undefined {
   }
 }
 
+/** What went wrong, in the interface's language. */
+function errorText(error: unknown) {
+  if (error instanceof ApiError) {
+    return error.code === 'demo-unavailable'
+      ? m.demo_unavailable()
+      : m.request_failed({ status: error.status });
+  }
+  return m.server_unreachable();
+}
+
 function formatPeriod({ start, end }: Booking) {
   const format = new Intl.DateTimeFormat(getLocale(), { dateStyle: 'medium', timeStyle: 'short' });
   return format.formatRange(Date.parse(start), Date.parse(end));
@@ -53,7 +63,7 @@ export function BookingsPage() {
 
   const resources = useQuery({
     queryKey: ['resources'],
-    queryFn: async () => (await api.resources.$get()).json(),
+    queryFn: async () => ok(await api.resources.$get()),
   });
   const selected = resourceId ?? resources.data?.[0]?.id;
 
@@ -61,10 +71,11 @@ export function BookingsPage() {
     queryKey: ['bookings', selected],
     enabled: selected !== undefined,
     queryFn: async () =>
-      (
-        await api.resources[':resourceId'].bookings.$get({ param: { resourceId: selected ?? '' } })
-      ).json(),
+      ok(
+        await api.resources[':resourceId'].bookings.$get({ param: { resourceId: selected ?? '' } }),
+      ),
   });
+  const failure = resources.error ?? bookings.error;
 
   // The same rule as the server, run before sending: the dispatcher sees the conflict first.
   const period = safePeriod(start, end);
@@ -88,17 +99,17 @@ export function BookingsPage() {
           end: period.end.toString(),
         },
       });
-      if (response.status === 201) {
-        setOutcome({ tone: 'ok', text: m.booking_created() });
-      } else if (response.status === 409) {
+      if (response.status === 409) {
         const { conflicts } = await response.json();
         const labels = conflicts.map((c) => c.label).join(', ');
         setOutcome({ tone: 'conflict', text: m.conflict_refused({ labels }) });
       } else {
-        setOutcome({ tone: 'conflict', text: m.request_failed({ status: response.status }) });
+        await ok(response);
+        setOutcome({ tone: 'ok', text: m.booking_created() });
       }
       await queryClient.invalidateQueries({ queryKey: ['bookings', selected] });
     },
+    onError: (error) => setOutcome({ tone: 'conflict', text: errorText(error) }),
   });
 
   const submit = (event: FormEvent) => {
@@ -153,10 +164,11 @@ export function BookingsPage() {
           {m.warning_overlap({ labels: overlapping.map((b) => b.label).join(', ') })}
         </Banner>
       )}
+      {failure && <Banner tone="conflict">{errorText(failure)}</Banner>}
       {outcome && <Banner tone={outcome.tone}>{outcome.text}</Banner>}
 
       <h2>{m.bookings_heading()}</h2>
-      {bookings.isPending ? (
+      {failure ? null : resources.isPending || bookings.isLoading ? (
         <p>{m.loading()}</p>
       ) : bookings.data?.length ? (
         <ul className="bookings">
