@@ -5,7 +5,8 @@ import { resource, resourceBooking } from './schema.ts';
 
 const timeZone = 'Europe/Paris';
 
-// The haulier of the mockups, based south of Lyon. Fixed ids keep links stable between runs.
+// The haulier of the mockups, based south of Lyon: its data is in French, like a real one's.
+// Fixed ids keep links stable between runs.
 const resources = [
   { id: '00000000-0000-4000-8000-000000000101', kind: 'driver', name: 'M. Laurent' },
   { id: '00000000-0000-4000-8000-000000000102', kind: 'driver', name: 'S. Moreau' },
@@ -23,10 +24,10 @@ const bookings = [
   [0, 0, 6, 10, 'Lyon → Grenoble'],
   [0, 0, 11, 15, 'Grenoble → Chambéry'],
   [1, 0, 6, 9, 'Lyon → Roanne'],
-  [1, 1, 0, 11, 'Daily rest'],
+  [1, 1, 0, 11, 'Repos journalier'],
   [2, 0, 7, 12, 'Vienne → Lyon 7e'],
   [3, 0, 5, 9, 'Corbas → Lyon 9e'],
-  [3, 1, 8, 12, 'Roadworthiness test'],
+  [3, 1, 8, 12, 'Contrôle technique'],
   [4, 0, 6, 15, 'Lyon → Grenoble → Chambéry'],
   [7, 0, 6, 15, 'Lyon → Grenoble → Chambéry'],
 ] as const;
