@@ -2,10 +2,10 @@
 // The API of the demo: the same Hono application as the server, on PGlite stored in the
 // visitor's IndexedDB, with the same migrations and the same demo haulier.
 import { PGlite } from '@electric-sql/pglite';
-import { btree_gist } from '@electric-sql/pglite/contrib/btree_gist';
 import { createRepositories, migrate, schema, seed } from '@timon/db';
 import { createApp } from '@timon/http';
 import { drizzle } from 'drizzle-orm/pglite';
+import { btree_gist } from './btree-gist.ts';
 
 declare const self: ServiceWorkerGlobalScope;
 
