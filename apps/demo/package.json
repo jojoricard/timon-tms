@@ -1,0 +1,23 @@
+{
+  "name": "@timon/demo",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "pnpm build && vite preview --port 4173",
+    "build": "vite build && vite build --config vite.sw.config.ts",
+    "preview": "vite preview --port 4173",
+    "test:e2e": "playwright test",
+    "typecheck": "tsc -p ."
+  },
+  "dependencies": {
+    "@electric-sql/pglite": "0.5.8",
+    "@timon/db": "workspace:*",
+    "@timon/http": "workspace:*",
+    "@timon/web": "workspace:*",
+    "drizzle-orm": "0.45.3"
+  },
+  "devDependencies": {
+    "@playwright/test": "1.63.0",
+    "vite": "8.3.3"
+  }
+}
