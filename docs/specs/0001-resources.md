@@ -2,9 +2,9 @@
 title: "Resources"
 subtitle: "Functional specification"
 reference: TIMON-SPEC-001
-version: "0.2"
+version: "1.0"
 date: "October 6, 2026"
-status: "Draft"
+status: "Accepted"
 ---
 
 # TIMON-SPEC-001 — Resources
@@ -79,7 +79,9 @@ The type list is a company list: a haulier can add its own non-blocking types (i
 - **Expiries**: every document expired or within its warning period, all resources together, sorted by date; a click opens the resource.
 - **Import**: download a CSV template per kind, upload a file, preview the rows with their errors, confirm.
 
-The screens follow the design system: status colours from the tokens (ok, warning, conflict), monospaced figures for plates and dates, French and English from the first screen.
+The screens follow the design system: status colours from the tokens (ok, warning, conflict), monospaced figures for plates and dates, French and English from the first screen. Mockups: [resources](../design/mockups/resources.png), [resource form](../design/mockups/resource-form.png), [expiries](../design/mockups/expiries.png), [import](../design/mockups/resource-import.png).
+
+![Expiries: expired documents first, then each document within its own warning period.](../design/mockups/expiries.png){width=100%}
 
 ## Acceptance criteria
 

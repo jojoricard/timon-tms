@@ -70,6 +70,10 @@ The interface is designed in French and English; the mockups here are the Englis
 | Hover on an order, hover on a driver, right-click menu | [planning-interactions.png](mockups/planning-interactions.png) |
 | Order, full page | [order.png](mockups/order.png) |
 | Driver record | [driver.png](mockups/driver.png) |
+| Resources, drivers tab ([SPEC-001](../specs/0001-resources.md)) | [resources.png](mockups/resources.png) |
+| Resource form, a tractor and its documents | [resource-form.png](mockups/resource-form.png) |
+| Expiries across all resources | [expiries.png](mockups/expiries.png) |
+| CSV import, check step with errors | [resource-import.png](mockups/resource-import.png) |
 
 ![Order in conflict: solutions, route on the A7, goods, price and margin, emissions under ISO 14083.](mockups/order.png)
 

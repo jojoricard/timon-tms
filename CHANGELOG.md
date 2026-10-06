@@ -6,7 +6,7 @@ All notable changes to this project are documented here. The format follows [Kee
 
 ### Added
 
-- SPEC-001 resources (draft): drivers, power units and trailers, capabilities, expiring documents, CSV import
+- SPEC-001 resources, accepted: drivers, power units and trailers, capabilities, expiring documents, CSV import; mockups of the four screens (`docs/design/mockups/`)
 
 ### Security
 
