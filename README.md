@@ -32,6 +32,7 @@ Timon helps a dispatcher plan drivers, tractors, rigid trucks and trailers, assi
 | ADR-001: TypeScript and PostgreSQL | [0001-typescript-postgresql.md](docs/adr/0001-typescript-postgresql.md) | [PDF](https://github.com/jojoricard/timon-tms/releases/latest/download/TIMON-ADR-001-language-and-database.pdf) |
 | ADR-002: target architecture, one codebase for the server and an in-browser demo | [0002-target-architecture.md](docs/adr/0002-target-architecture.md) | [PDF](https://github.com/jojoricard/timon-tms/releases/latest/download/TIMON-ADR-002-target-architecture.pdf) |
 | ADR-003: environments and hosting, from the laptop to the public demo | [0003-environments-and-hosting.md](docs/adr/0003-environments-and-hosting.md) | [PDF](https://github.com/jojoricard/timon-tms/releases/latest/download/TIMON-ADR-003-environments-and-hosting.pdf) |
+| SPEC-001: resources, their capabilities and expiring documents | [0001-resources.md](docs/specs/0001-resources.md) | [PDF](https://github.com/jojoricard/timon-tms/releases/latest/download/TIMON-SPEC-001-resources.pdf) |
 | Brand guidelines: logo, colour, type, signature elements, screens, voice | [guidelines/](docs/design/guidelines/index.html) | [PDF](docs/design/timon-brand-guidelines.pdf) |
 | Visual identity and mockups | [design/README.md](docs/design/README.md) | |
 
