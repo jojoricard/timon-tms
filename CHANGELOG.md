@@ -4,6 +4,10 @@ All notable changes to this project are documented here. The format follows [Kee
 
 ## [Unreleased]
 
+### Added
+
+- SPEC-001 resources (draft): drivers, power units and trailers, capabilities, expiring documents, CSV import
+
 ### Security
 
 - esbuild pulled by drizzle-kit (through `@esbuild-kit/core-utils`) raised from 0.18.20 to 0.25 with a pnpm override, fixing GHSA-67mh-4wv8-2f99; no copy below 0.25 remains
