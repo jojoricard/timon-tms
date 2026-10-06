@@ -4,3 +4,8 @@ packages:
 
 onlyBuiltDependencies:
   - esbuild
+
+overrides:
+  # drizzle-kit pulls esbuild ~0.18 through @esbuild-kit/core-utils, affected by
+  # GHSA-67mh-4wv8-2f99 (fixed in 0.25.0). Remove once drizzle-kit drops @esbuild-kit.
+  "@esbuild-kit/core-utils>esbuild": "^0.25.0"

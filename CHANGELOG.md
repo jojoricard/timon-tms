@@ -2,6 +2,12 @@
 
 All notable changes to this project are documented here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [Unreleased]
+
+### Security
+
+- esbuild pulled by drizzle-kit (through `@esbuild-kit/core-utils`) raised from 0.18.20 to 0.25 with a pnpm override, fixing GHSA-67mh-4wv8-2f99; no copy below 0.25 remains
+
 ## [0.3.0] - 2026-10-06
 
 ### Added
