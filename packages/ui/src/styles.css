@@ -1,0 +1,88 @@
+@import "./tokens.css";
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: var(--color-surface);
+  color: var(--color-ink);
+  font: var(--type-body);
+}
+
+:focus-visible {
+  outline: 2px solid var(--color-focus);
+  outline-offset: 2px;
+}
+
+.t-button {
+  height: var(--control-height);
+  padding: 0 var(--space-3);
+  border: 1px solid var(--color-control-border);
+  border-radius: var(--radius-sm);
+  background: var(--color-surface-raised);
+  color: var(--color-ink);
+  font: var(--type-body-strong);
+  cursor: pointer;
+}
+
+.t-button[data-variant="primary"] {
+  border-color: var(--color-petrol);
+  background: var(--color-petrol);
+  color: var(--color-on-petrol);
+}
+
+.t-button[data-variant="primary"]:hover {
+  background: var(--color-petrol-hover);
+}
+
+.t-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.t-field {
+  display: grid;
+  gap: var(--space-1);
+}
+
+.t-field > span {
+  color: var(--color-ink-muted);
+  font: var(--type-small);
+}
+
+.t-field :is(input, select) {
+  width: 100%;
+  min-width: 0;
+  height: var(--control-height);
+  padding: 0 var(--space-2);
+  border: 1px solid var(--color-control-border);
+  border-radius: var(--radius-sm);
+  background: var(--color-surface-raised);
+  color: var(--color-ink);
+  font: var(--type-body);
+}
+
+.t-banner {
+  padding: var(--space-3);
+  border-radius: var(--radius-md);
+  border-left: 4px solid currentColor;
+}
+
+.t-banner[data-tone="conflict"] {
+  background: var(--color-conflict-tint);
+  color: var(--color-conflict-ink);
+}
+
+.t-banner[data-tone="warning"] {
+  background: var(--color-warning-tint);
+  color: var(--color-warning-ink);
+}
+
+.t-banner[data-tone="ok"] {
+  background: var(--color-ok-tint);
+  color: var(--color-ink);
+}

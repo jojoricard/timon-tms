@@ -1,0 +1,21 @@
+{
+  "$schema": "https://inlang.com/schema/inlang-message-format",
+  "language": "Langue",
+  "bookings_title": "Réservations des moyens",
+  "bookings_intro": "Réservez un moyen sur une période. La base de données refuse deux réservations du même moyen qui se chevauchent, quoi que laisse passer l'interface.",
+  "field_resource": "Moyen",
+  "field_label": "Libellé",
+  "field_start": "Début",
+  "field_end": "Fin",
+  "action_book": "Réserver",
+  "kind_driver": "Conducteur",
+  "kind_power_unit": "Tracteur ou porteur",
+  "kind_trailer": "Remorque",
+  "bookings_heading": "Réservations",
+  "bookings_empty": "Aucune réservation pour ce moyen.",
+  "loading": "Chargement…",
+  "warning_overlap": "Cette période chevauche : {labels}. Le serveur la refusera.",
+  "conflict_refused": "Refusé par le serveur : le moyen est déjà réservé sur une partie de cette période ({labels}).",
+  "booking_created": "Réservation créée.",
+  "request_failed": "La requête a échoué ({status})."
+}

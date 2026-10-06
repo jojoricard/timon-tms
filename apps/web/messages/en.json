@@ -1,0 +1,21 @@
+{
+  "$schema": "https://inlang.com/schema/inlang-message-format",
+  "language": "Language",
+  "bookings_title": "Resource bookings",
+  "bookings_intro": "Book a resource over a period. The database refuses two overlapping bookings of the same resource, whatever the interface lets through.",
+  "field_resource": "Resource",
+  "field_label": "Label",
+  "field_start": "Start",
+  "field_end": "End",
+  "action_book": "Book",
+  "kind_driver": "Driver",
+  "kind_power_unit": "Tractor or rigid truck",
+  "kind_trailer": "Trailer",
+  "bookings_heading": "Bookings",
+  "bookings_empty": "No booking for this resource.",
+  "loading": "Loading…",
+  "warning_overlap": "This period overlaps: {labels}. The server will refuse it.",
+  "conflict_refused": "Refused by the server: the resource is already booked over part of this period ({labels}).",
+  "booking_created": "Booking created.",
+  "request_failed": "The request failed ({status})."
+}
