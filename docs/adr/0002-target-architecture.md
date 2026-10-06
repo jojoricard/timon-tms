@@ -2,8 +2,8 @@
 title: "Target architecture"
 subtitle: "Architecture decision record"
 reference: TIMON-ADR-002
-version: "1.0"
-date: "October 5, 2026"
+version: "1.1"
+date: "October 6, 2026"
 status: "Accepted"
 ---
 
@@ -51,12 +51,14 @@ The demo constraint decides most of it: the API and the database must also run i
 | `packages/db` | Drizzle schema, migrations, repositories | `app`, `domain` |
 | `packages/http` | Hono routes, Zod schemas, OpenAPI | `app`, `domain` |
 | `packages/ui` | React components on the design tokens | nothing |
-| `apps/web` | React app (Vite, TanStack, dnd-kit); checks a drop with `domain` | `ui`, `domain`, API client |
+| `apps/web` | React app (Vite, TanStack, dnd-kit); checks a drop with `domain` | `ui`, `domain`; types only from `http`, for the typed API client |
 | `apps/api` | Node entry: Hono, `node-postgres`, authentication | `http`, `db` |
-| `apps/demo` | Service worker: the same Hono app, PGlite, demo data | `http`, `db` |
+| `apps/demo` | Service worker: the same Hono app, PGlite, demo data | `http`, `db`, `web` to mount the interface |
 
 Supporting choices:
 
+- **TypeScript 7**, the native compiler, for faster type checks. It no longer exposes a JavaScript compiler API, so tools built on it, such as dependency-cruiser, do not work; the dependency direction above is checked by a short script that reads the manifests and the imports.
+- **Packages shipped as TypeScript sources:** no build step for the shared packages. Vite bundles them for the browser and the service worker; Node 24 runs the API directly, with its built-in type stripping. The code therefore uses only erasable syntax (no enums, no parameter properties) and imports files with their `.ts` extension.
 - **PostgreSQL 18**, the version the current PGlite release (0.5) is built on, so the demo and production never diverge on SQL. Both are upgraded together.
 - **Dates:** periods stored as `tstzrange`, handled with the Temporal API. Chrome, Firefox and Node 26 ship it; a polyfill covers Safari and Node 24 in the meantime.
 - **Interface languages:** Paraglide JS, messages compiled to typed functions. Paraglide falls back to English when a French message is missing, so a CI check compares the two message files and fails on any gap.
