@@ -1,0 +1,21 @@
+# Local database only; Node runs on the host. The official image ships btree_gist.
+services:
+  postgres:
+    image: postgres:18
+    environment:
+      POSTGRES_USER: timon
+      POSTGRES_PASSWORD: timon
+      POSTGRES_DB: timon
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      # Since PostgreSQL 18 the image keeps its data under /var/lib/postgresql/18/docker.
+      - postgres-data:/var/lib/postgresql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U timon -d timon"]
+      interval: 2s
+      timeout: 3s
+      retries: 15
+
+volumes:
+  postgres-data:
