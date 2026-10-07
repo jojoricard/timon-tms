@@ -6,10 +6,6 @@ export type CreateBookingResult =
   | { readonly ok: false; readonly reason: 'unknown-resource' }
   | { readonly ok: false; readonly reason: 'overlap'; readonly conflicts: ResourceBooking[] };
 
-export function listResources(ports: Ports) {
-  return ports.resources.list();
-}
-
 export function listBookings(ports: Ports, resourceId: string) {
   return ports.bookings.listByResource(resourceId);
 }
