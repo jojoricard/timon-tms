@@ -13,13 +13,13 @@ Timon helps a dispatcher plan drivers, tractors, rigid trucks and trailers, assi
 
 ## Status
 
-**Foundations done, planning release next.** Scoping, visual identity, architecture and environments are decided and recorded in [`docs/`](docs/). The code skeleton proves the architecture on one thin slice: booking a resource over a period, refused by the database on overlap, running both on Node with PostgreSQL and entirely in the browser.
+**Planning release in progress.** Scoping, visual identity, architecture and environments are decided and recorded in [`docs/`](docs/). The first feature is in: resources ([SPEC-001](docs/specs/0001-resources.md)). Drivers, power units and trailers with their capabilities and compliance documents, the status of each document on today's date, the expiries to renew, and a CSV import. It runs on Node with PostgreSQL and entirely in the browser.
 
 | Phase | Content | Status |
 | --- | --- | --- |
 | 0. Scoping | Vision, target, market, regulation, domain model, roadmap | Done |
 | 1. Foundations | Visual identity and design system, architecture and environments, code skeleton and CI | Done |
-| 2. Planning release | Reference data, units, orders, planning and conflicts, emissions report | Planned |
+| 2. Planning release | Reference data (resources done), units, orders, planning and conflicts, emissions report | In progress |
 | 3–5 | Extended operations, driver app, customer portal | Later |
 
 **Demo:** [timon.agence-jri.com](https://timon.agence-jri.com). It runs entirely in your browser: the API and a PostgreSQL database (PGlite) live in a service worker, and your data stays on your machine.
@@ -56,7 +56,7 @@ Without Docker, `pnpm dev:demo` builds and serves the in-browser demo on http://
 | Command | What it does |
 | --- | --- |
 | `pnpm test` | Unit and API tests, on PGlite in-process; set `TEST_DATABASE_URL` to run them on PostgreSQL |
-| `pnpm test:e2e` | Playwright smoke test on the demo build (`pnpm build` first) |
+| `pnpm test:e2e` | Playwright journeys on the demo build, one per acceptance criterion shown on screen (`pnpm build` first) |
 | `pnpm lint`, `pnpm format` | Biome |
 | `pnpm typecheck` | TypeScript, every package |
 | `pnpm check:deps`, `pnpm check:i18n` | Dependency direction of ADR-002; French and English messages complete |
@@ -64,7 +64,7 @@ Without Docker, `pnpm dev:demo` builds and serves the in-browser demo on http://
 
 | Path | Role |
 | --- | --- |
-| `packages/domain` | Rules: periods, overlaps. No I/O |
+| `packages/domain` | Rules: periods and overlaps, plates, kinds and categories, document status. No I/O |
 | `packages/app` | Use cases and the ports they need |
 | `packages/db` | Drizzle schema, migrations, repositories, demo data |
 | `packages/http` | Hono routes, Zod schemas, OpenAPI contract at `/api/openapi.json` |

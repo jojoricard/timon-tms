@@ -5,22 +5,52 @@ import {
   createRootRoute,
   createRoute,
   createRouter,
+  Link,
   Outlet,
   RouterProvider,
+  redirect,
+  useRouterState,
 } from '@tanstack/react-router';
 import { Banner } from '@timon/ui';
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
-import { BookingsPage } from './bookings-page.tsx';
+import { kindFromSlug } from './kinds.ts';
 import { LanguageSwitch } from './language-switch.tsx';
 import { m } from './paraglide/messages.js';
 import { getLocale } from './paraglide/runtime.js';
+import { ExpiriesPage } from './resources/expiries-page.tsx';
+import { ImportPage } from './resources/import-page.tsx';
+import { ListPage } from './resources/list-page.tsx';
+import { ResourcePage } from './resources/resource-page.tsx';
+
+/** The section link stays current on every page under /resources. */
+function ResourcesLink() {
+  const path = useRouterState({ select: (state) => state.location.pathname });
+  return (
+    <Link
+      to="/resources/$kind"
+      params={{ kind: 'drivers' }}
+      className="appbar-link"
+      activeOptions={{ exact: true }}
+      aria-current={path.startsWith('/resources') ? 'page' : undefined}
+    >
+      {m.nav_resources()}
+    </Link>
+  );
+}
 
 const rootRoute = createRootRoute({
   component: () => (
     <div className="layout">
       <header className="appbar">
         <span className="wordmark">Timon</span>
+        <nav aria-label={m.nav_main()}>
+          <ul className="appbar-nav">
+            <li>
+              <ResourcesLink />
+            </li>
+          </ul>
+        </nav>
         <LanguageSwitch />
       </header>
       <main>
@@ -28,15 +58,85 @@ const rootRoute = createRootRoute({
       </main>
     </div>
   ),
+  notFoundComponent: () => (
+    <div className="page">
+      <Banner tone="warning">{m.not_found()}</Banner>
+    </div>
+  ),
 });
 
-const bookingsRoute = createRoute({
+// Resources is the home screen.
+const indexRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/',
-  component: BookingsPage,
+  beforeLoad: () => {
+    throw redirect({ to: '/resources/$kind', params: { kind: 'drivers' } });
+  },
 });
 
-const router = createRouter({ routeTree: rootRoute.addChildren([bookingsRoute]) });
+const expiriesRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/resources/expiries',
+  component: ExpiriesPage,
+});
+
+const kindOf = (slug: string) => {
+  const kind = kindFromSlug(slug);
+  if (!kind) throw redirect({ to: '/resources/$kind', params: { kind: 'drivers' } });
+  return kind;
+};
+
+export const listRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/resources/$kind',
+  validateSearch: (search: Record<string, unknown>): { imported?: number } => {
+    const imported = Number(search.imported);
+    return Number.isInteger(imported) && imported > 0 ? { imported } : {};
+  },
+  component: function List() {
+    const { kind } = listRoute.useParams();
+    const { imported } = listRoute.useSearch();
+    return <ListPage key={kind} kind={kindOf(kind)} imported={imported} />;
+  },
+});
+
+const newRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/resources/$kind/new',
+  component: function New() {
+    const { kind } = newRoute.useParams();
+    return <ResourcePage key={kind} kind={kindOf(kind)} />;
+  },
+});
+
+const importRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/resources/$kind/import',
+  component: function Import() {
+    const { kind } = importRoute.useParams();
+    return <ImportPage key={kind} kind={kindOf(kind)} />;
+  },
+});
+
+const resourceRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/resources/$kind/$id',
+  component: function Resource() {
+    const { kind, id } = resourceRoute.useParams();
+    return <ResourcePage key={id} kind={kindOf(kind)} id={id} />;
+  },
+});
+
+const router = createRouter({
+  routeTree: rootRoute.addChildren([
+    indexRoute,
+    expiriesRoute,
+    listRoute,
+    newRoute,
+    importRoute,
+    resourceRoute,
+  ]),
+});
 
 declare module '@tanstack/react-router' {
   interface Register {

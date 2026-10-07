@@ -17,6 +17,7 @@
     "pg": "8.23.1"
   },
   "devDependencies": {
-    "@types/pg": "8.23.1"
+    "@types/pg": "8.23.1",
+    "temporal-polyfill": "1.0.5"
   }
 }

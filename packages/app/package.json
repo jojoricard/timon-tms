@@ -9,6 +9,10 @@
     "typecheck": "tsc -p ."
   },
   "dependencies": {
-    "@timon/domain": "workspace:*"
+    "@timon/domain": "workspace:*",
+    "papaparse": "5.7.0"
+  },
+  "devDependencies": {
+    "@types/papaparse": "5.5.2"
   }
 }

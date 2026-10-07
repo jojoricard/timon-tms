@@ -1,4 +1,4 @@
-import { createRepositories, schema } from '@timon/db';
+import { createRepositories } from '@timon/db';
 import { createTestDatabase, type TestDatabase } from '@timon/db/testing';
 import { createApp } from '@timon/http';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
@@ -11,11 +11,12 @@ let resourceId: string;
 beforeAll(async () => {
   database = await createTestDatabase();
   app = createApp(createRepositories(database.db));
-  const [driver] = await database.db
-    .insert(schema.resource)
-    .values({ kind: 'driver', name: 'S. Moreau' })
-    .returning();
-  resourceId = driver?.id ?? '';
+  const response = await app.request('/api/resources', {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ kind: 'driver', lastName: 'Moreau', firstName: 'Samuel' }),
+  });
+  resourceId = ((await response.json()) as { id: string }).id;
 });
 
 afterAll(() => database.close());
