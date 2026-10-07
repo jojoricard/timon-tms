@@ -7,6 +7,17 @@ All notable changes to this project are documented here. The format follows [Kee
 ### Added
 
 - SPEC-001 resources, accepted: drivers, power units and trailers, capabilities, expiring documents, CSV import; mockups of the four screens (`docs/design/mockups/`)
+- Resources (SPEC-001, #5): drivers, power units and trailers with their characteristics, capabilities and compliance documents; status of each document and resource on today's date, in Europe/Paris, with a warning period per document type; archiving and restoring, never deleting
+- Expiries screen: every document expired or within its warning period, expired first, then by date
+- CSV import of drivers, power units or trailers, in English or French, all or nothing, with a preview of every error by line; up to 1 MB and 2,000 lines
+- Company lists seeded by migration: document types, body types, trade labels, capabilities
+- Demo data: the fleet of the mockups (18 drivers, 12 power units, 15 trailers), its deadlines moved to today's date
+- IBM Plex Sans and Mono, served with the application
+
+### Changed
+
+- Resources is the home screen; the booking screen of the skeleton is gone (the booking API and its exclusion constraint stay)
+- Existing local and demo resources are cleared by migration 0002; `pnpm db:seed` writes the new demo haulier
 
 ### Security
 
