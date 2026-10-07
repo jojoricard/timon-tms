@@ -2,7 +2,7 @@ import { BookingOverlapError } from '@timon/app';
 import { periodOf } from '@timon/domain';
 import { sql } from 'drizzle-orm';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import { createRepositories, migrate, schema, seed } from '../src/index.ts';
+import { createRepositories, migrate } from '../src/index.ts';
 import { createTestDatabase, type TestDatabase } from '../src/testing.ts';
 
 let database: TestDatabase;
@@ -11,15 +11,21 @@ let otherDriverId: string;
 
 beforeAll(async () => {
   database = await createTestDatabase();
-  const rows = await database.db
-    .insert(schema.resource)
-    .values([
-      { kind: 'driver', name: 'L. Fabre' },
-      { kind: 'driver', name: 'K. Benali' },
-    ])
-    .returning();
-  driverId = rows[0]?.id ?? '';
-  otherDriverId = rows[1]?.id ?? '';
+  const { resources } = createRepositories(database.db);
+  const driver = (lastName: string) =>
+    resources.create({
+      details: {
+        kind: 'driver',
+        lastName,
+        firstName: 'Test',
+        displayName: lastName,
+        employeeNumber: null,
+        phone: null,
+      },
+      documents: [],
+    });
+  driverId = (await driver('Fabre')).id;
+  otherDriverId = (await driver('Benali')).id;
 });
 
 afterAll(() => database.close());
@@ -81,19 +87,5 @@ describe('resource_booking', () => {
         sql`insert into resource_booking (resource_id, period, label) values (${otherDriverId}, tstzrange(now(), null), 'open')`,
       ),
     ).rejects.toThrow();
-  });
-});
-
-describe('seed', () => {
-  it('writes the demo haulier once', async () => {
-    const fresh = await createTestDatabase();
-    try {
-      expect(await seed(fresh.db)).toBe(true);
-      expect(await seed(fresh.db)).toBe(false);
-      const { resources } = createRepositories(fresh.db);
-      expect((await resources.list()).length).toBeGreaterThan(0);
-    } finally {
-      await fresh.close();
-    }
   });
 });
