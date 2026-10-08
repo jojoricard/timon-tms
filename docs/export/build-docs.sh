@@ -19,3 +19,4 @@ gen docs/adr/0001-typescript-postgresql.md TIMON-ADR-001-language-and-database.d
 gen docs/adr/0002-target-architecture.md TIMON-ADR-002-target-architecture.docx
 gen docs/adr/0003-environments-and-hosting.md TIMON-ADR-003-environments-and-hosting.docx
 gen docs/specs/0001-resources.md TIMON-SPEC-001-resources.docx
+gen docs/specs/0002-customers-and-sites.md TIMON-SPEC-002-customers-and-sites.docx
