@@ -74,6 +74,12 @@ The interface is designed in French and English; the mockups here are the Englis
 | Resource form, a tractor and its documents | [resource-form.png](mockups/resource-form.png) |
 | Expiries across all resources | [expiries.png](mockups/expiries.png) |
 | CSV import, check step with errors | [resource-import.png](mockups/resource-import.png) |
+| Customers ([SPEC-002](../specs/0002-customers-and-sites.md)) | [customers.png](mockups/customers.png) |
+| Customer form, contacts and usual sites | [customer-form.png](mockups/customer-form.png) |
+| Sites, the shared address book | [sites.png](mockups/sites.png) |
+| Site form, location, opening hours and requirements | [site-form.png](mockups/site-form.png) |
+| Sites CSV import, check and locate step | [site-import.png](mockups/site-import.png) |
+| Driver form, protective equipment held | [driver-protective-equipment.png](mockups/driver-protective-equipment.png) |
 
 ![Order in conflict: solutions, route on the A7, goods, price and margin, emissions under ISO 14083.](mockups/order.png)
 

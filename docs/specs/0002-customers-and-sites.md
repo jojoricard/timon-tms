@@ -2,9 +2,9 @@
 title: "Customers and sites"
 subtitle: "Functional specification"
 reference: TIMON-SPEC-002
-version: "0.1"
+version: "1.0"
 date: "October 8, 2026"
-status: "Draft"
+status: "Accepted"
 ---
 
 # TIMON-SPEC-002 — Customers and sites
@@ -96,7 +96,9 @@ This extends SPEC-001. A driver's form gains the list of protective equipment th
 - **Import**: the import screen of SPEC-001, with a template for customers and one for sites.
 - **Driver form**: the protective equipment block added to the existing form.
 
-The screens follow the design system and are in French and English from the first screen. Mockups come in the next revision of this document.
+The screens follow the design system and are in French and English from the first screen. Mockups: [customers](../design/mockups/customers.png), [customer form](../design/mockups/customer-form.png), [sites](../design/mockups/sites.png), [site form](../design/mockups/site-form.png), [site import](../design/mockups/site-import.png), [driver protective equipment](../design/mockups/driver-protective-equipment.png).
+
+![Site form: address suggestions, the pin moved by hand to the truck entrance, opening hours as a week, requirements, and the warning for a site 32 metres away.](../design/mockups/site-form.png){width=100%}
 
 ## Acceptance criteria
 
