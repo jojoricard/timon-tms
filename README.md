@@ -13,13 +13,13 @@ Timon helps a dispatcher plan drivers, tractors, rigid trucks and trailers, assi
 
 ## Status
 
-**Planning release in progress.** Scoping, visual identity, architecture and environments are decided and recorded in [`docs/`](docs/). The first feature is in: resources ([SPEC-001](docs/specs/0001-resources.md)). Drivers, power units and trailers with their capabilities and compliance documents, the status of each document on today's date, the expiries to renew, and a CSV import. It runs on Node with PostgreSQL and entirely in the browser.
+**Planning release in progress.** Scoping, visual identity, architecture and environments are decided and recorded in [`docs/`](docs/). Two features are in. Resources ([SPEC-001](docs/specs/0001-resources.md)): drivers, power units and trailers with their capabilities and compliance documents, the status of each document on today's date, the expiries to renew. Customers and sites ([SPEC-002](docs/specs/0002-customers-and-sites.md)): customers with their contacts, and an address book of sites located on the map, with opening hours and requirements. Both import from CSV, and everything runs on Node with PostgreSQL and entirely in the browser.
 
 | Phase               | Content                                                                                  | Status      |
 | ------------------- | ---------------------------------------------------------------------------------------- | ----------- |
 | 0. Scoping          | Vision, target, market, regulation, domain model, roadmap                                | Done        |
 | 1. Foundations      | Visual identity and design system, architecture and environments, code skeleton and CI   | Done        |
-| 2. Planning release | Reference data (resources done), units, orders, planning and conflicts, emissions report | In progress |
+| 2. Planning release | Reference data (resources, customers and sites done), units, orders, planning and conflicts, emissions report | In progress |
 | 3–5                 | Extended operations, driver app, customer portal                                         | Later       |
 
 **Demo:** [timon.agence-jri.com](https://timon.agence-jri.com). It runs entirely in your browser: the API and a PostgreSQL database (PGlite) live in a service worker, and your data stays on your machine.

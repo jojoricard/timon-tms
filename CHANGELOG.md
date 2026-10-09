@@ -13,11 +13,23 @@ All notable changes to this project are documented here. The format follows [Kee
 - Company lists seeded by migration: document types, body types, trade labels, capabilities
 - Demo data: the fleet of the mockups (18 drivers, 12 power units, 15 trailers), its deadlines moved to today's date
 - IBM Plex Sans and Mono, served with the application
+- SPEC-002 customers and sites, accepted (1.1), with the mockups of the six screens (`docs/design/mockups/`)
+- Customers (SPEC-002, #6): legal identity, SIRET checked (Luhn, La Poste rule) and unique among active customers, VAT number proposed from the SIREN, code unique with archived customers, billing address, contacts deleted for good when removed, usual sites
+- Sites, one address book for the company: address located by the IGN national address base, or by hand on a map (Leaflet, OpenStreetMap tiles), and how it was located; time zone from the country; opening hours per day, with nights over two days; booking, protective equipment, access limits, gate phone and instructions; a warning for an active site within 50 m or on the same street
+- Geocoding behind a port of the application, in a new `packages/geocoding` with the IGN adapter and a rate limiter under the service's 50 requests per second; a failed lookup saves the site as not located, so the demo works offline
+- CSV import of customers and of sites, all or nothing; French sites without coordinates are located during the preview, and a site that cannot be located is imported as not located
+- Protective equipment: a company list, required by sites, held by drivers (driver form and list)
+- Demo data: the customers and sites of the SPEC-002 mockups
 
 ### Changed
 
 - Resources is the home screen; the booking screen of the skeleton is gone (the booking API and its exclusion constraint stay)
 - Existing local and demo resources are cleared by migration 0002; `pnpm db:seed` writes the new demo haulier
+- ADR-002 1.2: `packages/geocoding` joins the packages; geocoding and the site map are recorded; truck routing and distances stay out of scope
+- The import screen is shared by resources, customers and sites
+- Lists open a record from anywhere on its row; the "Open" columns are gone, and the name in each row stays a link for the keyboard
+- Lists lay out their columns from fixed widths: columns stay in place across the resource tabs and while filtering, every row has the same height, and long French column titles take a second line
+- Forms: panels side by side line up (site form as two rows of two), contact Remove buttons sit level with the fields, document actions are centred in their row, and the file field of the imports reads as a drop zone
 
 ### Security
 
