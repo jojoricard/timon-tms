@@ -1,13 +1,21 @@
 import { plateKey, type ResourceBooking, Temporal } from '@timon/domain';
 import {
+  CustomerCodeTakenError,
+  type CustomerInput,
   DocumentTypeTakenError,
+  type Geocoder,
   type NewResource,
   PlateTakenError,
   type Ports,
   type ReferenceLists,
+  SiretTakenError,
+  type SiteRecord,
+  type StoredCustomer,
   type StoredDocument,
   type StoredResource,
+  type StoredSite,
 } from '../src/index.ts';
+import { createFakeGeocoder } from './fake-geocoder.ts';
 
 const type = (
   code: string,
@@ -46,14 +54,26 @@ export const lists: ReferenceLists = {
     code,
     name: null,
   })),
+  protectiveEquipment: [
+    'safety-shoes',
+    'high-visibility-vest',
+    'hard-hat',
+    'safety-glasses',
+    'gloves',
+  ].map((code) => ({ id: `pe-${code}`, code, name: null })),
 };
 
 /**
  * Ports kept in memory, with the database's guarantees: one active resource per plate, one
  * document per type. `now` fixes the clock.
  */
-export function memoryPorts(now = '2026-10-06T10:00:00Z') {
+export function memoryPorts(
+  now = '2026-10-06T10:00:00Z',
+  geocoder: Geocoder = createFakeGeocoder(() => []),
+) {
   const resources: StoredResource[] = [];
+  const customers: StoredCustomer[] = [];
+  const sites: StoredSite[] = [];
   const bookings: ResourceBooking[] = [];
   let next = 0;
   const id = (prefix: string) => `${prefix}-${++next}`;
@@ -95,8 +115,122 @@ export function memoryPorts(now = '2026-10-06T10:00:00Z') {
     if (resource) replace({ ...resource, documents: change([...resource.documents]) });
   };
 
+  // Customers: a code is never reused, a SIRET is unique among active customers.
+  const customerConflict = (candidate: StoredCustomer) => {
+    const others = customers.filter((c) => c.id !== candidate.id);
+    if (others.some((c) => c.code === candidate.code)) return new CustomerCodeTakenError();
+    if (
+      candidate.siret &&
+      !candidate.archived &&
+      others.some((c) => !c.archived && c.siret === candidate.siret)
+    ) {
+      return new SiretTakenError();
+    }
+    return undefined;
+  };
+  const buildCustomer = (input: CustomerInput, existing?: StoredCustomer): StoredCustomer => ({
+    ...input,
+    id: existing?.id ?? id('customer'),
+    archived: existing?.archived ?? false,
+    createdAt: existing?.createdAt ?? at,
+    updatedAt: at,
+    contacts: input.contacts.map((c) => ({ ...c, id: c.id ?? id('contact') })),
+  });
+  const withCustomerIds = (site: StoredSite): StoredSite => ({
+    ...site,
+    customerIds: customers.filter((c) => c.siteIds.includes(site.id)).map((c) => c.id),
+  });
+  const buildSite = (record: SiteRecord, existing?: StoredSite): StoredSite => ({
+    ...record,
+    id: existing?.id ?? id('site'),
+    archived: existing?.archived ?? false,
+    createdAt: existing?.createdAt ?? at,
+    updatedAt: at,
+    customerIds: [],
+  });
+
   const ports: Ports = {
     clock: { now: () => at },
+    geocoder,
+    customers: {
+      list: async ({ includeArchived }) => customers.filter((c) => includeArchived || !c.archived),
+      get: async (customerId) => customers.find((c) => c.id === customerId),
+      findByCode: async (code, exceptId) =>
+        customers.find((c) => c.code === code && c.id !== exceptId),
+      findActiveBySiret: async (siret, exceptId) =>
+        customers.find((c) => !c.archived && c.siret === siret && c.id !== exceptId),
+      create: async (input) => {
+        const created = buildCustomer(input);
+        const conflict = customerConflict(created);
+        if (conflict) throw conflict;
+        customers.push(created);
+        return created;
+      },
+      createMany: async (inputs) => {
+        const before = customers.length;
+        for (const input of inputs) {
+          const created = buildCustomer(input);
+          const conflict = customerConflict(created);
+          if (conflict) {
+            customers.length = before;
+            throw conflict;
+          }
+          customers.push(created);
+        }
+        return inputs.length;
+      },
+      update: async (customerId, input) => {
+        const index = customers.findIndex((c) => c.id === customerId);
+        const existing = customers[index];
+        if (!existing) return undefined;
+        const updated = buildCustomer(input, existing);
+        const conflict = customerConflict(updated);
+        if (conflict) throw conflict;
+        customers[index] = updated;
+        return updated;
+      },
+      setArchived: async (customerId, archived) => {
+        const index = customers.findIndex((c) => c.id === customerId);
+        const existing = customers[index];
+        if (!existing) return undefined;
+        const updated = { ...existing, archived };
+        const conflict = customerConflict(updated);
+        if (conflict) throw conflict;
+        customers[index] = updated;
+        return updated;
+      },
+    },
+    sites: {
+      list: async ({ includeArchived }) =>
+        sites.filter((s) => includeArchived || !s.archived).map(withCustomerIds),
+      get: async (siteId) => {
+        const site = sites.find((s) => s.id === siteId);
+        return site ? withCustomerIds(site) : undefined;
+      },
+      create: async (record) => {
+        const created = buildSite(record);
+        sites.push(created);
+        return withCustomerIds(created);
+      },
+      createMany: async (records) => {
+        for (const record of records) sites.push(buildSite(record));
+        return records.length;
+      },
+      update: async (siteId, record) => {
+        const index = sites.findIndex((s) => s.id === siteId);
+        const existing = sites[index];
+        if (!existing) return undefined;
+        sites[index] = buildSite(record, existing);
+        return withCustomerIds(sites[index]);
+      },
+      setArchived: async (siteId, archived) => {
+        const index = sites.findIndex((s) => s.id === siteId);
+        const existing = sites[index];
+        if (!existing) return undefined;
+        sites[index] = { ...existing, archived };
+        return withCustomerIds(sites[index]);
+      },
+    },
     referenceLists: { get: async () => lists },
     resources: {
       list: async ({ kind, includeArchived }) =>
@@ -177,5 +311,5 @@ export function memoryPorts(now = '2026-10-06T10:00:00Z') {
       },
     },
   };
-  return { ports, resources, bookings };
+  return { ports, resources, bookings, customers, sites };
 }

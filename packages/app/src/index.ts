@@ -1,4 +1,29 @@
 export { type CreateBookingResult, createBooking, listBookings } from './bookings.ts';
+export { type CsvColumn, importLimits as csvLimits, readCsv } from './csv.ts';
+export {
+  type CustomerImportCheck,
+  type CustomerImportIssue,
+  type CustomerImportResult,
+  type CustomerImportRow,
+  checkCustomerImport,
+  customerColumns,
+  customerTemplate,
+  importCustomers,
+} from './customer-import.ts';
+export {
+  type CountryFilter,
+  type CustomerList,
+  type CustomerOwner,
+  type CustomerResult,
+  type CustomerView,
+  countryFilters,
+  createCustomer,
+  customerSummary,
+  getCustomer,
+  listCustomers,
+  setCustomerArchived,
+  updateCustomer,
+} from './customers.ts';
 export {
   addDocument,
   type DocumentResult,
@@ -6,6 +31,17 @@ export {
   updateDocument,
 } from './documents.ts';
 export { type Expiry, type ExpiryList, listExpiries } from './expiries.ts';
+export {
+  type GeocodeCandidate,
+  type GeocodeOptions,
+  type GeocodePrecision,
+  type Geocoder,
+  GeocoderUnavailableError,
+  geocodedCountries,
+  locateAddress,
+  suggestAddresses,
+  suggestionLimits,
+} from './geocoding.ts';
 export {
   checkImport,
   type FileProblem,
@@ -22,6 +58,10 @@ export {
   BookingOverlapError,
   type BookingRepository,
   type Clock,
+  type ContactInput,
+  CustomerCodeTakenError,
+  type CustomerInput,
+  type CustomerRepository,
   type DocumentRepository,
   type DocumentType,
   DocumentTypeTakenError,
@@ -29,13 +69,20 @@ export {
   type NewBooking,
   type NewDocument,
   type NewResource,
+  OpeningOverlapError,
   PlateTakenError,
   type Ports,
   type ReferenceListRepository,
   type ReferenceLists,
   type ResourceRepository,
+  SiretTakenError,
+  type SiteRecord,
+  type SiteRepository,
+  type StoredContact,
+  type StoredCustomer,
   type StoredDocument,
   type StoredResource,
+  type StoredSite,
 } from './ports.ts';
 export {
   createResource,
@@ -52,4 +99,29 @@ export {
   statusFilters,
   updateResource,
 } from './resources.ts';
+export {
+  acceptPreviewLocation,
+  checkSiteImport,
+  importSites,
+  type PreviewLocation,
+  type SiteImportCheck,
+  type SiteImportResult,
+  type SiteImportRow,
+  siteColumns,
+  siteTemplate,
+} from './site-import.ts';
+export {
+  createSite,
+  findNearbySites,
+  getSite,
+  listSites,
+  type NearbySite,
+  type SiteFilter,
+  type SiteList,
+  type SiteResult,
+  type SiteView,
+  setSiteArchived,
+  siteFilters,
+  updateSite,
+} from './sites.ts';
 export type { DocumentView, ResourceView } from './views.ts';

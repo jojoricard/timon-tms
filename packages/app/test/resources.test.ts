@@ -21,6 +21,7 @@ const driver = (lastName: string, firstName = 'Test'): Driver => ({
   displayName: '',
   employeeNumber: null,
   phone: null,
+  protectiveEquipmentIds: [],
 });
 
 const tractor = (plate: string): Vehicle => ({
