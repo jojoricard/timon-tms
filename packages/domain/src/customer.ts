@@ -26,8 +26,19 @@ export type CustomerDetails = {
   readonly siteIds: readonly string[];
 };
 
-// Enough to catch a typo, not a validation of the address itself.
-const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+/**
+ * Something before a single @, then a domain with a dot inside it, and no space: enough to catch
+ * a typo, not a validation of the address itself. Plain string checks rather than a pattern, so a
+ * long cell of an imported file cannot make the check backtrack.
+ */
+function looksLikeEmail(value: string): boolean {
+  if (/\s/.test(value)) return false;
+  const at = value.indexOf('@');
+  if (at < 1 || at !== value.lastIndexOf('@')) return false;
+  const domain = value.slice(at + 1);
+  const dot = domain.indexOf('.', 1);
+  return dot > 0 && dot < domain.length - 1;
+}
 
 /** Rule 3: a contact has a name and can be reached, by phone or by email. */
 export function checkContact(contact: ContactDetails, index: number): Issue[] {
@@ -36,7 +47,7 @@ export function checkContact(contact: ContactDetails, index: number): Issue[] {
   if (blank(contact.phone) && blank(contact.email)) {
     issues.push({ field: `contacts.${index}`, code: 'contact-unreachable' });
   }
-  if (!blank(contact.email) && !emailPattern.test(contact.email?.trim() ?? '')) {
+  if (!blank(contact.email) && !looksLikeEmail(contact.email?.trim() ?? '')) {
     issues.push({ field: `contacts.${index}.email`, code: 'email-invalid' });
   }
   return issues;

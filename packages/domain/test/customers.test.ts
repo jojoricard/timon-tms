@@ -43,6 +43,24 @@ describe('checkCustomer', () => {
     expect(codes({ ...customer, contacts })).toEqual(['contacts.1:contact-unreachable']);
   });
 
+  it('checks the shape of an email, quickly whatever its length', () => {
+    const withEmail = (email: string) => ({
+      ...customer,
+      contacts: [{ name: 'Sandrine Dupont', role: null, phone: null, email }],
+    });
+    for (const email of ['s.dupont@dupont-materiaux.fr', 'a@b.co', 'x@sub.domain.fr']) {
+      expect(codes(withEmail(email))).toEqual([]);
+    }
+    for (const email of ['dupont', '@b.fr', 'a@b', 'a@.fr', 'a@b.', 'a@b@c.fr', 'a b@c.fr']) {
+      expect(codes(withEmail(email))).toEqual(['contacts.0.email:email-invalid']);
+    }
+    const start = Date.now();
+    expect(codes(withEmail(`!@!.${'!.'.repeat(50_000)}@`))).toEqual([
+      'contacts.0.email:email-invalid',
+    ]);
+    expect(Date.now() - start).toBeLessThan(100);
+  });
+
   it('wants a name, a code in capitals and a known country', () => {
     expect(codes({ ...customer, name: ' ', code: 'dupont mat', country: 'XX' })).toEqual([
       'name:required',
