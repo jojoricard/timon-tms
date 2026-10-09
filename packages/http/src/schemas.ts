@@ -77,6 +77,7 @@ export const ReferenceLists = z
     bodyTypes: z.array(ListItem),
     tradeLabels: z.array(ListItem),
     capabilities: z.array(ListItem),
+    protectiveEquipment: z.array(ListItem),
   })
   .openapi('ReferenceLists');
 
@@ -119,6 +120,7 @@ export const Resource = z
     bodyTypeId: z.uuid().nullable(),
     tradeLabelId: z.uuid().nullable(),
     capabilityIds: z.array(z.uuid()),
+    protectiveEquipmentIds: z.array(z.uuid()),
     documents: z.array(Document),
     severity: Severity,
     nextExpiry: Document.nullable(),
@@ -151,6 +153,7 @@ export const DriverInput = z.object({
   displayName: optionalText,
   employeeNumber: optionalText,
   phone: optionalText,
+  protectiveEquipmentIds: z.array(z.uuid()).max(20).optional(),
 });
 
 const vehicleInput = {

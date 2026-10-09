@@ -1,5 +1,5 @@
 import { createRepositories } from '@timon/db';
-import { createTestDatabase, type TestDatabase } from '@timon/db/testing';
+import { createTestDatabase, offline, type TestDatabase } from '@timon/db/testing';
 import { createApp } from '@timon/http';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
@@ -10,7 +10,7 @@ let resourceId: string;
 
 beforeAll(async () => {
   database = await createTestDatabase();
-  app = createApp(createRepositories(database.db));
+  app = createApp({ ...createRepositories(database.db), geocoder: offline });
   const response = await app.request('/api/resources', {
     method: 'POST',
     headers: { 'content-type': 'application/json' },
