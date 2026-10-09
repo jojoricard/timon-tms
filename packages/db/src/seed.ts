@@ -11,7 +11,8 @@ import {
 import { count } from 'drizzle-orm';
 import type { Database } from './database.ts';
 import { createRepositories } from './repositories.ts';
-import { documentType, resource } from './schema.ts';
+import { customer, documentType, resource } from './schema.ts';
+import { moreauEquipment, seedCustomers } from './seed-customers.ts';
 
 // The haulier of the mockups, south of Lyon: 18 drivers, 12 power units, 15 trailers. Dates
 // are written as on the mockups, dated Tuesday 6 October 2026, and moved by as many days as
@@ -344,6 +345,8 @@ function build(lists: ReferenceLists, shift: number) {
       displayName: defaultDisplayName(d.first, d.last),
       employeeNumber: `E-${1001 + index}`,
       phone: `06 12 34 ${20 + index} ${40 + index}`,
+      // Samuel Moreau holds three of the five items on the driver mockup of SPEC-002.
+      protectiveEquipmentIds: d.last === 'Moreau' ? moreauEquipment : [],
     };
     return {
       details,
@@ -381,32 +384,37 @@ function build(lists: ReferenceLists, shift: number) {
 }
 
 /**
- * Writes the demo haulier. Does nothing if resources already exist, so it is safe to run at
- * every start of the demo.
+ * Writes the demo haulier: resources, then customers and sites. Each part is skipped when it
+ * already exists, so it is safe to run at every start of the demo, and on a database seeded
+ * before customers existed.
  */
 export async function seed(
   db: Database,
   today = companyDay(Temporal.Now.instant()),
 ): Promise<boolean> {
-  const [existing] = await db.select({ n: count() }).from(resource);
-  if ((existing?.n ?? 0) > 0) return false;
-
-  // A list entry of this company, not one Timon provides: it has a name, not a code.
-  await db
-    .insert(documentType)
-    .values({
-      id: insuranceTypeId,
-      companyId,
-      name: "Attestation d'assurance",
-      appliesTo: ['power-unit', 'trailer'],
-      blocking: false,
-      warnDays: 30,
-      sortOrder: 100,
-    })
-    .onConflictDoNothing();
-
   const repositories = createRepositories(db);
-  const lists = await repositories.referenceLists.get();
-  await repositories.resources.createMany(build(lists, mockupDay.until(today).days));
-  return true;
+  const [resources] = await db.select({ n: count() }).from(resource);
+  const [customers] = await db.select({ n: count() }).from(customer);
+  const writeResources = (resources?.n ?? 0) === 0;
+  const writeCustomers = (customers?.n ?? 0) === 0;
+
+  if (writeResources) {
+    // A list entry of this company, not one Timon provides: it has a name, not a code.
+    await db
+      .insert(documentType)
+      .values({
+        id: insuranceTypeId,
+        companyId,
+        name: "Attestation d'assurance",
+        appliesTo: ['power-unit', 'trailer'],
+        blocking: false,
+        warnDays: 30,
+        sortOrder: 100,
+      })
+      .onConflictDoNothing();
+    const lists = await repositories.referenceLists.get();
+    await repositories.resources.createMany(build(lists, mockupDay.until(today).days));
+  }
+  if (writeCustomers) await seedCustomers(repositories);
+  return writeResources || writeCustomers;
 }
