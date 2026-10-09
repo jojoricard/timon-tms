@@ -14,6 +14,11 @@ import {
 import { Banner } from '@timon/ui';
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
+import { CustomerPage } from './customers/customer-page.tsx';
+import { CustomersPage } from './customers/customers-page.tsx';
+import { CustomerImportPage, SiteImportPage } from './customers/import-pages.tsx';
+import { SitePage } from './customers/site-page.tsx';
+import { SitesPage } from './customers/sites-page.tsx';
 import { kindFromSlug } from './kinds.ts';
 import { LanguageSwitch } from './language-switch.tsx';
 import { m } from './paraglide/messages.js';
@@ -22,20 +27,35 @@ import { ExpiriesPage } from './resources/expiries-page.tsx';
 import { ImportPage } from './resources/import-page.tsx';
 import { ListPage } from './resources/list-page.tsx';
 import { ResourcePage } from './resources/resource-page.tsx';
+import { followRowLinks } from './row-links.ts';
 
-/** The section link stays current on every page under /resources. */
-function ResourcesLink() {
+/** A section link stays current on every page under its path. */
+function SectionLinks() {
   const path = useRouterState({ select: (state) => state.location.pathname });
   return (
-    <Link
-      to="/resources/$kind"
-      params={{ kind: 'drivers' }}
-      className="appbar-link"
-      activeOptions={{ exact: true }}
-      aria-current={path.startsWith('/resources') ? 'page' : undefined}
-    >
-      {m.nav_resources()}
-    </Link>
+    <>
+      <li>
+        <Link
+          to="/resources/$kind"
+          params={{ kind: 'drivers' }}
+          className="appbar-link"
+          activeOptions={{ exact: true }}
+          aria-current={path.startsWith('/resources') ? 'page' : undefined}
+        >
+          {m.nav_resources()}
+        </Link>
+      </li>
+      <li>
+        <Link
+          to="/customers"
+          className="appbar-link"
+          activeOptions={{ exact: true }}
+          aria-current={path.startsWith('/customers') ? 'page' : undefined}
+        >
+          {m.nav_customers()}
+        </Link>
+      </li>
+    </>
   );
 }
 
@@ -46,9 +66,7 @@ const rootRoute = createRootRoute({
         <span className="wordmark">Timon</span>
         <nav aria-label={m.nav_main()}>
           <ul className="appbar-nav">
-            <li>
-              <ResourcesLink />
-            </li>
+            <SectionLinks />
           </ul>
         </nav>
         <LanguageSwitch />
@@ -127,6 +145,88 @@ const resourceRoute = createRoute({
   },
 });
 
+const count = (value: unknown) => {
+  const n = Number(value);
+  return Number.isInteger(n) && n >= 0 ? n : undefined;
+};
+
+const customersRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/customers',
+  validateSearch: (search: Record<string, unknown>): { imported?: number } => {
+    const imported = count(search.imported);
+    return imported ? { imported } : {};
+  },
+  component: function Customers() {
+    const { imported } = customersRoute.useSearch();
+    return <CustomersPage imported={imported} />;
+  },
+});
+
+const newCustomerRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/customers/new',
+  component: () => <CustomerPage />,
+});
+
+const customerImportRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/customers/import',
+  component: CustomerImportPage,
+});
+
+const sitesRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/customers/sites',
+  validateSearch: (search: Record<string, unknown>): { imported?: number; notLocated?: number } => {
+    const imported = count(search.imported);
+    return imported ? { imported, notLocated: count(search.notLocated) ?? 0 } : {};
+  },
+  component: function Sites() {
+    const { imported, notLocated } = sitesRoute.useSearch();
+    return (
+      <SitesPage
+        imported={imported ? { count: imported, notLocated: notLocated ?? 0 } : undefined}
+      />
+    );
+  },
+});
+
+const newSiteRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/customers/sites/new',
+  validateSearch: (search: Record<string, unknown>): { customer?: string } =>
+    typeof search.customer === 'string' ? { customer: search.customer } : {},
+  component: function NewSite() {
+    const { customer } = newSiteRoute.useSearch();
+    return <SitePage customerId={customer} />;
+  },
+});
+
+const siteImportRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/customers/sites/import',
+  component: SiteImportPage,
+});
+
+const siteRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/customers/sites/$id',
+  component: function Site() {
+    const { id } = siteRoute.useParams();
+    return <SitePage key={id} id={id} />;
+  },
+});
+
+const customerRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/customers/$id',
+  component: function Customer() {
+    const { id } = customerRoute.useParams();
+    return <CustomerPage key={id} id={id} />;
+  },
+});
+
 const router = createRouter({
   routeTree: rootRoute.addChildren([
     indexRoute,
@@ -135,6 +235,14 @@ const router = createRouter({
     newRoute,
     importRoute,
     resourceRoute,
+    customersRoute,
+    newCustomerRoute,
+    customerImportRoute,
+    sitesRoute,
+    newSiteRoute,
+    siteImportRoute,
+    siteRoute,
+    customerRoute,
   ]),
 });
 
@@ -149,6 +257,7 @@ export function mount(element: HTMLElement) {
   // One retry: the demo's service worker restarts its database on the next request.
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: 1 } } });
   document.documentElement.lang = getLocale();
+  followRowLinks(element);
   createRoot(element).render(
     <StrictMode>
       <QueryClientProvider client={queryClient}>

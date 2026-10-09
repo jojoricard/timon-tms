@@ -94,6 +94,7 @@ describe('checkDriver', () => {
       displayName: 'K.',
       employeeNumber: null,
       phone: null,
+      protectiveEquipmentIds: [],
     } as const;
     expect(checkDriver(driver)).toEqual([{ field: 'lastName', code: 'required' }]);
   });

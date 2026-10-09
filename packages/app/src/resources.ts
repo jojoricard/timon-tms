@@ -11,6 +11,7 @@ import {
   type VehicleKind,
 } from '@timon/domain';
 import { PlateTakenError, type Ports, type ReferenceLists, type StoredResource } from './ports.ts';
+import { searchable } from './search.ts';
 import { type ResourceView, resourceView, statusDay } from './views.ts';
 
 /** An issue with one input: the rules of the domain, plus what only the application knows. */
@@ -65,6 +66,7 @@ export function normalise(details: ResourceDetails): ResourceDetails {
       displayName: clean(details.displayName) ?? defaultDisplayName(firstName, lastName),
       employeeNumber: clean(details.employeeNumber),
       phone: clean(details.phone),
+      protectiveEquipmentIds: [...new Set(details.protectiveEquipmentIds)],
     };
   }
   return {
@@ -78,8 +80,13 @@ export function normalise(details: ResourceDetails): ResourceDetails {
 /** The domain's rules, and that every list entry exists. */
 export function checkDetails(details: ResourceDetails, lists: ReferenceLists): FieldIssue[] {
   const issues: FieldIssue[] = [...checkResource(details)];
-  if (details.kind === 'driver') return issues;
   const known = (items: ReferenceLists['bodyTypes'], id: string) => items.some((i) => i.id === id);
+  if (details.kind === 'driver') {
+    if (details.protectiveEquipmentIds.some((id) => !known(lists.protectiveEquipment, id))) {
+      issues.push({ field: 'protectiveEquipmentIds', code: 'unknown-value' });
+    }
+    return issues;
+  }
   if (details.bodyTypeId && !known(lists.bodyTypes, details.bodyTypeId)) {
     issues.push({ field: 'bodyTypeId', code: 'unknown-value' });
   }
@@ -170,12 +177,6 @@ export async function setArchived(
     throw error;
   }
 }
-
-const searchable = (text: string) =>
-  text
-    .normalize('NFD')
-    .replace(/\p{Diacritic}/gu, '')
-    .toLowerCase();
 
 function matches(resource: StoredResource, query: string): boolean {
   const words =

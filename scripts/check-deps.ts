@@ -13,12 +13,14 @@ const allowed: Record<string, string[]> = {
   '@timon/app': ['@timon/domain'],
   '@timon/db': ['@timon/app', '@timon/domain'],
   '@timon/http': ['@timon/app', '@timon/domain'],
+  // Adapters to outside services, behind ports of app: the IGN geocoder (ADR-002 1.2).
+  '@timon/geocoding': ['@timon/app'],
   '@timon/ui': [],
   // The web app reads the API's types through the typed client, never its code.
   '@timon/web': ['@timon/ui', '@timon/domain', 'type:@timon/http'],
-  '@timon/api': ['@timon/http', '@timon/db'],
+  '@timon/api': ['@timon/http', '@timon/db', '@timon/geocoding'],
   // The demo shell mounts the web app once its service worker answers /api.
-  '@timon/demo': ['@timon/http', '@timon/db', '@timon/web'],
+  '@timon/demo': ['@timon/http', '@timon/db', '@timon/geocoding', '@timon/web'],
 };
 
 // Only the Node entry may use Node; db's test support is never bundled.

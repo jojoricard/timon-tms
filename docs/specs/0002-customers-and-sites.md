@@ -2,7 +2,7 @@
 title: "Customers and sites"
 subtitle: "Functional specification"
 reference: TIMON-SPEC-002
-version: "1.0"
+version: "1.1"
 date: "October 8, 2026"
 status: "Accepted"
 ---
@@ -106,7 +106,7 @@ The screens follow the design system and are in French and English from the firs
 2. **Given** an active customer with SIRET 404 833 048 00014, **when** I create another customer with the same SIRET, **then** the form refuses it and names the existing customer.
 3. **Given** a customer coded "DUPONT-IDF", archived, **when** I create a customer coded "dupont-idf", **then** the form refuses the code.
 4. **Given** a contact with a name only, **when** I save the customer, **then** the form asks for a phone or an email.
-5. **Given** a site in France, **when** I type "1 avenue de l'Europe 78140 Vélizy" and choose the suggestion, **then** street, postcode, city and location are filled and the site is located by *address*.
+5. **Given** a site in France, **when** I type "2 avenue de l'Europe 78140 Vélizy-Villacoublay" and choose the suggestion, **then** street, postcode, city and location are filled and the site is located by *address*.
 6. **Given** a site in Germany, **when** I place the pin on the map and save, **then** the site is located *by hand* and its time zone is Europe/Berlin.
 7. **Given** the geocoding service cannot be reached, **when** I save a French site, **then** it is saved as *not located* and appears under the "not located" filter.
 8. **Given** an active site, **when** I create another site 30 metres away, **then** a warning names the first site and I can still save.

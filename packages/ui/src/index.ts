@@ -15,3 +15,4 @@ export {
   type Tone,
 } from './controls.tsx';
 export { Field } from './field.tsx';
+export { Columns } from './table.tsx';

@@ -1,6 +1,6 @@
 // biome-ignore-all lint/suspicious/noExplicitAny: response bodies are read loosely in these tests.
 import { createRepositories } from '@timon/db';
-import { createTestDatabase, type TestDatabase } from '@timon/db/testing';
+import { createTestDatabase, offline, type TestDatabase } from '@timon/db/testing';
 import { createApp } from '@timon/http';
 import { Temporal } from 'temporal-polyfill';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
@@ -14,7 +14,7 @@ let now = Temporal.Instant.from('2026-10-06T10:00:00Z');
 
 beforeAll(async () => {
   database = await createTestDatabase();
-  app = createApp(createRepositories(database.db, { now: () => now }));
+  app = createApp({ ...createRepositories(database.db, { now: () => now }), geocoder: offline });
 });
 
 afterAll(() => database.close());

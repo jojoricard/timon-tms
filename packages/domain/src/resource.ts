@@ -19,6 +19,8 @@ export type Driver = {
   readonly displayName: string;
   readonly employeeNumber: string | null;
   readonly phone: string | null;
+  /** Held or not, no dates; compared with what a site requires when a trip is planned (#9). */
+  readonly protectiveEquipmentIds: readonly string[];
 };
 
 export type Vehicle = {

@@ -8,8 +8,8 @@ import {
   vehicleCategories,
   vehicleKinds,
 } from '@timon/domain';
-import Papa from 'papaparse';
-import { type ImportColumn, importColumns, simplify, valueAliases } from './import-format.ts';
+import { type FileProblem, importLimits, readCsv, simplify } from './csv.ts';
+import { type ImportColumn, importColumns, valueAliases } from './import-format.ts';
 import {
   type ListItem,
   type NewDocument,
@@ -26,8 +26,7 @@ import {
   plateOwner,
 } from './resources.ts';
 
-/** Larger files are refused before they are read. */
-export const importLimits = { maxBytes: 1_000_000, maxLines: 2_000 } as const;
+export { type FileProblem, importLimits };
 
 export type ImportIssue =
   | FieldIssue
@@ -50,12 +49,6 @@ export type ImportRow = {
   readonly issues: readonly ImportIssue[];
   readonly documents: number;
 };
-
-export type FileProblem =
-  | { readonly code: 'too-large'; readonly params: { maxBytes: number } }
-  | { readonly code: 'too-many-lines'; readonly params: { maxLines: number } }
-  | { readonly code: 'empty' }
-  | { readonly code: 'missing-columns'; readonly params: { fields: readonly string[] } };
 
 export type ImportCheck = {
   readonly kind: ResourceKind;
@@ -204,6 +197,7 @@ function parseRow(
             displayName: (values.displayName as string | null) ?? '',
             employeeNumber: values.employeeNumber as string | null,
             phone: values.phone as string | null,
+            protectiveEquipmentIds: [],
           }
         : {
             kind,
@@ -238,56 +232,11 @@ async function parse(
   kind: ResourceKind,
   csv: string,
 ): Promise<{ check: ImportCheck; resources: NewResource[] }> {
-  if (new TextEncoder().encode(csv).byteLength > importLimits.maxBytes) {
-    return {
-      check: empty(kind, { code: 'too-large', params: { maxBytes: importLimits.maxBytes } }),
-      resources: [],
-    };
-  }
-  const { data } = Papa.parse<string[]>(csv.replace(/^﻿/, ''), {
-    delimiter: '',
-    delimitersToGuess: [';', ',', '\t'],
-    skipEmptyLines: false,
-  });
-  const [header = [], ...lines] = data;
-  const filled = lines
-    .map((cells, index) => ({ cells, line: index + 2 }))
-    .filter(({ cells }) => cells.some((cell) => cell.trim() !== ''));
-  if (filled.length === 0) return { check: empty(kind, { code: 'empty' }), resources: [] };
-  if (filled.length > importLimits.maxLines) {
-    return {
-      check: empty(kind, { code: 'too-many-lines', params: { maxLines: importLimits.maxLines } }),
-      resources: [],
-    };
-  }
-
-  const columns = importColumns[kind];
-  const positions = new Map<string, number>();
-  header.forEach((title, index) => {
-    const column = columns.find((c) =>
-      [c.en, c.fr, c.field].some((name) => simplify(name) === simplify(title)),
-    );
-    if (column && !positions.has(column.field)) positions.set(column.field, index);
-  });
-  const missing = columns.filter((c) => c.required && !positions.has(c.field)).map((c) => c.field);
-  if (missing.length > 0) {
-    return {
-      check: empty(kind, { code: 'missing-columns', params: { fields: missing } }),
-      resources: [],
-    };
-  }
+  const read = readCsv(csv, importColumns[kind]);
+  if ('problem' in read) return { check: empty(kind, read.problem), resources: [] };
 
   const lists = await ports.referenceLists.get();
-  const rows = filled.map(({ cells, line }) =>
-    parseRow(
-      kind,
-      line,
-      Object.fromEntries(
-        [...positions].map(([field, index]) => [field, (cells[index] ?? '').trim()]),
-      ),
-      lists,
-    ),
-  );
+  const rows = read.lines.map(({ cells, line }) => parseRow(kind, line, { ...cells }, lists));
 
   // Rule 1, within the file and against the resources already in Timon.
   let alreadyInTimon = 0;

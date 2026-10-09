@@ -56,6 +56,7 @@ export function toResource(r: ResourceView): z.infer<typeof Resource> {
     bodyTypeId: vehicle?.bodyTypeId ?? null,
     tradeLabelId: vehicle?.tradeLabelId ?? null,
     capabilityIds: [...(vehicle?.capabilityIds ?? [])],
+    protectiveEquipmentIds: [...(driver?.protectiveEquipmentIds ?? [])],
     documents: r.documents.map(toDocument),
     severity: r.severity,
     nextExpiry: r.nextExpiry ? toDocument(r.nextExpiry) : null,
@@ -83,6 +84,7 @@ export function fromInput(input: z.infer<typeof ResourceInput>): ResourceDetails
       displayName: input.displayName ?? '',
       employeeNumber: input.employeeNumber ?? null,
       phone: input.phone ?? null,
+      protectiveEquipmentIds: input.protectiveEquipmentIds ?? [],
     };
   }
   return {

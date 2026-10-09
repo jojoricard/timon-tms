@@ -3,6 +3,7 @@
 // visitor's IndexedDB, with the same migrations and the same demo haulier.
 import { PGlite } from '@electric-sql/pglite';
 import { createRepositories, migrate, schema, seed } from '@timon/db';
+import { createIgnGeocoder } from '@timon/geocoding';
 import { createApp } from '@timon/http';
 import { drizzle } from 'drizzle-orm/pglite';
 import { btree_gist } from './btree-gist.ts';
@@ -16,7 +17,8 @@ async function start() {
   const db = drizzle({ client, schema });
   await migrate(db);
   await seed(db);
-  return createApp(createRepositories(db));
+  // Online, addresses are located by the IGN; offline, sites are saved as not located.
+  return createApp({ ...createRepositories(db), geocoder: createIgnGeocoder() });
 }
 
 self.addEventListener('install', () => void self.skipWaiting());

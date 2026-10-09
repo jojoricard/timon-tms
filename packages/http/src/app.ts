@@ -22,6 +22,7 @@ import {
 } from '@timon/app';
 import { periodOf, type ResourceBooking } from '@timon/domain';
 import { bodyLimit } from 'hono/body-limit';
+import { customerApi } from './customer-routes.ts';
 import {
   Booking,
   DocumentInput,
@@ -42,6 +43,7 @@ import {
   ResourceSummary,
 } from './schemas.ts';
 import { fromDocumentInput, fromInput, toExpiry, toImportCheck, toResource } from './to-json.ts';
+import { validationHook } from './validation.ts';
 
 const json = <T extends z.ZodType>(schema: T, description: string) => ({
   content: { 'application/json': { schema } },
@@ -233,19 +235,15 @@ const importBodyLimit = bodyLimit({
  */
 export function createApp(ports: Ports) {
   const app = new OpenAPIHono({
-    defaultHook: (result, c) => {
-      if (!result.success) {
-        return c.json(
-          { error: 'invalid-request' as const, message: z.prettifyError(result.error) },
-          400,
-        );
-      }
-    },
+    defaultHook: validationHook,
   }).basePath('/api');
 
   app.use('/imports/*', importBodyLimit);
 
+  // Customers and sites first: their /imports/customers and /imports/sites come before the
+  // /imports/{kind} of resources.
   const api = app
+    .route('/', customerApi(ports))
     .openapi(routes.summary, async (c) => {
       const { day, active, expiries } = await resourceSummary(ports);
       return c.json({ day: day.toString(), active, expiries }, 200);
@@ -341,6 +339,7 @@ export function createApp(ports: Ports) {
           bodyTypes: [...lists.bodyTypes],
           tradeLabels: [...lists.tradeLabels],
           capabilities: [...lists.capabilities],
+          protectiveEquipment: [...lists.protectiveEquipment],
         },
         200,
       );

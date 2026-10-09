@@ -88,15 +88,7 @@ export const importColumns: Record<ResourceKind, readonly ImportColumn[]> = {
   trailer: vehicleColumns(false),
 };
 
-/** Lower case, no accents, words joined by single spaces. */
-export function simplify(value: string): string {
-  return value
-    .normalize('NFD')
-    .replace(/\p{Diacritic}/gu, '')
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, ' ')
-    .trim();
-}
+export { simplify } from './csv.ts';
 
 // Values accepted for the coded lists, besides the code itself.
 export const valueAliases: Record<string, readonly string[]> = {

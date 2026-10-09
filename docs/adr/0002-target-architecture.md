@@ -2,8 +2,8 @@
 title: "Target architecture"
 subtitle: "Architecture decision record"
 reference: TIMON-ADR-002
-version: "1.1"
-date: "October 6, 2026"
+version: "1.2"
+date: "October 8, 2026"
 status: "Accepted"
 ---
 
@@ -50,10 +50,11 @@ The demo constraint decides most of it: the API and the database must also run i
 | `packages/app` | Use cases and the ports they need | `domain` |
 | `packages/db` | Drizzle schema, migrations, repositories | `app`, `domain` |
 | `packages/http` | Hono routes, Zod schemas, OpenAPI | `app`, `domain` |
+| `packages/geocoding` | Adapters to outside services, behind ports of `app`: the IGN geocoder | `app` |
 | `packages/ui` | React components on the design tokens | nothing |
 | `apps/web` | React app (Vite, TanStack, dnd-kit); checks a drop with `domain` | `ui`, `domain`; types only from `http`, for the typed API client |
-| `apps/api` | Node entry: Hono, `node-postgres`, authentication | `http`, `db` |
-| `apps/demo` | Service worker: the same Hono app, PGlite, demo data | `http`, `db`, `web` to mount the interface |
+| `apps/api` | Node entry: Hono, `node-postgres`, authentication | `http`, `db`, `geocoding` |
+| `apps/demo` | Service worker: the same Hono app, PGlite, demo data | `http`, `db`, `geocoding`, `web` to mount the interface |
 
 Supporting choices:
 
@@ -63,6 +64,8 @@ Supporting choices:
 - **Dates:** periods stored as `tstzrange`, handled with the Temporal API. Chrome, Firefox and Node 26 ship it; a polyfill covers Safari and Node 24 in the meantime.
 - **Interface languages:** Paraglide JS, messages compiled to typed functions. Paraglide falls back to English when a French message is missing, so a CI check compares the two message files and fails on any gap.
 - **Styling:** CSS variables generated from `docs/design/tokens.json`; no CSS framework, the design system already defines the scale.
+- **Geocoding:** the national address base, served by the IGN Géoplateforme (`data.geopf.fr/geocodage`): no key, open to any origin, 50 requests per second per IP address. It is called by the API, on Node and in the demo's service worker alike, never by the interface directly: one adapter, one rate limiter at 40 per second, one fake for the tests. A lookup that fails saves the site as not located; it is never an error, so the demo keeps working offline.
+- **Map:** Leaflet with OpenStreetMap tiles, credited on the map, loaded only by the site form to place or move a pin. Truck routing and distances stay out (see below).
 - **Tests:** Vitest for `domain` and `app`; API tests against PGlite in-process, without Docker; the same suite against a real PostgreSQL container in CI; Playwright on the demo build for the key journeys.
 
 ## Consequences
@@ -70,7 +73,7 @@ Supporting choices:
 - **What it makes simpler:** a public demo at zero cost that never sleeps; fast tests without Docker; one contract for our interface and for third parties; the dependency direction in the table above is checked in CI.
 - **What it costs:** every package except `apps/api` must avoid Node-only APIs; Drizzle has no built-in range type, so `tstzrange` is declared as a custom column type and the exclusion constraint lives in a hand-written migration; the demo has no real authentication and stores data in the visitor's browser only; PGlite adds about 5 MB, compressed, to the first load of the demo.
 - **What to watch:** behaviour gaps between PGlite and PostgreSQL (the CI runs both); the service worker lifecycle (updates, first visit before it is active); the Temporal polyfill, to remove once support is native.
-- **Out of scope here:** authentication, hosting of the production server, maps and truck routing. Each gets its own ADR when a feature needs it.
+- **Out of scope here:** authentication, hosting of the production server, truck routing and distances. Each gets its own ADR when a feature needs it.
 
 <!-- pagebreak -->
 

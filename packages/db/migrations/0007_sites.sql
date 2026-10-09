@@ -1,0 +1,33 @@
+CREATE TABLE "site" (
+	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
+	"company_id" uuid NOT NULL,
+	"name" text NOT NULL,
+	"street1" text NOT NULL,
+	"street2" text,
+	"postcode" text NOT NULL,
+	"city" text NOT NULL,
+	"country" text DEFAULT 'FR' NOT NULL,
+	"latitude" double precision,
+	"longitude" double precision,
+	"located_by" text NOT NULL,
+	"time_zone" text DEFAULT 'Europe/Paris' NOT NULL,
+	"booking_required" boolean DEFAULT false NOT NULL,
+	"booking_method" text,
+	"booking_detail" text,
+	"max_length_cm" integer,
+	"max_weight_kg" integer,
+	"loading_dock" boolean DEFAULT true NOT NULL,
+	"semi_trailers_accepted" boolean DEFAULT true NOT NULL,
+	"gate_phone" text,
+	"instructions" text,
+	"archived_at" timestamp with time zone,
+	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
+	"updated_at" timestamp with time zone DEFAULT now() NOT NULL,
+	CONSTRAINT "site_location" CHECK (("site"."located_by" = 'not-located') = ("site"."latitude" is null) and ("site"."latitude" is null) = ("site"."longitude" is null)),
+	CONSTRAINT "site_coordinates" CHECK ("site"."latitude" is null or ("site"."latitude" between -90 and 90 and "site"."longitude" between -180 and 180)),
+	CONSTRAINT "site_french_postcode" CHECK ("site"."country" <> 'FR' or "site"."postcode" ~ '^[0-9]{5}$'),
+	CONSTRAINT "site_booking" CHECK (not "site"."booking_required" or "site"."booking_method" is not null),
+	CONSTRAINT "site_limits" CHECK (("site"."max_length_cm" is null or "site"."max_length_cm" > 0) and ("site"."max_weight_kg" is null or "site"."max_weight_kg" > 0))
+);
+--> statement-breakpoint
+ALTER TABLE "site" ADD CONSTRAINT "site_company_id_company_id_fk" FOREIGN KEY ("company_id") REFERENCES "public"."company"("id") ON DELETE no action ON UPDATE no action;
