@@ -72,7 +72,7 @@ export const severityTone: Record<Severity, Tone> = {
 
 export const textTone = (severity: Severity): 'warning' | 'conflict' | undefined => {
   const tone = severityTone[severity];
-  return tone === 'ok' || tone === 'neutral' ? undefined : tone;
+  return tone === 'warning' || tone === 'conflict' ? tone : undefined;
 };
 
 /** French and English both read dates day first: 06/10/2026. */

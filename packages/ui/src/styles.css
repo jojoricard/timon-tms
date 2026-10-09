@@ -125,6 +125,26 @@ a {
   border-color: var(--color-conflict);
 }
 
+/* A file field reads as a drop zone, its button as the other buttons. */
+.t-field input[type="file"] {
+  height: auto;
+  padding: var(--space-6) var(--space-4);
+  border-style: dashed;
+  cursor: pointer;
+}
+
+.t-field input[type="file"]::file-selector-button {
+  height: var(--control-height);
+  margin-right: var(--space-3);
+  padding: 0 var(--space-3);
+  border: 1px solid var(--color-control-border);
+  border-radius: var(--radius-sm);
+  background: var(--color-surface-raised);
+  color: var(--color-ink);
+  font: var(--type-body-strong);
+  cursor: pointer;
+}
+
 .t-field-hint {
   color: var(--color-ink-muted);
   font: var(--type-small);
@@ -306,6 +326,11 @@ a {
   color: var(--color-conflict-ink);
 }
 
+.t-badge[data-tone="petrol"] {
+  background: var(--color-petrol-tint);
+  color: var(--color-petrol);
+}
+
 .t-badge[data-tone="neutral"] {
   background: var(--color-surface-sunken);
   color: var(--color-ink-muted);
@@ -387,6 +412,12 @@ a {
   border-collapse: collapse;
 }
 
+/* Widths come from the columns, not the content: below this width the frame scrolls instead. */
+.t-table:has(> colgroup) {
+  min-width: 960px;
+  table-layout: fixed;
+}
+
 .t-table th {
   padding: var(--space-3);
   background: var(--color-surface-sunken);
@@ -396,6 +427,11 @@ a {
   text-align: left;
   text-transform: uppercase;
   white-space: nowrap;
+}
+
+/* A column title longer than its column, in French for instance, takes a second line. */
+.t-table:has(> colgroup) th {
+  white-space: normal;
 }
 
 .t-table td,
@@ -415,8 +451,17 @@ a {
   white-space: normal;
 }
 
+/* One row height whether a row has a second line or not: lists read as an even grid. */
+.t-table tbody tr {
+  height: 3.875rem;
+}
+
 .t-table tbody tr:hover {
   background: var(--color-surface);
+}
+
+.t-nowrap {
+  white-space: nowrap;
 }
 
 .t-table tr[data-tone="conflict"] {
@@ -448,6 +493,9 @@ a {
 }
 
 .t-panel > h2 {
+  display: flex;
+  align-items: center;
+  min-height: var(--control-height);
   margin: 0 0 var(--space-4);
   font: var(--type-section-title);
 }
@@ -564,4 +612,37 @@ a {
 .t-steps li[data-state="done"] {
   color: var(--color-ink);
   font-weight: 600;
+}
+
+/* Tags: short names in a table cell, such as protective equipment */
+
+.t-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.t-tags li {
+  padding: 1px 6px;
+  border-radius: var(--radius-sm);
+  background: var(--color-surface-sunken);
+  font: var(--type-small);
+  font-weight: 600;
+}
+
+textarea {
+  font: var(--type-body);
+}
+
+.t-field textarea {
+  width: 100%;
+  min-height: 80px;
+  padding: var(--space-2);
+  border: 1px solid var(--color-control-border);
+  border-radius: var(--radius-sm);
+  background: var(--color-surface-raised);
+  color: var(--color-ink);
 }

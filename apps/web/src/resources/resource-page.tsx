@@ -23,6 +23,7 @@ import type {
 import { Banner, Button, Checkbox, Field, Plate, SegmentedControl, StatusBadge } from '@timon/ui';
 import { type FormEvent, useState } from 'react';
 import { ApiError, api, ok } from '../api.ts';
+import { equipmentLabel } from '../customers/customer-labels.ts';
 import { errorText, keys, useReferenceLists, useRefreshResources, useResource } from '../data.ts';
 import { failureText, issueSentence, ownerKind } from '../issues.ts';
 import { kindSlugs, newTitle, tabLabel } from '../kinds.ts';
@@ -90,6 +91,7 @@ type FormState = {
   bodyTypeId: string;
   tradeLabelId: string;
   capabilityIds: string[];
+  protectiveEquipmentIds: string[];
 };
 
 function initialState(kind: ResourceKind, r: ResourceJson | undefined): FormState {
@@ -110,6 +112,7 @@ function initialState(kind: ResourceKind, r: ResourceJson | undefined): FormStat
     bodyTypeId: r?.bodyTypeId ?? '',
     tradeLabelId: r?.tradeLabelId ?? '',
     capabilityIds: r?.capabilityIds ?? [],
+    protectiveEquipmentIds: r?.protectiveEquipmentIds ?? [],
   };
 }
 
@@ -126,6 +129,7 @@ function toInput(kind: ResourceKind, s: FormState): { input?: ResourceInputJson;
       displayName: s.displayName || null,
       employeeNumber: s.employeeNumber || null,
       phone: s.phone || null,
+      protectiveEquipmentIds: s.protectiveEquipmentIds,
     } as const;
     // The display name is filled by the server when left empty.
     const issues = checkResource({
@@ -377,6 +381,33 @@ function ResourceForm({
                     autoComplete="tel"
                   />
                 </Field>
+                <fieldset className="span-2 capabilities">
+                  <legend>{m.section_driver_protective_equipment()}</legend>
+                  <p className="t-field-hint">
+                    {m.pe_held({
+                      held: state.protectiveEquipmentIds.length,
+                      total: lists.protectiveEquipment.length,
+                    })}
+                  </p>
+                  <div className="capability-list">
+                    {lists.protectiveEquipment.map((item) => (
+                      <Checkbox
+                        key={item.id}
+                        label={equipmentLabel(item)}
+                        checked={state.protectiveEquipmentIds.includes(item.id)}
+                        onChange={(checked) =>
+                          set(
+                            'protectiveEquipmentIds',
+                            checked
+                              ? [...state.protectiveEquipmentIds, item.id]
+                              : state.protectiveEquipmentIds.filter((x) => x !== item.id),
+                          )
+                        }
+                      />
+                    ))}
+                  </div>
+                  <p className="t-field-hint">{m.pe_hint()}</p>
+                </fieldset>
               </>
             ) : (
               <>
@@ -667,22 +698,24 @@ function Documents({ resource, lists }: { resource: ResourceJson; lists: Referen
                         : severityLabel[d.severity]()}
                     </StatusBadge>
                   </td>
-                  <td className="t-end row-actions">
-                    <Button
-                      variant="link"
-                      onClick={() => startEdit(d)}
-                      aria-label={m.action_edit_named({ name: label })}
-                    >
-                      {m.action_edit()}
-                    </Button>
-                    <Button
-                      variant="link"
-                      onClick={() => remove.mutate(d.id)}
-                      disabled={remove.isPending}
-                      aria-label={m.action_remove_named({ name: label })}
-                    >
-                      {m.action_remove()}
-                    </Button>
+                  <td className="t-end">
+                    <span className="row-actions">
+                      <Button
+                        variant="link"
+                        onClick={() => startEdit(d)}
+                        aria-label={m.action_edit_named({ name: label })}
+                      >
+                        {m.action_edit()}
+                      </Button>
+                      <Button
+                        variant="link"
+                        onClick={() => remove.mutate(d.id)}
+                        disabled={remove.isPending}
+                        aria-label={m.action_remove_named({ name: label })}
+                      >
+                        {m.action_remove()}
+                      </Button>
+                    </span>
                   </td>
                 </tr>
               );

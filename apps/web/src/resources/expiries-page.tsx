@@ -1,7 +1,17 @@
 import { Link } from '@tanstack/react-router';
 import type { ResourceKind } from '@timon/domain';
 import type { ExpiryJson, ReferenceListsJson } from '@timon/http';
-import { Banner, Checkbox, Chip, ChipGroup, Metric, Metrics, Plate, StatusBadge } from '@timon/ui';
+import {
+  Banner,
+  Checkbox,
+  Chip,
+  ChipGroup,
+  Columns,
+  Metric,
+  Metrics,
+  Plate,
+  StatusBadge,
+} from '@timon/ui';
 import { useState } from 'react';
 import { errorText, useExpiries, useReferenceLists } from '../data.ts';
 import { ownerKind } from '../issues.ts';
@@ -116,6 +126,7 @@ function ExpiryTable({
       <caption className="t-visually-hidden">
         {m.expiries_caption({ date: formatLongDate(day) })}
       </caption>
+      <Columns widths={[9, 13, 10, 17, 9, 10, 9, 23]} />
       <thead>
         <tr>
           <th scope="col">{m.col_status()}</th>
@@ -126,15 +137,12 @@ function ExpiryTable({
           <th scope="col">{m.col_when()}</th>
           <th scope="col">{m.col_rule()}</th>
           <th scope="col">{m.col_note()}</th>
-          <th scope="col">
-            <span className="t-visually-hidden">{m.col_actions()}</span>
-          </th>
         </tr>
       </thead>
       <tbody>
         {expiries.length === 0 ? (
           <tr>
-            <td colSpan={9}>{m.expiries_empty()}</td>
+            <td colSpan={8}>{m.expiries_empty()}</td>
           </tr>
         ) : null}
         {expiries.map((e) => {
@@ -148,12 +156,22 @@ function ExpiryTable({
                 </StatusBadge>
               </td>
               <th scope="row">
-                {e.resource.kind === 'driver' ? e.resource.name : <Plate>{e.resource.name}</Plate>}
+                <Link
+                  to="/resources/$kind/$id"
+                  params={{ kind: kindSlugs[e.resource.kind], id: e.resource.id }}
+                  className="row-link"
+                >
+                  {e.resource.kind === 'driver' ? (
+                    e.resource.name
+                  ) : (
+                    <Plate>{e.resource.name}</Plate>
+                  )}
+                </Link>
               </th>
               <td>{capitalise(ownerKind(e.resource))}</td>
               <td>{entryLabel(type)}</td>
               <td className="t-mono">{formatDate(e.expiresOn)}</td>
-              <td className="t-tone-text" data-tone={textTone(e.severity)}>
+              <td className="t-tone-text t-nowrap" data-tone={textTone(e.severity)}>
                 {formatDays(e.daysUntil)}
               </td>
               <td>{e.blocking ? m.rule_blocking() : m.rule_not_blocking()}</td>
@@ -163,15 +181,6 @@ function ExpiryTable({
                   : expired
                     ? m.note_blocked()
                     : m.note_warns({ days: e.warnDays })}
-              </td>
-              <td className="t-end">
-                <Link
-                  to="/resources/$kind/$id"
-                  params={{ kind: kindSlugs[e.resource.kind], id: e.resource.id }}
-                  aria-label={m.action_open_named({ name: e.resource.name })}
-                >
-                  {m.action_open()}
-                </Link>
               </td>
             </tr>
           );

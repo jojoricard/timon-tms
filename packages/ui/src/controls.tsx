@@ -1,6 +1,6 @@
 import { type ReactNode, useId } from 'react';
 
-export type Tone = 'ok' | 'warning' | 'conflict' | 'neutral';
+export type Tone = 'ok' | 'warning' | 'conflict' | 'neutral' | 'petrol';
 
 /**
  * A choice among a few options, as radio buttons in a fieldset: one tab stop, arrow keys move

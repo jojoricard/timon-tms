@@ -2,9 +2,10 @@ import { useMutation } from '@tanstack/react-query';
 import { Link } from '@tanstack/react-router';
 import type { ResourceKind, VehicleKind } from '@timon/domain';
 import type { DocumentJson, ReferenceListsJson, ResourceJson } from '@timon/http';
-import { Banner, Button, Checkbox, Chip, ChipGroup, Plate, StatusBadge } from '@timon/ui';
+import { Banner, Button, Checkbox, Chip, ChipGroup, Columns, Plate, StatusBadge } from '@timon/ui';
 import { type ReactNode, useState } from 'react';
 import { api, ok } from '../api.ts';
+import { EquipmentTags } from '../customers/section.tsx';
 import {
   errorText,
   type StatusFilter,
@@ -156,7 +157,14 @@ function ResourceTable({
 
   const columns =
     kind === 'driver'
-      ? [m.col_driver(), m.col_licence(), m.col_cpc(), m.col_driver_card(), m.col_adr()]
+      ? [
+          m.col_driver(),
+          m.col_licence(),
+          m.col_cpc(),
+          m.col_driver_card(),
+          m.col_adr(),
+          m.col_protective_equipment(),
+        ]
       : kind === 'power-unit'
         ? [m.col_plate(), m.col_kind(), m.col_category(), m.col_make_model(), m.col_body_type()]
         : [m.col_plate(), m.col_kind(), m.col_category(), m.col_body_type()];
@@ -164,6 +172,15 @@ function ResourceTable({
   return (
     <table className="t-table">
       <caption className="t-visually-hidden">{caption}</caption>
+      <Columns
+        widths={
+          kind === 'driver'
+            ? [17, 7, 8, 11, 7, 17, 21, 12]
+            : kind === 'power-unit'
+              ? [17, 13, 8, 18, 11, 21, 12]
+              : [17, 17, 10, 23, 21, 12]
+        }
+      />
       <thead>
         <tr>
           {columns.map((c) => (
@@ -203,6 +220,9 @@ function ResourceTable({
                     <MonthCell document={documentOf(r, code)} />
                   </td>
                 ))}
+                <td>
+                  <EquipmentTags ids={r.protectiveEquipmentIds} list={lists.protectiveEquipment} />
+                </td>
               </>
             ) : (
               <>
