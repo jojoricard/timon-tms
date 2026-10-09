@@ -1,3 +1,4 @@
+import type { Issue } from './issue.ts';
 import {
   type Driver,
   powerUnitKinds,
@@ -7,6 +8,8 @@ import {
   type VehicleCategory,
   type VehicleKind,
 } from './resource.ts';
+
+export type { Issue };
 
 /** Rule 2: the categories each kind of vehicle may have. */
 export const allowedCategories: Record<VehicleKind, readonly VehicleCategory[]> = {
@@ -30,23 +33,6 @@ export function canPull(kind: VehicleKind): boolean {
 export function vehicleKindsOf(kind: Vehicle['kind']): readonly VehicleKind[] {
   return kind === 'power-unit' ? powerUnitKinds : trailerKinds;
 }
-
-/**
- * What is wrong with a record, as a code the interface translates. `field` names the input
- * the issue belongs to; `params` fills the message.
- */
-export type Issue = {
-  readonly field: string;
-  readonly code:
-    | 'required'
-    | 'kind-not-allowed'
-    | 'category-not-allowed'
-    | 'weight-not-positive'
-    | 'combination-not-above-vehicle'
-    | 'combination-not-allowed'
-    | 'body-type-not-allowed';
-  readonly params?: Readonly<Record<string, string | number>>;
-};
 
 const blank = (value: string | null | undefined) => !value || value.trim() === '';
 
