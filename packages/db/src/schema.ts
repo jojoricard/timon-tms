@@ -1,12 +1,21 @@
-import { resourceKinds, vehicleCategories, vehicleKinds } from '@timon/domain';
+import {
+  bookingMethods,
+  locatedByValues,
+  resourceKinds,
+  vehicleCategories,
+  vehicleKinds,
+} from '@timon/domain';
 import { sql } from 'drizzle-orm';
 import {
   boolean,
   check,
   date,
+  doublePrecision,
+  index,
   integer,
   pgTable,
   primaryKey,
+  smallint,
   text,
   timestamp,
   unique,
@@ -192,4 +201,182 @@ export const resourceBooking = pgTable(
       sql`not isempty(${t.period}) and lower_inc(${t.period}) and not upper_inc(${t.period}) and not lower_inf(${t.period}) and not upper_inf(${t.period})`,
     ),
   ],
+);
+
+// SPEC-002. Customers and sites belong to the company, not to a subsidiary: a chartered order
+// keeps its customer, and sites are one address book for every customer.
+
+export const customer = pgTable(
+  'customer',
+  {
+    id: uuid().primaryKey().defaultRandom(),
+    companyId: uuid('company_id')
+      .notNull()
+      .references(() => company.id),
+    // Stored in capitals: unique without case, archived customers included (rule 1).
+    code: text().notNull(),
+    name: text().notNull(),
+    country: text().notNull().default('FR'),
+    siret: text(),
+    vatNumber: text('vat_number'),
+    billingStreet1: text('billing_street1'),
+    billingStreet2: text('billing_street2'),
+    billingPostcode: text('billing_postcode'),
+    billingCity: text('billing_city'),
+    notes: text(),
+    archivedAt: timestamp('archived_at', { withTimezone: true }),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    unique('customer_company_code').on(t.companyId, t.code),
+    uniqueIndex('customer_active_siret')
+      .on(t.companyId, t.siret)
+      .where(sql`${t.archivedAt} is null`),
+    check('customer_code_upper', sql`${t.code} = upper(${t.code})`),
+    check(
+      'customer_siret_french',
+      sql`${t.siret} is null or (${t.siret} ~ '^[0-9]{14}$' and ${t.country} = 'FR')`,
+    ),
+  ],
+);
+
+// Rule 3: a removed contact is deleted, not archived; personal data is not kept.
+export const contact = pgTable(
+  'contact',
+  {
+    id: uuid().primaryKey().defaultRandom(),
+    customerId: uuid('customer_id')
+      .notNull()
+      .references(() => customer.id),
+    name: text().notNull(),
+    role: text(),
+    phone: text(),
+    email: text(),
+    sortOrder: integer('sort_order').notNull().default(0),
+  },
+  (t) => [
+    index('contact_customer_idx').on(t.customerId),
+    check('contact_reachable', sql`${t.phone} is not null or ${t.email} is not null`),
+  ],
+);
+
+export const site = pgTable(
+  'site',
+  {
+    id: uuid().primaryKey().defaultRandom(),
+    companyId: uuid('company_id')
+      .notNull()
+      .references(() => company.id),
+    name: text().notNull(),
+    street1: text().notNull(),
+    street2: text(),
+    postcode: text().notNull(),
+    city: text().notNull(),
+    country: text().notNull().default('FR'),
+    latitude: doublePrecision(),
+    longitude: doublePrecision(),
+    locatedBy: text('located_by', { enum: locatedByValues }).notNull(),
+    timeZone: text('time_zone').notNull().default('Europe/Paris'),
+    bookingRequired: boolean('booking_required').notNull().default(false),
+    bookingMethod: text('booking_method', { enum: bookingMethods }),
+    bookingDetail: text('booking_detail'),
+    maxLengthCm: integer('max_length_cm'),
+    maxWeightKg: integer('max_weight_kg'),
+    loadingDock: boolean('loading_dock').notNull().default(true),
+    semiTrailersAccepted: boolean('semi_trailers_accepted').notNull().default(true),
+    gatePhone: text('gate_phone'),
+    instructions: text(),
+    archivedAt: timestamp('archived_at', { withTimezone: true }),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    check(
+      'site_location',
+      sql`(${t.locatedBy} = 'not-located') = (${t.latitude} is null) and (${t.latitude} is null) = (${t.longitude} is null)`,
+    ),
+    check(
+      'site_coordinates',
+      sql`${t.latitude} is null or (${t.latitude} between -90 and 90 and ${t.longitude} between -180 and 180)`,
+    ),
+    check('site_french_postcode', sql`${t.country} <> 'FR' or ${t.postcode} ~ '^[0-9]{5}$'`),
+    check('site_booking', sql`not ${t.bookingRequired} or ${t.bookingMethod} is not null`),
+    check(
+      'site_limits',
+      sql`(${t.maxLengthCm} is null or ${t.maxLengthCm} > 0) and (${t.maxWeightKg} is null or ${t.maxWeightKg} > 0)`,
+    ),
+  ],
+);
+
+// The sites a customer usually uses. A site may be used by several customers (rule 6).
+export const customerSite = pgTable(
+  'customer_site',
+  {
+    customerId: uuid('customer_id')
+      .notNull()
+      .references(() => customer.id),
+    siteId: uuid('site_id')
+      .notNull()
+      .references(() => site.id),
+  },
+  (t) => [
+    primaryKey({ columns: [t.customerId, t.siteId] }),
+    index('customer_site_site_idx').on(t.siteId),
+  ],
+);
+
+// Opening hours in the site's time zone, in minutes since midnight; 1440 is 24:00. Two ranges
+// of one day may not overlap (rule 4): the exclusion constraint is in migration 0009.
+export const siteOpening = pgTable(
+  'site_opening',
+  {
+    siteId: uuid('site_id')
+      .notNull()
+      .references(() => site.id),
+    weekday: smallint().notNull(),
+    startMinute: smallint('start_minute').notNull(),
+    endMinute: smallint('end_minute').notNull(),
+  },
+  (t) => [
+    primaryKey({ columns: [t.siteId, t.weekday, t.startMinute] }),
+    check('site_opening_weekday', sql`${t.weekday} between 1 and 7`),
+    check(
+      'site_opening_range',
+      sql`${t.startMinute} >= 0 and ${t.endMinute} <= 1440 and ${t.endMinute} > ${t.startMinute}`,
+    ),
+  ],
+);
+
+export const protectiveEquipment = pgTable('protective_equipment', listColumns, (t) => [
+  ...listChecks('protective_equipment'),
+  unique('protective_equipment_company_code').on(t.companyId, t.code),
+]);
+
+// What everyone entering a site must wear.
+export const siteProtectiveEquipment = pgTable(
+  'site_protective_equipment',
+  {
+    siteId: uuid('site_id')
+      .notNull()
+      .references(() => site.id),
+    protectiveEquipmentId: uuid('protective_equipment_id')
+      .notNull()
+      .references(() => protectiveEquipment.id),
+  },
+  (t) => [primaryKey({ columns: [t.siteId, t.protectiveEquipmentId] })],
+);
+
+// What a driver holds: held or not, no dates. The application only links drivers.
+export const resourceProtectiveEquipment = pgTable(
+  'resource_protective_equipment',
+  {
+    resourceId: uuid('resource_id')
+      .notNull()
+      .references(() => resource.id),
+    protectiveEquipmentId: uuid('protective_equipment_id')
+      .notNull()
+      .references(() => protectiveEquipment.id),
+  },
+  (t) => [primaryKey({ columns: [t.resourceId, t.protectiveEquipmentId] })],
 );

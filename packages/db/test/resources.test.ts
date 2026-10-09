@@ -3,7 +3,7 @@ import { Temporal, type Vehicle } from '@timon/domain';
 import { sql } from 'drizzle-orm';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { createRepositories } from '../src/index.ts';
-import { createTestDatabase, type TestDatabase } from '../src/testing.ts';
+import { createTestDatabase, offline, type TestDatabase } from '../src/testing.ts';
 
 // The repositories on a real database, and the constraints that hold even when the
 // application's own checks are bypassed.
@@ -13,7 +13,7 @@ let ports: Ports;
 
 beforeAll(async () => {
   database = await createTestDatabase();
-  ports = createRepositories(database.db);
+  ports = { ...createRepositories(database.db), geocoder: offline };
 });
 
 afterAll(() => database.close());

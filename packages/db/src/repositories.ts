@@ -1,18 +1,15 @@
-import {
-  BookingOverlapError,
-  type BookingRepository,
-  type Clock,
-  type DocumentRepository,
-  DocumentTypeTakenError,
-  type ListItem,
-  type NewDocument,
-  type NewResource,
-  PlateTakenError,
-  type Ports,
-  type ReferenceListRepository,
-  type ResourceRepository,
-  type StoredDocument,
-  type StoredResource,
+import type {
+  BookingRepository,
+  Clock,
+  DocumentRepository,
+  ListItem,
+  NewDocument,
+  NewResource,
+  Ports,
+  ReferenceListRepository,
+  ResourceRepository,
+  StoredDocument,
+  StoredResource,
 } from '@timon/app';
 import {
   type Period,
@@ -22,15 +19,19 @@ import {
   Temporal,
 } from '@timon/domain';
 import { and, asc, eq, inArray, isNull, ne, sql } from 'drizzle-orm';
+import { customerRepository, siteRepository } from './customer-repositories.ts';
 import type { Database } from './database.ts';
+import { translateErrors } from './errors.ts';
 import {
   bodyType,
   capability,
   document,
   documentType,
+  protectiveEquipment,
   resource,
   resourceBooking,
   resourceCapability,
+  resourceProtectiveEquipment,
   tradeLabel,
 } from './schema.ts';
 import { formatRange } from './tstzrange.ts';
@@ -40,12 +41,17 @@ export const defaultSubsidiaryId = '10000000-0000-4000-8000-000000000002';
 
 const systemClock: Clock = { now: () => Temporal.Now.instant() };
 
-export function createRepositories(db: Database, clock: Clock = systemClock): Ports {
+/** Every port the database serves; the geocoder is added by the entry point. */
+export type Repositories = Omit<Ports, 'geocoder'>;
+
+export function createRepositories(db: Database, clock: Clock = systemClock): Repositories {
   return {
     resources: resourceRepository(db),
     documents: documentRepository(db),
     referenceLists: referenceListRepository(db),
     bookings: bookingRepository(db),
+    customers: customerRepository(db),
+    sites: siteRepository(db),
     clock,
   };
 }
@@ -77,6 +83,7 @@ function documentValues(resourceId: string, input: NewDocument) {
 function toResource(
   row: ResourceRow,
   capabilityIds: readonly string[],
+  protectiveEquipmentIds: readonly string[],
   documents: readonly StoredDocument[],
 ): StoredResource {
   const common = {
@@ -95,6 +102,7 @@ function toResource(
       displayName: row.displayName ?? '',
       employeeNumber: row.employeeNumber,
       phone: row.phone,
+      protectiveEquipmentIds,
     };
   }
   if (!row.plate || !row.vehicleKind || !row.category || row.gvwKg === null) {
@@ -154,21 +162,45 @@ function resourceValues(details: ResourceDetails) {
   };
 }
 
-const capabilityIdsOf = (details: ResourceDetails) =>
-  details.kind === 'driver' ? [] : details.capabilityIds;
+/** Capabilities of a vehicle and protective equipment of a driver, replaced as a whole. */
+async function replaceLinks(tx: Database, resourceId: string, details: ResourceDetails) {
+  await tx.delete(resourceCapability).where(eq(resourceCapability.resourceId, resourceId));
+  await tx
+    .delete(resourceProtectiveEquipment)
+    .where(eq(resourceProtectiveEquipment.resourceId, resourceId));
+  if (details.kind === 'driver') {
+    if (details.protectiveEquipmentIds.length > 0) {
+      await tx.insert(resourceProtectiveEquipment).values(
+        details.protectiveEquipmentIds.map((protectiveEquipmentId) => ({
+          resourceId,
+          protectiveEquipmentId,
+        })),
+      );
+    }
+  } else if (details.capabilityIds.length > 0) {
+    await tx
+      .insert(resourceCapability)
+      .values(details.capabilityIds.map((capabilityId) => ({ resourceId, capabilityId })));
+  }
+}
 
 function resourceRepository(db: Database): ResourceRepository {
   async function load(rows: ResourceRow[]): Promise<StoredResource[]> {
     const ids = rows.map((row) => row.id);
     if (ids.length === 0) return [];
-    const [documents, capabilities] = await Promise.all([
+    const [documents, capabilities, equipment] = await Promise.all([
       db.select().from(document).where(inArray(document.resourceId, ids)),
       db.select().from(resourceCapability).where(inArray(resourceCapability.resourceId, ids)),
+      db
+        .select()
+        .from(resourceProtectiveEquipment)
+        .where(inArray(resourceProtectiveEquipment.resourceId, ids)),
     ]);
     return rows.map((row) =>
       toResource(
         row,
         capabilities.filter((c) => c.resourceId === row.id).map((c) => c.capabilityId),
+        equipment.filter((e) => e.resourceId === row.id).map((e) => e.protectiveEquipmentId),
         documents.filter((d) => d.resourceId === row.id).map(toDocument),
       ),
     );
@@ -185,12 +217,7 @@ function resourceRepository(db: Database): ResourceRepository {
       .values({ ...resourceValues(details), subsidiaryId: defaultSubsidiaryId })
       .returning({ id: resource.id });
     if (!row) throw new Error('Insert returned no row');
-    const capabilityIds = capabilityIdsOf(details);
-    if (capabilityIds.length > 0) {
-      await tx
-        .insert(resourceCapability)
-        .values(capabilityIds.map((capabilityId) => ({ resourceId: row.id, capabilityId })));
-    }
+    await replaceLinks(tx, row.id, details);
     if (documents.length > 0) {
       await tx.insert(document).values(documents.map((d) => documentValues(row.id, d)));
     }
@@ -247,13 +274,7 @@ function resourceRepository(db: Database): ResourceRepository {
             .where(and(eq(resource.id, id), eq(resource.kind, details.kind)))
             .returning({ id: resource.id });
           if (rows.length === 0) return false;
-          await tx.delete(resourceCapability).where(eq(resourceCapability.resourceId, id));
-          const capabilityIds = capabilityIdsOf(details);
-          if (capabilityIds.length > 0) {
-            await tx
-              .insert(resourceCapability)
-              .values(capabilityIds.map((capabilityId) => ({ resourceId: id, capabilityId })));
-          }
+          await replaceLinks(tx, id, details);
           return true;
         }),
       );
@@ -306,18 +327,25 @@ function documentRepository(db: Database): DocumentRepository {
 }
 
 function referenceListRepository(db: Database): ReferenceListRepository {
-  const listOf = async (table: typeof bodyType | typeof tradeLabel | typeof capability) => {
+  const listOf = async (
+    table: typeof bodyType | typeof tradeLabel | typeof capability | typeof protectiveEquipment,
+  ) => {
     const rows = await db.select().from(table).orderBy(asc(table.sortOrder), asc(table.name));
     return rows.map(({ id, code, name }): ListItem => ({ id, code, name }));
   };
   return {
     get: async () => {
-      const [types, bodyTypes, tradeLabels, capabilities] = await Promise.all([
-        db.select().from(documentType).orderBy(asc(documentType.sortOrder), asc(documentType.name)),
-        listOf(bodyType),
-        listOf(tradeLabel),
-        listOf(capability),
-      ]);
+      const [types, bodyTypes, tradeLabels, capabilities, protectiveEquipmentList] =
+        await Promise.all([
+          db
+            .select()
+            .from(documentType)
+            .orderBy(asc(documentType.sortOrder), asc(documentType.name)),
+          listOf(bodyType),
+          listOf(tradeLabel),
+          listOf(capability),
+          listOf(protectiveEquipment),
+        ]);
       return {
         documentTypes: types.map(({ id, code, name, appliesTo, blocking, warnDays }) => ({
           id,
@@ -330,6 +358,7 @@ function referenceListRepository(db: Database): ReferenceListRepository {
         bodyTypes,
         tradeLabels,
         capabilities,
+        protectiveEquipment: protectiveEquipmentList,
       };
     },
   };
@@ -363,34 +392,4 @@ function bookingRepository(db: Database): BookingRepository {
       return created;
     },
   };
-}
-
-// The database is the last word on these rules: its violations become the errors of the ports.
-const violations: Record<string, () => Error> = {
-  resource_booking_no_overlap: () => new BookingOverlapError('Overlapping booking'),
-  resource_active_plate: () => new PlateTakenError('Plate used by another active resource'),
-  document_resource_type: () => new DocumentTypeTakenError('Document type already recorded'),
-};
-
-async function translateErrors<T>(run: () => Promise<T>): Promise<T> {
-  try {
-    return await run();
-  } catch (error) {
-    const constraint = violatedConstraint(error);
-    const translated = constraint ? violations[constraint]?.() : undefined;
-    if (translated) throw Object.assign(translated, { cause: error });
-    throw error;
-  }
-}
-
-// node-postgres and PGlite both expose the SQLSTATE as `code` and the constraint name;
-// Drizzle may wrap the error in `cause`.
-function violatedConstraint(error: unknown): string | undefined {
-  for (let e = error; e instanceof Object; e = (e as { cause?: unknown }).cause) {
-    const { code, constraint } = e as { code?: unknown; constraint?: unknown };
-    if (code === '23P01' || code === '23505') {
-      return typeof constraint === 'string' ? constraint : undefined;
-    }
-  }
-  return undefined;
 }

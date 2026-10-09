@@ -36,6 +36,62 @@
       "when": 1791278447325,
       "tag": "0004_default_company",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1791443531848,
+      "tag": "0005_customers",
+      "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1791443554204,
+      "tag": "0006_contacts",
+      "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1791443574167,
+      "tag": "0007_sites",
+      "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1791443598238,
+      "tag": "0008_customer_sites",
+      "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1791443613124,
+      "tag": "0009_opening_ranges",
+      "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1791443620548,
+      "tag": "0010_protective_equipment",
+      "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1791443629697,
+      "tag": "0011_site_requirements",
+      "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "7",
+      "when": 1791443639831,
+      "tag": "0012_driver_protective_equipment",
+      "breakpoints": true
     }
   ]
 }

@@ -21,6 +21,7 @@ beforeAll(async () => {
         displayName: lastName,
         employeeNumber: null,
         phone: null,
+        protectiveEquipmentIds: [],
       },
       documents: [],
     });
