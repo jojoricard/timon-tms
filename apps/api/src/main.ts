@@ -1,11 +1,13 @@
 import { serve } from '@hono/node-server';
 import { createRepositories } from '@timon/db';
+import { createIgnGeocoder } from '@timon/geocoding';
 import { createApp } from '@timon/http';
 import { connect } from './database.ts';
 
 const port = Number(process.env.PORT ?? 3000);
 const { db, close } = connect();
-const server = serve({ fetch: createApp(createRepositories(db)).fetch, port }, ({ port }) => {
+const app = createApp({ ...createRepositories(db), geocoder: createIgnGeocoder() });
+const server = serve({ fetch: app.fetch, port }, ({ port }) => {
   console.log(`Timon API on http://localhost:${port}/api (contract: /api/openapi.json)`);
 });
 
