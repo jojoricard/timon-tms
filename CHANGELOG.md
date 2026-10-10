@@ -4,6 +4,8 @@ All notable changes to this project are documented here. The format follows [Kee
 
 ## [Unreleased]
 
+## [0.4.0] - 2026-10-10
+
 ### Added
 
 - SPEC-001 resources, accepted: drivers, power units and trailers, capabilities, expiring documents, CSV import; mockups of the four screens (`docs/design/mockups/`)
@@ -27,6 +29,7 @@ All notable changes to this project are documented here. The format follows [Kee
 - Resources is the home screen; the booking screen of the skeleton is gone (the booking API and its exclusion constraint stay)
 - Existing local and demo resources are cleared by migration 0002; `pnpm db:seed` writes the new demo haulier
 - ADR-002 1.2: `packages/geocoding` joins the packages; geocoding and the site map are recorded; truck routing and distances stay out of scope
+- ADR-002 1.3: points to ADR-004 for the alternatives and terms of use of geocoding and the map
 - The import screen is shared by resources, customers and sites
 - Lists open a record from anywhere on its row; the "Open" columns are gone, and the name in each row stays a link for the keyboard
 - Lists lay out their columns from fixed widths: columns stay in place across the resource tabs and while filtering, every row has the same height, and long French column titles take a second line
