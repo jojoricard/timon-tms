@@ -2,8 +2,8 @@
 title: "Target architecture"
 subtitle: "Architecture decision record"
 reference: TIMON-ADR-002
-version: "1.2"
-date: "October 8, 2026"
+version: "1.3"
+date: "October 9, 2026"
 status: "Accepted"
 ---
 
@@ -64,8 +64,8 @@ Supporting choices:
 - **Dates:** periods stored as `tstzrange`, handled with the Temporal API. Chrome, Firefox and Node 26 ship it; a polyfill covers Safari and Node 24 in the meantime.
 - **Interface languages:** Paraglide JS, messages compiled to typed functions. Paraglide falls back to English when a French message is missing, so a CI check compares the two message files and fails on any gap.
 - **Styling:** CSS variables generated from `docs/design/tokens.json`; no CSS framework, the design system already defines the scale.
-- **Geocoding:** the national address base, served by the IGN Géoplateforme (`data.geopf.fr/geocodage`): no key, open to any origin, 50 requests per second per IP address. It is called by the API, on Node and in the demo's service worker alike, never by the interface directly: one adapter, one rate limiter at 40 per second, one fake for the tests. A lookup that fails saves the site as not located; it is never an error, so the demo keeps working offline.
-- **Map:** Leaflet with OpenStreetMap tiles, credited on the map, loaded only by the site form to place or move a pin. Truck routing and distances stay out (see below).
+- **Geocoding:** the national address base, served by the IGN Géoplateforme (`data.geopf.fr/geocodage`): no key, open to any origin, 50 requests per second per IP address. It is called by the API, on Node and in the demo's service worker alike, never by the interface directly: one adapter, one rate limiter at 40 per second, one fake for the tests. A lookup that fails saves the site as not located; it is never an error, so the demo keeps working offline. Alternatives and terms of use: [ADR-004](0004-maps-and-geocoding.md).
+- **Map:** Leaflet with OpenStreetMap tiles, credited on the map, loaded only by the site form to place or move a pin. Truck routing and distances stay out (see below). Alternatives and terms of use: [ADR-004](0004-maps-and-geocoding.md).
 - **Tests:** Vitest for `domain` and `app`; API tests against PGlite in-process, without Docker; the same suite against a real PostgreSQL container in CI; Playwright on the demo build for the key journeys.
 
 ## Consequences

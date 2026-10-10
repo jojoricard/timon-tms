@@ -20,6 +20,7 @@ All notable changes to this project are documented here. The format follows [Kee
 - CSV import of customers and of sites, all or nothing; French sites without coordinates are located during the preview, and a site that cannot be located is imported as not located
 - Protective equipment: a company list, required by sites, held by drivers (driver form and list)
 - Demo data: the customers and sites of the SPEC-002 mockups
+- ADR-004 maps and geocoding: why the IGN address base, Leaflet and OpenStreetMap tiles, their terms of use and the way out
 
 ### Changed
 
