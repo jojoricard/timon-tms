@@ -22,7 +22,7 @@ Timon helps a dispatcher plan drivers, tractors, rigid trucks and trailers, assi
 | 2. Planning release | Reference data (resources, customers and sites done), units, orders, planning and conflicts, emissions report | In progress |
 | 3–5                 | Extended operations, driver app, customer portal                                         | Later       |
 
-**Demo:** [timon.agence-jri.com](https://timon.agence-jri.com). It runs entirely in your browser: the API and a PostgreSQL database (PGlite) live in a service worker, and your data stays on your machine.
+**Demo:** [timon.jorisricard.com](https://timon.jorisricard.com). It runs entirely in your browser: the API and a PostgreSQL database (PGlite) live in a service worker, and your data stays on your machine.
 
 ## Documentation
 
