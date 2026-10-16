@@ -52,7 +52,7 @@ None of these is needed before Timon has authentication and real users. [Neon's 
 | Development | Laptop, `pnpm dev` | PostgreSQL 18 in Docker | `localhost` |
 | Tests | Laptop and CI | PGlite; PostgreSQL 18 in CI | none |
 | Preview demo | Vercel, per pull request | PGlite, in the browser | generated |
-| Public demo | Vercel, from `main` | PGlite, in the browser | `timon.agence-jri.com` |
+| Public demo | Vercel, from `main` | PGlite, in the browser | `timon.jorisricard.com` |
 | Production | Container, host to be decided | PostgreSQL 18 | to be decided |
 
 On the laptop:
@@ -65,7 +65,7 @@ On the laptop:
 
 From a pull request to the demo:
 
-- **Vercel settings:** `vercel.json` sets the SPA rewrites, serves the hashed build files as immutable and keeps `index.html` and the service worker uncached, so a new version is picked up on the next visit. The demo lives on `timon.agence-jri.com`, a subdomain of a domain already on the team. Pausing on budget is left off: it [pauses the production deployment of every project](https://vercel.com/docs/spend-management#pausing-projects) on the team. Alerts at 50, 75 and 100 % of the budget are enough for a static demo.
+- **Vercel settings:** `vercel.json` sets the SPA rewrites, serves the hashed build files as immutable and keeps `index.html` and the service worker uncached, so a new version is picked up on the next visit. The demo lives on `timon.jorisricard.com`, a subdomain of a domain already on the team. Pausing on budget is left off: it [pauses the production deployment of every project](https://vercel.com/docs/spend-management#pausing-projects) on the team. Alerts at 50, 75 and 100 % of the budget are enough for a static demo.
 - **Branches:** `main` is protected; work happens on short branches, merged by pull request once CI is green, as a single squashed commit. CI runs lint, type checks and the tests on every pull request; GitHub Actions is free for public repositories.
 - **Releases:** a `v*` tag publishes the documents, as today, and will later publish the container image to the GitHub Container Registry.
 
