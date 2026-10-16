@@ -37,15 +37,15 @@ Timon helps a dispatcher plan drivers, tractors, rigid trucks and trailers, assi
 | SPEC-002: customers, sites and their requirements                                            | [0002-customers-and-sites.md](docs/specs/0002-customers-and-sites.md)         | [PDF](https://github.com/jojoricard/timon-tms/releases/latest/download/TIMON-SPEC-002-customers-and-sites.pdf)     |
 | Brand guidelines: logo, colour, type, signature elements, screens, voice                     | [guidelines/](docs/design/guidelines/index.html)                              | [PDF](docs/design/timon-brand-guidelines.pdf)                                                                      |
 
-The Markdown files are the sources. A GitHub Actions workflow builds the Word and PDF versions on every change and attaches them to each release; locally, `sh docs/export/build-docs.sh` produces the Word files (requires [pandoc](https://pandoc.org/)).
+The Markdown files are the sources. A GitHub Actions workflow builds the Word and PDF versions on every change and attaches them to each release. Locally, `sh docs/export/build-docs.sh` produces the Word files (requires [pandoc](https://pandoc.org/)).
 
 ## Run it locally
 
-You need Node 24, pnpm 10 and Docker. The pnpm version is pinned in `package.json`; pnpm switches to it on its own.
+You need Node 24, pnpm 10 and Docker. The pnpm version is pinned in `package.json`, and pnpm switches to it on its own.
 
 ```sh
 pnpm install
-cp .env.example .env        # local settings; change POSTGRES_PORT and DATABASE_URL if 5432 is taken
+cp .env.example .env        # local settings, change POSTGRES_PORT and DATABASE_URL if 5432 is taken
 docker compose up -d        # PostgreSQL 18
 pnpm db:migrate
 pnpm db:seed                # the demo haulier near Lyon
@@ -56,11 +56,11 @@ Without Docker, `pnpm dev:demo` builds and serves the in-browser demo on http://
 
 | Command                              | What it does                                                                                             |
 | ------------------------------------ | -------------------------------------------------------------------------------------------------------- |
-| `pnpm test`                          | Unit and API tests, on PGlite in-process; set `TEST_DATABASE_URL` to run them on PostgreSQL              |
+| `pnpm test`                          | Unit and API tests, on PGlite in-process, set `TEST_DATABASE_URL` to run them on PostgreSQL              |
 | `pnpm test:e2e`                      | Playwright journeys on the demo build, one per acceptance criterion shown on screen (`pnpm build` first) |
 | `pnpm lint`, `pnpm format`           | Biome                                                                                                    |
 | `pnpm typecheck`                     | TypeScript, every package                                                                                |
-| `pnpm check:deps`, `pnpm check:i18n` | Dependency direction of ADR-002; French and English messages complete                                    |
+| `pnpm check:deps`, `pnpm check:i18n` | Dependency direction of ADR-002, French and English messages complete                                    |
 | `pnpm db:generate`                   | New migration from the Drizzle schema                                                                    |
 
 | Path              | Role                                                                               |
@@ -76,7 +76,7 @@ Without Docker, `pnpm dev:demo` builds and serves the in-browser demo on http://
 
 ## Tech stack
 
-TypeScript across the interface, the API and a shared `domain` package; PostgreSQL. React and Vite for the interface, Hono for a REST API with an OpenAPI contract, Drizzle for data access, in a pnpm monorepo. The same API runs on Node in production and in the browser, on PGlite, for the public demo. See [ADR-001](docs/adr/0001-typescript-postgresql.md) and [ADR-002](docs/adr/0002-target-architecture.md).
+TypeScript across the interface, the API and a shared `domain` package, and PostgreSQL. React and Vite for the interface, Hono for a REST API with an OpenAPI contract, Drizzle for data access, in a pnpm monorepo. The same API runs on Node in production and in the browser, on PGlite, for the public demo. See [ADR-001](docs/adr/0001-typescript-postgresql.md) and [ADR-002](docs/adr/0002-target-architecture.md).
 
 ## How the project is run
 
@@ -84,8 +84,8 @@ One scoping phase, then a Kanban flow: each feature gets a short spec, a mockup,
 
 ## License
 
-[GNU AGPL-3.0](LICENSE). You can use, modify and self-host Timon; if you offer it as a service, you must publish your changes.
+[GNU AGPL-3.0](LICENSE). You can use, modify and self-host Timon. If you offer it as a service, you must publish your changes.
 
 ---
 
-Designed and built by Joris Ricard · Agence JRi
+Designed and built by [Joris Ricard](https://jorisricard.com)

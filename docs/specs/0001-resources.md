@@ -7,7 +7,7 @@ date: "October 6, 2026"
 status: "Accepted"
 ---
 
-# TIMON-SPEC-001 — Resources
+# TIMON-SPEC-001: Resources
 
 Issue [#5](https://github.com/jojoricard/timon-tms/issues/5). Drivers, power units and trailers, what they can do and the documents that allow them to work.
 
@@ -32,12 +32,12 @@ The planning itself, units and orders come in later features. This one provides 
 | | Driver | Power unit | Trailer |
 | --- | --- | --- | --- |
 | Identity | Last name, first name, display name (e.g. "K. Benali"), employee number (optional), phone | Registration plate | Registration plate |
-| Kind | — | Tractor, rigid truck or light van | Semi-trailer or drawbar trailer |
-| Regulatory category | — | N1, N2 or N3 | O1, O2, O3 or O4 |
-| Weights | — | Gross vehicle weight; gross combination weight if it can pull | Gross vehicle weight |
-| Trade label | — | From the company's list (e.g. "PL", "PP", "GP"), optional | From the company's list, optional |
-| Body type | — | Rigid truck and light van only: curtainsider, box, refrigerated, flatbed, tipper, tanker… | Same list |
-| Capabilities | — | Tail lift, crane, side loading, temperature control | Same list |
+| Kind | n/a | Tractor, rigid truck or light van | Semi-trailer or drawbar trailer |
+| Regulatory category | n/a | N1, N2 or N3 | O1, O2, O3 or O4 |
+| Weights | n/a | Gross vehicle weight; gross combination weight if it can pull | Gross vehicle weight |
+| Trade label | n/a | From the company's list (e.g. "PL", "PP", "GP"), optional | From the company's list, optional |
+| Body type | n/a | Rigid truck and light van only: curtainsider, box, refrigerated, flatbed, tipper, tanker… | Same list |
+| Capabilities | n/a | Tail lift, crane, side loading, temperature control | Same list |
 | Documents | See below | See below | See below |
 
 A tractor has no body type: it carries nothing without a semi-trailer. Body types, trade labels and capabilities are company lists, seeded with the values above and editable later.
@@ -52,7 +52,7 @@ A document has a type, an optional reference, an issue date (optional) and an **
 | Driver | CPC (FIMO, then FCO every five years) | Yes | 90 days | Driving an N2 or N3 vehicle |
 | Driver | Driver card (tachograph) | Yes | 30 days | Driving a vehicle with a tachograph |
 | Driver | ADR certificate | Yes | 90 days | Orders with an ADR class |
-| Driver | Occupational health check | No | 30 days | — |
+| Driver | Occupational health check | No | 30 days | n/a |
 | Power unit, trailer | Roadworthiness test | Yes | 30 days | Any assignment |
 | Power unit | Tachograph inspection | Yes | 30 days | Any assignment |
 | Power unit, trailer | ATP certificate | Yes | 60 days | Temperature-controlled orders |

@@ -1,5 +1,5 @@
 ---
-title: "Timon — Project scoping"
+title: "Timon: Project scoping"
 subtitle: "Scoping note"
 reference: TIMON-CAD-001
 version: "0.8"
@@ -7,7 +7,7 @@ date: "October 5, 2026"
 status: "In review"
 ---
 
-# Timon — Project scoping
+# Timon: Project scoping
 
 ## Vision
 
@@ -185,16 +185,16 @@ Docs live in the repository (`docs/specs`, `docs/adr`, `docs/design`). The board
 
 ## Sources
 
-- [Comparatif des logiciels TMS — Dashdoc](https://www.dashdoc.com/fr/blog/Meilleurs-logiciels-TMS-en-2025)
-- [Logiciel TMS transport : guide et comparatif — Shiptify](https://www.shiptify.com/logtech/logiciel-tms-transport)
-- [Comparatif logiciel TMS TPE/PME — EASY Transports](https://easytransports.fr/comparatif-logiciel-tms)
-- [Logiciel TMS pour transporteurs — EASY Transports](https://easytransports.fr/logiciel-tms)
-- [Top 5 des TMS transport routier 2026 — Mobilité alternative](https://mobilite-alternative.fr/top-5-meilleurs-logiciels-tms-transport-routier-2026/)
-- [Dashdoc, prix et avis — trouvemonsaas](https://trouvemonsaas.fr/saas/dashdoc)
+- [Comparatif des logiciels TMS (Dashdoc)](https://www.dashdoc.com/fr/blog/Meilleurs-logiciels-TMS-en-2025)
+- [Logiciel TMS transport : guide et comparatif (Shiptify)](https://www.shiptify.com/logtech/logiciel-tms-transport)
+- [Comparatif logiciel TMS TPE/PME (EASY Transports)](https://easytransports.fr/comparatif-logiciel-tms)
+- [Logiciel TMS pour transporteurs (EASY Transports)](https://easytransports.fr/logiciel-tms)
+- [Top 5 des TMS transport routier 2026 (Mobilité alternative)](https://mobilite-alternative.fr/top-5-meilleurs-logiciels-tms-transport-routier-2026/)
+- [Dashdoc, prix et avis (trouvemonsaas)](https://trouvemonsaas.fr/saas/dashdoc)
 - [Tarifs Cargo-TMS](https://www.cargo-tms.fr/tarif-logiciel-tms/)
-- [Bilan carbone d'un transporteur routier — Projet Celsius](https://projetcelsius.com/blog/bilan-carbone-transporteur-routier/)
-- [ICS2 et CountEmissionsEU — trans.info](https://trans.info/fr/ics2-et-countemissionseu-ce-qui-change-pour-les-transporteurs-dans-l-ue-480571)
-- [Calendrier de la facturation électronique — Tiime](https://blog.tiime.fr/calendrier-de-la-facturation-electronique-dates-cles-et-echeances-a-ne-pas-manquer)
-- [eFTI : définition — Truxelo](https://truxelo.com/glossaire/efti)
-- [eCMR — Signal TMS](https://www.signal-tms.com/fr/ecmr)
-- [Code de la route, art. R311-1 — Légifrance](https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000051682572)
+- [Bilan carbone d'un transporteur routier (Projet Celsius)](https://projetcelsius.com/blog/bilan-carbone-transporteur-routier/)
+- [ICS2 et CountEmissionsEU (trans.info)](https://trans.info/fr/ics2-et-countemissionseu-ce-qui-change-pour-les-transporteurs-dans-l-ue-480571)
+- [Calendrier de la facturation électronique (Tiime)](https://blog.tiime.fr/calendrier-de-la-facturation-electronique-dates-cles-et-echeances-a-ne-pas-manquer)
+- [eFTI : définition (Truxelo)](https://truxelo.com/glossaire/efti)
+- [eCMR (Signal TMS)](https://www.signal-tms.com/fr/ecmr)
+- [Code de la route, art. R311-1 (Légifrance)](https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000051682572)

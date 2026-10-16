@@ -7,7 +7,7 @@ date: "October 5, 2026"
 status: "Accepted"
 ---
 
-# TIMON-ADR-001 — Language and database
+# TIMON-ADR-001: Language and database
 
 ## Context
 

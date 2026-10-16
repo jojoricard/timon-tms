@@ -7,7 +7,7 @@ date: "October 9, 2026"
 status: "Accepted"
 ---
 
-# TIMON-ADR-002 — Target architecture
+# TIMON-ADR-002: Target architecture
 
 ## Context
 

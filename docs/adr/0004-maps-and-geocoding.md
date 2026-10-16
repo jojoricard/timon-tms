@@ -7,7 +7,7 @@ date: "October 9, 2026"
 status: "Accepted"
 ---
 
-# TIMON-ADR-004 — Maps and geocoding
+# TIMON-ADR-004: Maps and geocoding
 
 ## Context
 

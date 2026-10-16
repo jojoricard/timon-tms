@@ -7,7 +7,7 @@ date: "October 5, 2026"
 status: "Accepted"
 ---
 
-# TIMON-ADR-003 — Environments and hosting
+# TIMON-ADR-003: Environments and hosting
 
 ## Context
 
