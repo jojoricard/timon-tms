@@ -1,4 +1,4 @@
-# Timon — Visual identity and mockups
+# Timon: Visual identity and mockups
 
 The brand guidelines are a 12-page document: [timon-brand-guidelines.pdf](timon-brand-guidelines.pdf). Their source is [`guidelines/index.html`](guidelines/index.html), printed from Chromium in A4 landscape.
 

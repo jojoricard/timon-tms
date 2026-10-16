@@ -7,7 +7,7 @@ date: "October 8, 2026"
 status: "Accepted"
 ---
 
-# TIMON-SPEC-002 — Customers and sites
+# TIMON-SPEC-002: Customers and sites
 
 Issue [#6](https://github.com/jojoricard/timon-tms/issues/6). Who orders the transport, where goods are picked up and delivered, and what each place requires from the vehicle and the driver who come to it.
 
@@ -50,7 +50,7 @@ Customers belong to the company, not to a subsidiary: when a subsidiary charters
 
 | Field | Rule |
 | --- | --- |
-| Name | Required, e.g. "Vélizy warehouse — north dock" |
+| Name | Required, e.g. "Vélizy warehouse, north dock" |
 | Address | Street lines, postcode, city, country; a French postcode has five digits |
 | Location | Latitude and longitude, from the address or placed by hand on the map; the site shows how it was located |
 | Time zone | Europe/Paris by default, taken from the country otherwise; opening hours are in this time zone |
