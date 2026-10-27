@@ -4,6 +4,10 @@ All notable changes to this project are documented here. The format follows [Kee
 
 ## [Unreleased]
 
+### Changed
+
+- Documents: new Word template in the author's own style (Literata, Schibsted Grotesk, highlighter and red-pen accents); fonts installed by the docs workflow; brand guidelines PDF printed again with the current credit line
+
 ## [0.4.0] - 2026-10-10
 
 ### Added
@@ -77,7 +81,7 @@ All notable changes to this project are documented here. The format follows [Kee
 
 - Project scoping note (`docs/scoping.md`)
 - ADR-001: TypeScript and PostgreSQL
-- Word export of the documents with the Agence JRi template (`docs/export/`)
+- Word export of the documents with a house template (`docs/export/`)
 - Docs workflow: Word and PDF built on every change, attached to releases (`.github/workflows/docs.yml`)
 - Visual identity: logo, brand guidelines (PDF), design tokens and six mockups in English (`docs/design/`)
 
