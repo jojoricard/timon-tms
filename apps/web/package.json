@@ -12,23 +12,23 @@
     "typecheck": "tsc -p ."
   },
   "dependencies": {
-    "@tanstack/react-query": "5.104.1",
-    "@tanstack/react-router": "1.170.41",
+    "@tanstack/react-query": "5.104.5",
+    "@tanstack/react-router": "1.170.46",
     "@timon/domain": "workspace:*",
     "@timon/ui": "workspace:*",
     "hono": "4.13.13",
     "leaflet": "1.9.4",
-    "react": "19.3.0",
-    "react-dom": "19.3.0"
+    "react": "19.3.1",
+    "react-dom": "19.3.1"
   },
   "devDependencies": {
-    "@inlang/paraglide-js": "2.25.4",
-    "@inlang/plugin-message-format": "4.4.4",
+    "@inlang/paraglide-js": "2.29.1",
+    "@inlang/plugin-message-format": "4.5.5",
     "@timon/http": "workspace:*",
     "@types/leaflet": "1.9.22",
     "@types/react": "19.3.0",
     "@types/react-dom": "19.3.0",
     "@vitejs/plugin-react": "6.1.2",
-    "vite": "8.3.3"
+    "vite": "8.3.5"
   }
 }

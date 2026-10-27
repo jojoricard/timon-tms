@@ -24,9 +24,9 @@
     "db:seed": "pnpm --filter @timon/api db:seed"
   },
   "devDependencies": {
-    "@biomejs/biome": "2.5.15",
+    "@biomejs/biome": "2.6.2",
     "@types/node": "24.19.1",
     "typescript": "7.0.2",
-    "vitest": "5.0.3"
+    "vitest": "5.0.5"
   }
 }
