@@ -1,5 +1,6 @@
 #!/usr/bin/env sh
-# Builds Agence JRi-styled .docx files from the Markdown sources in docs/.
+# Builds the styled .docx files from the Markdown sources in docs/.
+# Fonts: Literata, Schibsted Grotesk and JetBrains Mono must be installed (see .github/workflows/docs.yml).
 # Usage: sh docs/export/build-docs.sh   (output in build/)
 set -e
 here="$(cd "$(dirname "$0")" && pwd)"
@@ -8,8 +9,8 @@ cd "$root"
 mkdir -p build
 gen() { # $1 = source .md, $2 = output .docx
   pandoc "$1" --from markdown --to docx \
-    --reference-doc "$here/reference-jri.docx" \
-    --lua-filter "$here/jri.lua" \
+    --reference-doc "$here/reference.docx" \
+    --lua-filter "$here/style.lua" \
     --resource-path "$(dirname "$1")" \
     -o "build/$2"
   echo "build/$2"

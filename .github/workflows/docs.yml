@@ -23,7 +23,11 @@ jobs:
       - name: Install pandoc, LibreOffice and the document fonts
         run: |
           sudo apt-get update
-          sudo apt-get install -y --no-install-recommends pandoc libreoffice-writer-nogui fonts-inter fonts-jetbrains-mono
+          sudo apt-get install -y --no-install-recommends pandoc libreoffice-writer-nogui
+          # Literata, Schibsted Grotesk and JetBrains Mono (SIL Open Font License), static TTF from npm
+          mkdir -p ~/.fonts /tmp/fonts && cd /tmp/fonts
+          npm pack @expo-google-fonts/literata@0.4.3 @expo-google-fonts/schibsted-grotesk@0.4.2 @expo-google-fonts/jetbrains-mono@0.4.1
+          for f in *.tgz; do tar xzf "$f" && cp package/*/*.ttf ~/.fonts/ && rm -rf package; done
           fc-cache -f
 
       - name: Build Word documents

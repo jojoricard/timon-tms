@@ -1,4 +1,4 @@
--- Pandoc filter: applies the Agence JRi document style.
+-- Pandoc filter: applies the document style of the Timon documents.
 -- 1. Drops the body H1 (the title comes from the YAML metadata).
 -- 2. Adds the meta line (reference, version, date, status) under the title.
 -- 3. Turns "Decision / Why" blockquotes into a framed box.
