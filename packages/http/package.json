@@ -12,7 +12,7 @@
     "@hono/zod-openapi": "1.6.3",
     "@timon/app": "workspace:*",
     "@timon/domain": "workspace:*",
-    "hono": "4.13.13",
-    "zod": "4.6.5"
+    "hono": "4.13.14",
+    "zod": "4.6.7"
   }
 }
