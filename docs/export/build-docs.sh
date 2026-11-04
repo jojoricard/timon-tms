@@ -22,3 +22,4 @@ gen docs/adr/0003-environments-and-hosting.md TIMON-ADR-003-environments-and-hos
 gen docs/adr/0004-maps-and-geocoding.md TIMON-ADR-004-maps-and-geocoding.docx
 gen docs/specs/0001-resources.md TIMON-SPEC-001-resources.docx
 gen docs/specs/0002-customers-and-sites.md TIMON-SPEC-002-customers-and-sites.docx
+gen docs/specs/0003-units.md TIMON-SPEC-003-units.docx
