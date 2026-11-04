@@ -1,6 +1,7 @@
 import type { z } from '@hono/zod-openapi';
 import type * as customerSchemas from './customer-schemas.ts';
 import type * as schemas from './schemas.ts';
+import type * as unitSchemas from './unit-schemas.ts';
 
 // The shapes the API answers with, for its clients. Type-only: no code crosses over.
 export type ResourceJson = z.infer<typeof schemas.Resource>;
@@ -33,3 +34,12 @@ export type AddressCandidateJson = z.infer<
 >['candidates'][number];
 export type CustomerImportCheckJson = z.infer<typeof customerSchemas.CustomerImportCheck>;
 export type SiteImportCheckJson = z.infer<typeof customerSchemas.SiteImportCheck>;
+export type UnitRefJson = z.infer<typeof schemas.UnitRef>;
+export type UnitJson = z.infer<typeof unitSchemas.Unit>;
+export type UnitMemberJson = z.infer<typeof unitSchemas.Member>;
+export type UnitDocumentJson = z.infer<typeof unitSchemas.UnitDocument>;
+export type UnitDocumentsJson = z.infer<typeof unitSchemas.UnitDocuments>;
+export type UnitsAtJson = z.infer<typeof unitSchemas.UnitsAt>;
+export type UnitOptionsJson = z.infer<typeof unitSchemas.UnitOptions>;
+export type UnitInputJson = z.infer<typeof unitSchemas.UnitInput>;
+export type UnitOverlapJson = z.infer<typeof unitSchemas.UnitOverlap>;
