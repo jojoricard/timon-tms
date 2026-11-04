@@ -3,6 +3,7 @@
 @import "@fontsource/ibm-plex-mono/400.css";
 @import "@fontsource/ibm-plex-mono/600.css";
 @import "./tokens.css";
+@import "./layout.css";
 
 *,
 *::before,
@@ -400,13 +401,6 @@ a {
 
 /* Tables */
 
-.t-table-frame {
-  overflow-x: auto;
-  border: 1px solid var(--color-line);
-  border-radius: var(--radius-md);
-  background: var(--color-surface-raised);
-}
-
 .t-table {
   width: 100%;
   border-collapse: collapse;
@@ -466,6 +460,11 @@ a {
 
 .t-table tr[data-tone="conflict"] {
   background: var(--color-conflict-tint);
+}
+
+/* Codes, dates and times in a cell stay on one line. */
+.t-table .t-mono {
+  white-space: nowrap;
 }
 
 .t-table .t-numeric {
@@ -563,6 +562,7 @@ a {
 
 .t-steps {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: var(--space-3);
   margin: 0;

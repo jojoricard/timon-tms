@@ -15,4 +15,5 @@ export {
   type Tone,
 } from './controls.tsx';
 export { Field } from './field.tsx';
+export { CardRow, CardStack, FormGrid, PageHeader, TableFrame, Tabs } from './layout.tsx';
 export { Columns } from './table.tsx';
