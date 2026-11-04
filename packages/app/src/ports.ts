@@ -1,6 +1,7 @@
 import type {
   ContactDetails,
   CustomerDetails,
+  OpenPeriod,
   Period,
   Resource,
   ResourceBooking,
@@ -16,6 +17,11 @@ export type NewBooking = Omit<ResourceBooking, 'id'>;
 /** Raised by a repository when the database rejects a booking that overlaps another. */
 export class BookingOverlapError extends Error {
   override readonly name = 'BookingOverlapError';
+}
+
+/** Raised by a repository when the database finds a resource in two units at once (rule 4). */
+export class UnitOverlapError extends Error {
+  override readonly name = 'UnitOverlapError';
 }
 
 /** Raised by a repository when the database finds the plate on another active resource. */
@@ -80,6 +86,8 @@ export type StoredDocument = NewDocument & {
 };
 
 export type StoredResource = Resource & {
+  /** Rule 7 of SPEC-001; one subsidiary for now (#14). */
+  readonly subsidiaryId: string;
   readonly createdAt: Temporal.Instant;
   readonly updatedAt: Temporal.Instant;
   readonly documents: readonly StoredDocument[];
@@ -123,6 +131,45 @@ export interface BookingRepository {
   listOverlapping(resourceId: string, period: Period): Promise<ResourceBooking[]>;
   /** @throws BookingOverlapError when the period overlaps another booking of the resource. */
   insert(booking: NewBooking): Promise<ResourceBooking>;
+}
+
+/** The members of a unit: a power unit, and a driver or a trailer or both. */
+export type UnitMembers = {
+  readonly powerUnitId: string;
+  readonly trailerId: string | null;
+  readonly driverId: string | null;
+};
+
+export type NewUnit = UnitMembers & {
+  /** Given by the dispatcher, e.g. "Unit 5"; otherwise the unit goes by its driver or plate. */
+  readonly name: string | null;
+  readonly period: OpenPeriod;
+  /** The unit this one continues after a change of driver or trailer. */
+  readonly previousUnitId: string | null;
+};
+
+export type StoredUnit = NewUnit & { readonly id: string };
+
+export interface UnitRepository {
+  get(id: string): Promise<StoredUnit | undefined>;
+  /** The units whose period contains the instant. */
+  listAt(instant: Temporal.Instant): Promise<StoredUnit[]>;
+  /** The units whose period overlaps `period`, other than `exceptId`. */
+  listOverlapping(period: OpenPeriod, exceptId?: string): Promise<StoredUnit[]>;
+  /** The units of a resource, latest start first. */
+  listByResource(resourceId: string): Promise<StoredUnit[]>;
+  /** @throws UnitOverlapError */
+  create(unit: NewUnit): Promise<StoredUnit>;
+  /** Members, name and period replaced. @throws UnitOverlapError */
+  replace(id: string, unit: NewUnit): Promise<StoredUnit | undefined>;
+  remove(id: string): Promise<boolean>;
+  /** @throws UnitOverlapError */
+  setEnd(id: string, end: Temporal.Instant): Promise<StoredUnit | undefined>;
+  /**
+   * In one transaction, ends the unit when `next` starts, then creates `next` (rule 6).
+   * @throws UnitOverlapError
+   */
+  change(id: string, next: NewUnit): Promise<{ ended: StoredUnit; started: StoredUnit }>;
 }
 
 export type ContactInput = ContactDetails & { readonly id?: string | undefined };
@@ -192,6 +239,7 @@ export type Ports = {
   readonly documents: DocumentRepository;
   readonly referenceLists: ReferenceListRepository;
   readonly bookings: BookingRepository;
+  readonly units: UnitRepository;
   readonly customers: CustomerRepository;
   readonly sites: SiteRepository;
   readonly geocoder: Geocoder;

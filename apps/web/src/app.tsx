@@ -28,6 +28,8 @@ import { ImportPage } from './resources/import-page.tsx';
 import { ListPage } from './resources/list-page.tsx';
 import { ResourcePage } from './resources/resource-page.tsx';
 import { followRowLinks } from './row-links.ts';
+import { UnitPage, type UnitStart } from './units/unit-page.tsx';
+import { UnitsPage } from './units/units-page.tsx';
 
 /** A section link stays current on every page under its path. */
 function SectionLinks() {
@@ -96,6 +98,46 @@ const expiriesRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/resources/expiries',
   component: ExpiriesPage,
+});
+
+const text = (value: unknown) => (typeof value === 'string' && value !== '' ? value : undefined);
+
+const unitsRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/resources/units',
+  validateSearch: (search: Record<string, unknown>): { at?: string } => {
+    const at = text(search.at);
+    return at ? { at } : {};
+  },
+  component: function Units() {
+    const { at } = unitsRoute.useSearch();
+    return <UnitsPage at={at} />;
+  },
+});
+
+const newUnitRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/resources/units/new',
+  validateSearch: (search: Record<string, unknown>): UnitStart =>
+    Object.fromEntries(
+      (['start', 'powerUnit', 'trailer', 'driver'] as const).flatMap((key) => {
+        const value = text(search[key]);
+        return value ? [[key, value]] : [];
+      }),
+    ),
+  component: function NewUnit() {
+    const initial = newUnitRoute.useSearch();
+    return <UnitPage initial={initial} />;
+  },
+});
+
+const unitRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/resources/units/$id',
+  component: function Unit() {
+    const { id } = unitRoute.useParams();
+    return <UnitPage key={id} id={id} />;
+  },
 });
 
 const kindOf = (slug: string) => {
@@ -231,6 +273,9 @@ const router = createRouter({
   routeTree: rootRoute.addChildren([
     indexRoute,
     expiriesRoute,
+    unitsRoute,
+    newUnitRoute,
+    unitRoute,
     listRoute,
     newRoute,
     importRoute,

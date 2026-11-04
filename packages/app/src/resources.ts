@@ -12,6 +12,7 @@ import {
 } from '@timon/domain';
 import { PlateTakenError, type Ports, type ReferenceLists, type StoredResource } from './ports.ts';
 import { searchable } from './search.ts';
+import { currentUnitOf, type UnitRef } from './units.ts';
 import { type ResourceView, resourceView, statusDay } from './views.ts';
 
 /** An issue with one input: the rules of the domain, plus what only the application knows. */
@@ -19,7 +20,13 @@ export type FieldIssue =
   | Issue
   | {
       readonly field: string;
-      readonly code: 'unknown-value' | 'invalid-date' | 'invalid-number' | 'issued-after-expiry';
+      readonly code:
+        | 'unknown-value'
+        | 'invalid-date'
+        | 'invalid-number'
+        | 'issued-after-expiry'
+        | 'outside-unit'
+        | 'unchanged';
       readonly params?: Readonly<Record<string, string | number>>;
     };
 
@@ -35,7 +42,9 @@ export type ResourceResult =
   | { readonly ok: true; readonly resource: ResourceView }
   | { readonly ok: false; readonly reason: 'not-found' }
   | { readonly ok: false; readonly reason: 'invalid'; readonly issues: readonly FieldIssue[] }
-  | { readonly ok: false; readonly reason: 'plate-taken'; readonly owner: PlateOwner };
+  | { readonly ok: false; readonly reason: 'plate-taken'; readonly owner: PlateOwner }
+  /** SPEC-003 rule 7: the resource belongs to a running or future unit. */
+  | { readonly ok: false; readonly reason: 'in-unit'; readonly unit: UnitRef };
 
 export const statusFilters = ['all', 'expiring', 'expired'] as const;
 export type StatusFilter = (typeof statusFilters)[number];
@@ -145,6 +154,13 @@ export async function updateResource(
 ): Promise<ResourceResult> {
   const existing = await ports.resources.get(id);
   if (!existing || existing.kind !== details.kind) return { ok: false, reason: 'not-found' };
+  // A vehicle in a running or future unit keeps its kind: the unit was composed for it.
+  if (existing.kind !== 'driver' && details.kind !== 'driver') {
+    if (existing.vehicleKind !== details.vehicleKind) {
+      const unit = await currentUnitOf(ports, id);
+      if (unit) return { ok: false, reason: 'in-unit', unit };
+    }
+  }
   return save(ports, details, (d) => ports.resources.update(id, d), id);
 }
 
@@ -153,7 +169,10 @@ export async function getResource(ports: Ports, id: string): Promise<ResourceVie
   return resource ? view(ports, resource) : undefined;
 }
 
-/** Rule 5: a resource is never deleted, only archived, and can be restored. */
+/**
+ * Rule 5: a resource is never deleted, only archived, and can be restored. One that belongs to a
+ * running or future unit cannot be archived (SPEC-003 rule 7).
+ */
 export async function setArchived(
   ports: Ports,
   id: string,
@@ -161,6 +180,10 @@ export async function setArchived(
 ): Promise<ResourceResult> {
   const existing = await ports.resources.get(id);
   if (!existing) return { ok: false, reason: 'not-found' };
+  if (archived) {
+    const unit = await currentUnitOf(ports, id);
+    if (unit) return { ok: false, reason: 'in-unit', unit };
+  }
   if (!archived && existing.kind !== 'driver') {
     const owner = await ports.resources.findActiveByPlate(plateKey(existing.plate), id);
     if (owner) return { ok: false, reason: 'plate-taken', owner: plateOwner(owner) };
@@ -239,12 +262,14 @@ export async function listResources(
   return { day, counts, resources };
 }
 
-/** Active resources per kind and documents needing attention, for the tabs. */
+/** Active resources per kind, units valid now and documents needing attention, for the tabs. */
 export async function resourceSummary(ports: Ports) {
-  const day = statusDay(ports.clock.now());
-  const [stored, lists] = await Promise.all([
+  const now = ports.clock.now();
+  const day = statusDay(now);
+  const [stored, lists, units] = await Promise.all([
     ports.resources.list({ includeArchived: false }),
     ports.referenceLists.get(),
+    ports.units.listAt(now),
   ]);
   const active = Object.fromEntries(
     resourceKinds.map((kind) => [kind, stored.filter((r) => r.kind === kind).length]),
@@ -252,7 +277,7 @@ export async function resourceSummary(ports: Ports) {
   const expiries = stored
     .flatMap((r) => resourceView(r, lists.documentTypes, day).documents)
     .filter((d) => d.status !== 'valid').length;
-  return { day, active, expiries };
+  return { day, active, units: units.length, expiries };
 }
 
 export function getReferenceLists(ports: Ports) {

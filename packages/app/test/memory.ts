@@ -1,4 +1,4 @@
-import { plateKey, type ResourceBooking, Temporal } from '@timon/domain';
+import { overlapsOpen, plateKey, type ResourceBooking, Temporal } from '@timon/domain';
 import {
   CustomerCodeTakenError,
   type CustomerInput,
@@ -14,6 +14,8 @@ import {
   type StoredDocument,
   type StoredResource,
   type StoredSite,
+  type StoredUnit,
+  UnitOverlapError,
 } from '../src/index.ts';
 import { createFakeGeocoder } from './fake-geocoder.ts';
 
@@ -34,6 +36,7 @@ const type = (
 /** The lists of migration 0004, with readable ids. */
 export const lists: ReferenceLists = {
   documentTypes: [
+    type('licence-c1', ['driver'], true, 60),
     type('licence-c', ['driver'], true, 60),
     type('licence-ce', ['driver'], true, 60),
     type('cpc', ['driver'], true, 90),
@@ -75,6 +78,7 @@ export function memoryPorts(
   const customers: StoredCustomer[] = [];
   const sites: StoredSite[] = [];
   const bookings: ResourceBooking[] = [];
+  const units: StoredUnit[] = [];
   let next = 0;
   const id = (prefix: string) => `${prefix}-${++next}`;
   const at = Temporal.Instant.from(now);
@@ -95,6 +99,7 @@ export function memoryPorts(
     return {
       ...details,
       id: resourceId,
+      subsidiaryId: 'south',
       archived: false,
       createdAt: at,
       updatedAt: at,
@@ -149,8 +154,80 @@ export function memoryPorts(
     customerIds: [],
   });
 
+  // Units: a resource in one unit at a time, as the exclusion constraint of the database.
+  const membersOf = (u: StoredUnit) =>
+    [u.powerUnitId, u.trailerId, u.driverId].filter((m): m is string => m !== null);
+  const assertFree = (unit: StoredUnit, others: StoredUnit[]) => {
+    const shared = others.some(
+      (o) =>
+        o.id !== unit.id &&
+        overlapsOpen(o.period, unit.period) &&
+        membersOf(o).some((m) => membersOf(unit).includes(m)),
+    );
+    if (shared) throw new UnitOverlapError();
+  };
+  const unitIndex = (unitId: string) => units.findIndex((u) => u.id === unitId);
+
   const ports: Ports = {
     clock: { now: () => at },
+    units: {
+      get: async (unitId) => units.find((u) => u.id === unitId),
+      listAt: async (instant) =>
+        units.filter(
+          (u) =>
+            Temporal.Instant.compare(u.period.start, instant) <= 0 &&
+            (u.period.end === null || Temporal.Instant.compare(instant, u.period.end) < 0),
+        ),
+      listOverlapping: async (period, exceptId) =>
+        units.filter((u) => u.id !== exceptId && overlapsOpen(u.period, period)),
+      listByResource: async (resourceId) =>
+        units
+          .filter((u) => membersOf(u).includes(resourceId))
+          .sort((a, b) => Temporal.Instant.compare(b.period.start, a.period.start)),
+      create: async (unit) => {
+        const created = { ...unit, id: id('unit') };
+        assertFree(created, units);
+        units.push(created);
+        return created;
+      },
+      replace: async (unitId, unit) => {
+        const index = unitIndex(unitId);
+        if (index < 0) return undefined;
+        const replaced = { ...unit, id: unitId };
+        assertFree(replaced, units);
+        units[index] = replaced;
+        return replaced;
+      },
+      remove: async (unitId) => {
+        const index = unitIndex(unitId);
+        if (index >= 0) units.splice(index, 1);
+        return index >= 0;
+      },
+      setEnd: async (unitId, end) => {
+        const index = unitIndex(unitId);
+        const existing = units[index];
+        if (!existing) return undefined;
+        const ended = { ...existing, period: { start: existing.period.start, end } };
+        assertFree(ended, units);
+        units[index] = ended;
+        return ended;
+      },
+      change: async (unitId, next) => {
+        const index = unitIndex(unitId);
+        const existing = units[index];
+        if (!existing) throw new Error(`No unit ${unitId}`);
+        const ended = {
+          ...existing,
+          period: { start: existing.period.start, end: next.period.start },
+        };
+        const started = { ...next, id: id('unit') };
+        const after = units.map((u) => (u.id === unitId ? ended : u));
+        assertFree(started, after);
+        units[index] = ended;
+        units.push(started);
+        return { ended, started };
+      },
+    },
     geocoder,
     customers: {
       list: async ({ includeArchived }) => customers.filter((c) => includeArchived || !c.archived),
@@ -311,5 +388,5 @@ export function memoryPorts(
       },
     },
   };
-  return { ports, resources, bookings, customers, sites };
+  return { ports, resources, bookings, customers, sites, units };
 }

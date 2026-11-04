@@ -46,6 +46,21 @@ export {
 } from './identifiers.ts';
 export type { Issue } from './issue.ts';
 export {
+  c1eCombinationMaxKg,
+  holdsCategory,
+  type LicenceCategory,
+  type LicenceVehicle,
+  licenceCategories,
+  licenceDocument,
+  licenceOfDocument,
+  licenceShown,
+  lightTrailerMaxKg,
+  lightVehicleMaxKg,
+  mediumVehicleMaxKg,
+  requiredLicence,
+  sortCategories,
+} from './licence.ts';
+export {
   checkOpeningRanges,
   endOfDay,
   formatMinutes,
@@ -56,7 +71,16 @@ export {
   type Weekday,
   weekdays,
 } from './opening-hours.ts';
-export { InvalidPeriodError, overlaps, type Period, periodOf } from './period.ts';
+export {
+  contains,
+  InvalidPeriodError,
+  type OpenPeriod,
+  openPeriodOf,
+  overlaps,
+  overlapsOpen,
+  type Period,
+  periodOf,
+} from './period.ts';
 export { plateKey } from './plate.ts';
 export {
   type Driver,
@@ -84,6 +108,24 @@ export {
   type SiteDetails,
 } from './site.ts';
 export { Temporal } from './temporal.ts';
+export {
+  checkComposition,
+  checkUnitPeriod,
+  compareMemberStatus,
+  fullName,
+  licenceIssue,
+  type MemberDocumentStatus,
+  memberDocumentStatuses,
+  type RequiredDocument,
+  requiredDocuments,
+  trailerIssue,
+  type UnitComposition,
+  type UnitResource,
+  type UnitRole,
+  unitFields,
+  unitName,
+  unitRoles,
+} from './unit.ts';
 export {
   allowedCategories,
   canHaveBodyType,

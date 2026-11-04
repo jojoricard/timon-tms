@@ -1,4 +1,4 @@
-import { type Period, periodOf } from '@timon/domain';
+import { type OpenPeriod, openPeriodOf, type Period, periodOf } from '@timon/domain';
 import { customType } from 'drizzle-orm/pg-core';
 
 /** Drizzle has no range type: a period is stored as a half-open `tstzrange '[)'`. */
@@ -26,4 +26,24 @@ export function parseRange(value: string): Period {
 // PostgreSQL writes a space between date and time and may shorten the offset to hours.
 function toIso(timestamp: string): string {
   return timestamp.replace(' ', 'T').replace(/([+-]\d{2})$/, '$1:00');
+}
+
+/** A period that may have no end, stored as `tstzrange '[)'` with an infinite upper bound. */
+export const openTstzrange = customType<{ data: OpenPeriod; driverData: string }>({
+  dataType: () => 'tstzrange',
+  toDriver: (period) => formatOpenRange(period),
+  fromDriver: (value) => parseOpenRange(value),
+});
+
+export function formatOpenRange(period: OpenPeriod): string {
+  return `[${period.start.toString()},${period.end?.toString() ?? ''})`;
+}
+
+const openRangePattern = /^\[\s*"?([^",]+)"?\s*,\s*(?:"?([^",)]+)"?)?\s*\)$/;
+
+/** Parses `["2026-10-06 04:00:00+00",)` as well as a bounded range. */
+export function parseOpenRange(value: string): OpenPeriod {
+  const match = openRangePattern.exec(value);
+  if (!match?.[1]) throw new Error(`Expected a [) tstzrange with a start, got ${value}`);
+  return openPeriodOf(toIso(match[1]), match[2] ? toIso(match[2]) : null);
 }

@@ -2,8 +2,8 @@
 title: "Units"
 subtitle: "Functional specification"
 reference: TIMON-SPEC-003
-version: "1.0"
-date: "October 27, 2026"
+version: "1.1"
+date: "November 4, 2026"
 status: "Accepted"
 ---
 
@@ -60,11 +60,11 @@ The category comes from the gross vehicle weights recorded in SPEC-001, not from
 | C1 power unit with a trailer over 750 kg, the two together up to 12,000 kg | C1E |
 | Any other power unit over 3,500 kg with a trailer over 750 kg, and any tractor with a semi-trailer | CE |
 
-A trailer up to 750 kg does not change the category. A higher category covers the lower ones: C covers C1, CE covers C1E and C, C1E covers C1. A driver holds a category when his record has a driving licence document for it (SPEC-001), whatever its expiry date: an expired licence is a document to renew, reported as below, not a missing category.
+A trailer up to 750 kg does not change the category. A higher category covers the lower ones: C covers C1, CE covers C1E and C, C1E covers C1. Every heavy category also covers B, which a driver must hold to obtain it. A driver holds a category when his record has a driving licence document for it (SPEC-001), whatever its expiry date: an expired licence is a document to renew, reported as below, not a missing category.
 
 ## Documents of the members
 
-On the unit's start date, or today for a unit already running, the unit shows the status of every document its members need, as defined in SPEC-001: the licence, the CPC and the driver card for a vehicle over 3,500 kg, the roadworthiness test, the tachograph inspection. The unit's status is the worst of them, and the next expiry within the unit's period is shown with it.
+On the unit's start date, or today for a unit already running, the unit shows the status of every document its members need, as defined in SPEC-001: the licence, the CPC and the driver card for a vehicle over 3,500 kg, the roadworthiness test, the tachograph inspection of a power unit over 3,500 kg. Only trailers over 3,500 kg (O3 and O4) take a roadworthiness test; lighter trailers need none. The unit's status is the worst of them, and the next expiry within the unit's period is shown with it.
 
 Here these statuses never block. A unit that lasts months will see documents expire and be renewed; whether a resource may run a given mission is checked mission by mission, on its date, by the planning (issue #9). A required document that was never recorded shows as *missing*.
 
@@ -76,7 +76,7 @@ Here these statuses never block. A unit that lasts months will see documents exp
 4. A resource belongs to at most one unit at any moment. A unit that would overlap another on any of its resources is refused, and the message names the other unit and its period.
 5. The driver must hold the category the unit needs (see above). Otherwise the unit is refused, and the message says which category is needed and which the driver holds.
 6. Units are never edited in place once started. Changing the driver or the trailer from a date ends the current unit at that minute and starts a new one with the same other members, in one step. A unit that has not started yet can be edited or deleted; a started unit can only be given an end.
-7. A resource that belongs to a running or future unit cannot be archived; the message names the unit.
+7. A resource that belongs to a running or future unit can neither be archived nor change kind (a tractor becoming a rigid truck, for instance); the message names the unit.
 
 ## Screens
 

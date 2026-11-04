@@ -8,8 +8,8 @@ import { m } from '../paraglide/messages.js';
 
 const kinds: ResourceKind[] = ['driver', 'power-unit', 'trailer'];
 
-/** Drivers, power units, trailers and expiries: links, the current one marked. */
-export function SectionTabs({ current }: { current: ResourceKind | 'expiries' }) {
+/** Drivers, power units, trailers, units and expiries: links, the current one marked. */
+export function SectionTabs({ current }: { current: ResourceKind | 'units' | 'expiries' }) {
   const summary = useSummary().data;
   return (
     <nav aria-label={m.tabs_label()}>
@@ -27,6 +27,12 @@ export function SectionTabs({ current }: { current: ResourceKind | 'expiries' })
             </Link>
           </li>
         ))}
+        <li>
+          <Link to="/resources/units" aria-current={current === 'units' ? 'page' : undefined}>
+            {m.tab_units()}
+            {summary ? <Count>{summary.units}</Count> : null}
+          </Link>
+        </li>
         <li>
           <Link to="/resources/expiries" aria-current={current === 'expiries' ? 'page' : undefined}>
             {m.tab_expiries()}

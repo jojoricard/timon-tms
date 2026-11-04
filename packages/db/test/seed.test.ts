@@ -5,6 +5,8 @@ import {
   listResources,
   listSites,
   resourceSummary,
+  unitsAt,
+  unitsOfResource,
 } from '@timon/app';
 import { Temporal } from '@timon/domain';
 import { afterEach, describe, expect, it } from 'vitest';
@@ -79,5 +81,42 @@ describe('seed', () => {
     expect(counts).toEqual({ all: 12, 'not-located': 1, booking: 8, 'protective-equipment': 11 });
     const { resources } = await listResources(ports, { kind: 'driver', query: 'Moreau' });
     expect(resources[0]?.kind === 'driver' && resources[0].protectiveEquipmentIds).toHaveLength(3);
+  });
+
+  it('writes the units of the mockup: eleven running now, one changed, one without a driver', async () => {
+    const { ports } = await seeded('2026-10-27');
+    const { units, free } = await unitsAt(ports);
+    expect(units.map((u) => [u.name, u.powerUnit.name, u.trailer?.name ?? null])).toEqual([
+      ['H. Perrin', 'CD-456-EF', 'SR-4471'],
+      ['J. Roux', 'ST-234-UV', 'SR-4472'],
+      ['K. Benali', 'IJ-345-KL', 'SR-4492'],
+      ['L. Fabre', 'KL-678-MN', 'FR-2214'],
+      ['S. Haddad', 'AB-123-CD', 'SR-4488'],
+      ['S. Moreau', 'EF-789-GH', 'SR-4480'],
+      ['Unit 5', 'QR-678-ST', 'SR-4483'],
+      ['N. Bensaïd', 'OP-901-QR', null],
+      ['P. Vidal', 'GH-012-IJ', null],
+      ['Y. Morel', 'MN-345-OP', 'RQ-0912'],
+      ['É. Marchand', 'FG-204-HJ', null],
+    ]);
+    expect(units.find((u) => u.name === 'S. Haddad')?.end).not.toBeNull();
+    expect(free.driver.map((d) => d.name)).toContain('M. Laurent');
+    expect(free['power-unit'].map((p) => p.name)).toEqual(['JK-318-LM']);
+
+    const moreau = units.find((u) => u.name === 'S. Moreau');
+    const history = await unitsOfResource(ports, moreau?.driver?.id ?? '');
+    expect(
+      history.map((u) => [u.state, u.powerUnit.name, u.trailer?.name ?? null, u.changed]),
+    ).toEqual([
+      ['running', 'EF-789-GH', 'SR-4480', 'trailer'],
+      ['ended', 'EF-789-GH', 'FR-2210', null],
+      ['ended', 'AB-123-CD', 'FR-2210', null],
+      ['ended', 'AB-123-CD', null, null],
+    ]);
+  });
+
+  it('keeps the units running relative to any other day', async () => {
+    const { ports } = await seeded('2027-03-15');
+    expect((await unitsAt(ports)).units).toHaveLength(11);
   });
 });

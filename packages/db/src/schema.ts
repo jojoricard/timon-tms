@@ -2,15 +2,18 @@ import {
   bookingMethods,
   locatedByValues,
   resourceKinds,
+  unitRoles,
   vehicleCategories,
   vehicleKinds,
 } from '@timon/domain';
 import { sql } from 'drizzle-orm';
 import {
+  type AnyPgColumn,
   boolean,
   check,
   date,
   doublePrecision,
+  foreignKey,
   index,
   integer,
   pgTable,
@@ -22,7 +25,7 @@ import {
   uniqueIndex,
   uuid,
 } from 'drizzle-orm/pg-core';
-import { tstzrange } from './tstzrange.ts';
+import { openTstzrange, tstzrange } from './tstzrange.ts';
 
 export const company = pgTable('company', {
   id: uuid().primaryKey().defaultRandom(),
@@ -142,6 +145,8 @@ export const resource = pgTable(
       'resource_tractor_body_type',
       sql`${t.vehicleKind} is distinct from 'tractor' or ${t.bodyTypeId} is null`,
     ),
+    // Target of the unit members' foreign key: a member's role is its resource's kind.
+    unique('resource_id_kind').on(t.id, t.kind),
   ],
 );
 
@@ -379,4 +384,57 @@ export const resourceProtectiveEquipment = pgTable(
       .references(() => protectiveEquipment.id),
   },
   (t) => [primaryKey({ columns: [t.resourceId, t.protectiveEquipmentId] })],
+);
+
+// SPEC-003. A unit groups a power unit with a driver, a trailer or both over a half-open period,
+// open-ended when `upper(period)` is infinite. The period lives on the unit; each member row
+// carries a copy, kept equal by a foreign key that cascades updates, so that ending a unit ends
+// its members. The exclusion constraint on the members, written by hand in migration 0013,
+// keeps a resource in one unit at a time (rule 4).
+export const unit = pgTable(
+  'unit',
+  {
+    id: uuid().primaryKey().defaultRandom(),
+    companyId: uuid('company_id')
+      .notNull()
+      .references(() => company.id),
+    name: text(),
+    period: openTstzrange().notNull(),
+    previousUnitId: uuid('previous_unit_id').references((): AnyPgColumn => unit.id, {
+      onDelete: 'set null',
+    }),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    unique('unit_id_period').on(t.id, t.period),
+    check(
+      'unit_period_from_start',
+      sql`not isempty(${t.period}) and lower_inc(${t.period}) and not upper_inc(${t.period}) and not lower_inf(${t.period})`,
+    ),
+  ],
+);
+
+export const unitMember = pgTable(
+  'unit_member',
+  {
+    unitId: uuid('unit_id').notNull(),
+    resourceId: uuid('resource_id').notNull(),
+    role: text({ enum: unitRoles }).notNull(),
+    period: openTstzrange().notNull(),
+  },
+  (t) => [
+    primaryKey({ columns: [t.unitId, t.role] }),
+    foreignKey({
+      name: 'unit_member_unit_period_fk',
+      columns: [t.unitId, t.period],
+      foreignColumns: [unit.id, unit.period],
+    })
+      .onUpdate('cascade')
+      .onDelete('cascade'),
+    foreignKey({
+      name: 'unit_member_resource_role_fk',
+      columns: [t.resourceId, t.role],
+      foreignColumns: [resource.id, resource.kind],
+    }),
+  ],
 );

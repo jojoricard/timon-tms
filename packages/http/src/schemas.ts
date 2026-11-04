@@ -9,7 +9,9 @@ import {
   vehicleKinds,
 } from '@timon/domain';
 
-const instant = z.iso.datetime({ offset: true }).openapi({ example: '2026-10-07T06:00:00Z' });
+export const instant = z.iso
+  .datetime({ offset: true })
+  .openapi({ example: '2026-10-07T06:00:00Z' });
 const day = z.iso.date().openapi({ example: '2026-11-20' });
 
 export const ResourceKind = z.enum(resourceKinds).openapi('ResourceKind');
@@ -46,6 +48,11 @@ export const Problem = z
       'plate-taken',
       'document-type-taken',
       'import-too-large',
+      'in-unit',
+      'unit-overlap',
+      'started',
+      'not-started',
+      'ended',
     ]),
     message: z.string().optional(),
     params: Params.optional(),
@@ -59,6 +66,13 @@ export const Invalid = z
 export const PlateTaken = z
   .object({ error: z.literal('plate-taken'), owner: PlateOwner })
   .openapi('PlateTaken');
+
+/** A unit named in a message: SPEC-003 rules 4 and 7. */
+export const UnitRef = z
+  .object({ id: z.uuid(), name: z.string(), start: instant, end: instant.nullable() })
+  .openapi('UnitRef');
+
+export const InUnit = z.object({ error: z.literal('in-unit'), unit: UnitRef }).openapi('InUnit');
 
 // Reference lists. `code` is translated by the interface; `name` is shown as typed.
 export const ListItem = z
@@ -139,6 +153,7 @@ export const ResourceSummary = z
   .object({
     day,
     active: z.object({ driver: z.number(), 'power-unit': z.number(), trailer: z.number() }),
+    units: z.number(),
     expiries: z.number(),
   })
   .openapi('ResourceSummary');

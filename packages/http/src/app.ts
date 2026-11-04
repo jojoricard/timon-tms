@@ -30,6 +30,7 @@ import {
   ImportCheck,
   ImportInput,
   ImportRefused,
+  InUnit,
   Invalid,
   NewBooking,
   Overlap,
@@ -43,6 +44,7 @@ import {
   ResourceSummary,
 } from './schemas.ts';
 import { fromDocumentInput, fromInput, toExpiry, toImportCheck, toResource } from './to-json.ts';
+import { toUnitRef, unitApi } from './unit-routes.ts';
 import { validationHook } from './validation.ts';
 
 const json = <T extends z.ZodType>(schema: T, description: string) => ({
@@ -70,7 +72,10 @@ const resourceAnswers = {
   200: json(Resource, 'The resource, with its documents and statuses'),
   400: json(z.union([Invalid, Problem]), 'A rule is broken; each issue names its field'),
   404: json(Problem, 'No such resource'),
-  409: json(z.union([PlateTaken, Problem]), 'Plate used by another active resource (rule 1)'),
+  409: json(
+    z.union([PlateTaken, InUnit, Problem]),
+    'Plate used by another active resource (rule 1), or the resource is in a running or future unit',
+  ),
 };
 
 const routes = {
@@ -219,6 +224,8 @@ function failure(result: Exclude<DocumentResult, { ok: true }>) {
       return { status: 409, body: { error: 'plate-taken', owner: result.owner } } as const;
     case 'document-type-taken':
       return { status: 409, body: { error: 'document-type-taken' } } as const;
+    case 'in-unit':
+      return { status: 409, body: { error: 'in-unit', unit: toUnitRef(result.unit) } } as const;
   }
 }
 
@@ -244,9 +251,10 @@ export function createApp(ports: Ports) {
   // /imports/{kind} of resources.
   const api = app
     .route('/', customerApi(ports))
+    .route('/', unitApi(ports))
     .openapi(routes.summary, async (c) => {
-      const { day, active, expiries } = await resourceSummary(ports);
-      return c.json({ day: day.toString(), active, expiries }, 200);
+      const { day, active, units, expiries } = await resourceSummary(ports);
+      return c.json({ day: day.toString(), active, units, expiries }, 200);
     })
     .openapi(routes.list, async (c) => {
       const { kind, q, status, archived } = c.req.valid('query');

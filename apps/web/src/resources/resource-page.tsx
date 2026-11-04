@@ -38,6 +38,7 @@ import {
   vehicleKindLabel,
 } from '../labels.ts';
 import { m } from '../paraglide/messages.js';
+import { ResourceUnits } from '../units/resource-units.tsx';
 import { Breadcrumb } from './section.tsx';
 
 type Notice = { tone: 'ok' | 'warning'; text: string } | undefined;
@@ -571,6 +572,7 @@ function ResourceForm({
           )}
         </section>
       </div>
+      {resource ? <ResourceUnits resource={resource} /> : null}
       {resource ? (
         <p className="footnote">
           {m.created_footer({

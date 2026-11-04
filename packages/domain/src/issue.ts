@@ -23,7 +23,17 @@ export type Issue = {
     | 'booking-method-required'
     | 'location-invalid'
     | 'opening-invalid'
-    | 'opening-overlap';
+    | 'opening-overlap'
+    | 'driver-or-trailer-required'
+    | 'light-van-no-trailer'
+    | 'semi-trailer-needs-tractor'
+    | 'drawbar-trailer-needs-rigid-truck'
+    | 'resource-archived'
+    | 'subsidiary-mismatch'
+    | 'licence-missing'
+    | 'licence-not-supported'
+    | 'not-to-the-minute'
+    | 'end-not-after-start';
   readonly params?: Readonly<Record<string, string | number>>;
 };
 
