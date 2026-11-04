@@ -4,7 +4,20 @@ All notable changes to this project are documented here. The format follows [Kee
 
 ## [Unreleased]
 
+### Added
+
+- Units (SPEC-003, #7): a power unit with a driver, a trailer or both, over a half-open period to the minute in Europe/Paris, open-ended or not; a resource in one unit at a time, enforced by an exclusion constraint on the members, on PostgreSQL and PGlite
+- Licence check: the category a unit needs from the gross vehicle weights (B, C1, C, C1E, CE), against the licence documents the driver holds, whatever their expiry
+- Composition rules: a semi-trailer behind a tractor only, a drawbar trailer behind a rigid truck only, a light van with a driver only; active members of one subsidiary
+- Change of driver or trailer from a date: the unit ends at that minute and a new one starts, in one transaction; a unit not started yet is edited or deleted, a started one is only given an end
+- Units screen: the units valid at any date and time, grouped by kind of power unit, with the resources free at that moment; unit form listing every resource with the reason it cannot be chosen; change dialog; the units of a resource on its form
+- Members' documents on the unit's start date, or today once running: worst status and next expiry, as a warning only
+- Demo data: fifteen units from the seeded fleet, eleven valid today between 08:00 and 20:00, among them one changed in the past, one for the day only and one without a driver, and the history of Samuel Moreau
+
 ### Changed
+
+- SPEC-003 1.1: a heavy category also covers B; trailers up to 3,500 kg need no roadworthiness test; a resource in a running or future unit can neither be archived nor change kind
+- Resources: archiving, or changing the kind of, a resource in a running or future unit is refused, naming the unit
 
 - Documents: new Word template in the author's own style (Literata, Schibsted Grotesk, highlighter and red-pen accents); fonts installed by the docs workflow; brand guidelines PDF printed again with the current credit line
 
