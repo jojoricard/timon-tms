@@ -26,3 +26,34 @@ export function overlaps(a: Period, b: Period): boolean {
     Temporal.Instant.compare(a.start, b.end) < 0 && Temporal.Instant.compare(b.start, a.end) < 0
   );
 }
+
+/**
+ * A half-open period that may have no end: `end` null lasts until changed. Same semantics as a
+ * PostgreSQL `tstzrange '[)'` with an infinite upper bound.
+ */
+export type OpenPeriod = {
+  readonly start: Temporal.Instant;
+  readonly end: Temporal.Instant | null;
+};
+
+export function openPeriodOf(
+  start: Temporal.Instant | string,
+  end: Temporal.Instant | string | null,
+): OpenPeriod {
+  if (end === null) return { start: Temporal.Instant.from(start), end: null };
+  return periodOf(start, end);
+}
+
+export function overlapsOpen(a: OpenPeriod, b: OpenPeriod): boolean {
+  const startsBeforeEnd = (p: OpenPeriod, q: OpenPeriod) =>
+    q.end === null || Temporal.Instant.compare(p.start, q.end) < 0;
+  return startsBeforeEnd(a, b) && startsBeforeEnd(b, a);
+}
+
+/** Whether `instant` falls within the period: from its start included to its end excluded. */
+export function contains(period: OpenPeriod, instant: Temporal.Instant): boolean {
+  return (
+    Temporal.Instant.compare(period.start, instant) <= 0 &&
+    (period.end === null || Temporal.Instant.compare(instant, period.end) < 0)
+  );
+}
