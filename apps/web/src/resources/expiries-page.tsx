@@ -11,6 +11,7 @@ import {
   Metrics,
   Plate,
   StatusBadge,
+  TableFrame,
 } from '@timon/ui';
 import { useState } from 'react';
 import { errorText, useExpiries, useReferenceLists } from '../data.ts';
@@ -100,9 +101,9 @@ export function ExpiriesPage() {
 
       {data && lists ? (
         <>
-          <div className="t-table-frame">
+          <TableFrame>
             <ExpiryTable expiries={data.expiries} lists={lists} day={data.day} />
-          </div>
+          </TableFrame>
           <p className="footnote">{m.expiries_footer({ date: formatLongDate(data.day) })}</p>
         </>
       ) : expiries.isPending ? (

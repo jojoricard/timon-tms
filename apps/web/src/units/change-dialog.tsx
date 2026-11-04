@@ -184,7 +184,7 @@ export function ChangeDialog({
         ) : null}
         {change.error ? <Banner tone="conflict">{failureText(change.error)}</Banner> : null}
 
-        <div className="page-actions dialog-actions">
+        <div className="t-actions dialog-actions">
           <Button onClick={onClose}>{m.action_cancel()}</Button>
           <Button type="submit" variant="primary" disabled={!fromInstant || change.isPending}>
             {changeLabel}

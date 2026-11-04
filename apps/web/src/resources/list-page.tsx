@@ -2,7 +2,17 @@ import { useMutation } from '@tanstack/react-query';
 import { Link } from '@tanstack/react-router';
 import type { ResourceKind, VehicleKind } from '@timon/domain';
 import type { DocumentJson, ReferenceListsJson, ResourceJson } from '@timon/http';
-import { Banner, Button, Checkbox, Chip, ChipGroup, Columns, Plate, StatusBadge } from '@timon/ui';
+import {
+  Banner,
+  Button,
+  Checkbox,
+  Chip,
+  ChipGroup,
+  Columns,
+  Plate,
+  StatusBadge,
+  TableFrame,
+} from '@timon/ui';
 import { type ReactNode, useState } from 'react';
 import { api, ok } from '../api.ts';
 import { EquipmentTags } from '../customers/section.tsx';
@@ -115,14 +125,14 @@ export function ListPage({
       {list.error ? <Banner tone="conflict">{errorText(list.error)}</Banner> : null}
       {list.data && lists ? (
         <>
-          <div className="t-table-frame">
+          <TableFrame>
             <ResourceTable
               kind={kind}
               resources={list.data.resources}
               lists={lists}
               day={list.data.day}
             />
-          </div>
+          </TableFrame>
           <p className="footnote">
             {m.list_footer({
               shown: list.data.resources.length,

@@ -1,13 +1,22 @@
 import { useMutation } from '@tanstack/react-query';
 import type { IssueJson, ReferenceListsJson } from '@timon/http';
-import { Banner, Button, Chip, ChipGroup, type StepState, Steps } from '@timon/ui';
+import {
+  Banner,
+  Button,
+  CardRow,
+  Chip,
+  ChipGroup,
+  type StepState,
+  Steps,
+  TableFrame,
+} from '@timon/ui';
 import { type ReactNode, useState } from 'react';
 import { ApiError } from '../api.ts';
 import { errorText } from '../data.ts';
 import { fieldLabel, issueSentence, issueText } from '../issues.ts';
 import { inSentence } from '../labels.ts';
 import { m } from '../paraglide/messages.js';
-import { Breadcrumb } from '../resources/section.tsx';
+import { PageHeader } from '../resources/section.tsx';
 
 // The import screen of SPEC-001, shared by resources, customers and sites: template, upload,
 // check, import. Each caller says how to check and import, and what to show.
@@ -155,13 +164,11 @@ export function ImportScreen<Row extends ImportRowLike, Check extends ImportChec
 
   return (
     <div className="page">
-      <header className="page-header">
-        <Breadcrumb>{breadcrumb}</Breadcrumb>
-        <div className="page-title-row">
-          <div className="page-title">
-            <h1>{title}</h1>
-          </div>
-          <div className="page-actions">
+      <PageHeader
+        breadcrumb={breadcrumb}
+        title={title}
+        actions={
+          <>
             {cancel}
             <Button
               variant="primary"
@@ -170,12 +177,13 @@ export function ImportScreen<Row extends ImportRowLike, Check extends ImportChec
             >
               {m.action_import_all({ count: result?.summary.lines ?? 0 })}
             </Button>
-          </div>
-        </div>
+          </>
+        }
+      >
         <Steps steps={steps} />
-      </header>
+      </PageHeader>
 
-      <div className="import-layout">
+      <CardRow columns={['1fr', '360px']}>
         <div className="import-main">
           <div className="upload">
             <label className="t-field">
@@ -248,7 +256,7 @@ export function ImportScreen<Row extends ImportRowLike, Check extends ImportChec
                   </Chip>
                 ))}
               </ChipGroup>
-              <div className="t-table-frame">
+              <TableFrame>
                 <table className="t-table">
                   <caption className="t-visually-hidden">
                     {m.import_caption({ file: file?.name ?? '' })}
@@ -293,7 +301,7 @@ export function ImportScreen<Row extends ImportRowLike, Check extends ImportChec
                     ))}
                   </tbody>
                 </table>
-              </div>
+              </TableFrame>
             </>
           ) : null}
         </div>
@@ -333,7 +341,7 @@ export function ImportScreen<Row extends ImportRowLike, Check extends ImportChec
             </div>
           </section>
         </aside>
-      </div>
+      </CardRow>
     </div>
   );
 }

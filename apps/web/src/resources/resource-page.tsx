@@ -20,7 +20,18 @@ import type {
   ResourceInputJson,
   ResourceJson,
 } from '@timon/http';
-import { Banner, Button, Checkbox, Field, Plate, SegmentedControl, StatusBadge } from '@timon/ui';
+import {
+  Banner,
+  Button,
+  CardRow,
+  Checkbox,
+  Field,
+  FormGrid,
+  Plate,
+  SegmentedControl,
+  StatusBadge,
+  TableFrame,
+} from '@timon/ui';
 import { type FormEvent, useState } from 'react';
 import { ApiError, api, ok } from '../api.ts';
 import { equipmentLabel } from '../customers/customer-labels.ts';
@@ -39,7 +50,7 @@ import {
 } from '../labels.ts';
 import { m } from '../paraglide/messages.js';
 import { ResourceUnits } from '../units/resource-units.tsx';
-import { Breadcrumb } from './section.tsx';
+import { PageHeader } from './section.tsx';
 
 type Notice = { tone: 'ok' | 'warning'; text: string } | undefined;
 
@@ -268,52 +279,52 @@ function ResourceForm({
 
   return (
     <div className="page">
-      <header className="page-header">
-        <Breadcrumb>
-          <li>
-            <Link to="/resources/$kind" params={{ kind: 'drivers' }}>
-              {m.resources_title()}
-            </Link>
-          </li>
-          <li>
-            <Link to="/resources/$kind" params={{ kind: kindSlugs[kind] }}>
-              {tabLabel[kind]()}
-            </Link>
-          </li>
-          <li aria-current="page">{resource?.name ?? newTitle[kind]()}</li>
-        </Breadcrumb>
-        <div className="page-title-row">
-          <div className="page-title">
-            {resource && kind !== 'driver' ? <Plate>{resource.plate}</Plate> : null}
-            <div>
-              <h1>
-                {!resource
-                  ? newTitle[kind]()
-                  : kind === 'driver'
-                    ? `${resource.firstName} ${resource.lastName}`
-                    : [kindText, resource.makeModel].filter(Boolean).join(' · ')}
-              </h1>
-              {resource && kind !== 'driver' ? (
-                <span className="page-subtitle">
-                  {[
-                    resource.category,
-                    resource.gcwKg
-                      ? `${m.field_gcw()} ${formatNumber(resource.gcwKg)} ${m.kg()}`
-                      : `${m.field_gvw()} ${formatNumber(resource.gvwKg ?? 0)} ${m.kg()}`,
-                  ].join(' · ')}
-                </span>
-              ) : null}
-            </div>
-            {resource?.nextExpiry && resource.nextExpiry.status !== 'valid' ? (
-              <StatusBadge tone={severityTone[resource.nextExpiry.severity]}>
-                {entryLabel(
-                  lists.documentTypes.find((t) => t.id === resource.nextExpiry?.documentTypeId),
-                )}{' '}
-                {formatDays(resource.nextExpiry.daysUntil)}
-              </StatusBadge>
-            ) : null}
-          </div>
-          <div className="page-actions">
+      <PageHeader
+        breadcrumb={
+          <>
+            <li>
+              <Link to="/resources/$kind" params={{ kind: 'drivers' }}>
+                {m.resources_title()}
+              </Link>
+            </li>
+            <li>
+              <Link to="/resources/$kind" params={{ kind: kindSlugs[kind] }}>
+                {tabLabel[kind]()}
+              </Link>
+            </li>
+            <li aria-current="page">{resource?.name ?? newTitle[kind]()}</li>
+          </>
+        }
+        lead={resource && kind !== 'driver' ? <Plate>{resource.plate}</Plate> : null}
+        title={
+          !resource
+            ? newTitle[kind]()
+            : kind === 'driver'
+              ? `${resource.firstName} ${resource.lastName}`
+              : [kindText, resource.makeModel].filter(Boolean).join(' · ')
+        }
+        subtitle={
+          resource && kind !== 'driver'
+            ? [
+                resource.category,
+                resource.gcwKg
+                  ? `${m.field_gcw()} ${formatNumber(resource.gcwKg)} ${m.kg()}`
+                  : `${m.field_gvw()} ${formatNumber(resource.gvwKg ?? 0)} ${m.kg()}`,
+              ].join(' · ')
+            : null
+        }
+        badges={
+          resource?.nextExpiry && resource.nextExpiry.status !== 'valid' ? (
+            <StatusBadge tone={severityTone[resource.nextExpiry.severity]}>
+              {entryLabel(
+                lists.documentTypes.find((t) => t.id === resource.nextExpiry?.documentTypeId),
+              )}{' '}
+              {formatDays(resource.nextExpiry.daysUntil)}
+            </StatusBadge>
+          ) : null
+        }
+        actions={
+          <>
             {resource ? (
               <Button
                 variant="danger"
@@ -329,18 +340,18 @@ function ResourceForm({
             <Button type="submit" form="resource-form" variant="primary" disabled={save.isPending}>
               {resource ? m.action_save() : m.action_create()}
             </Button>
-          </div>
-        </div>
-      </header>
+          </>
+        }
+      />
 
       {resource?.archived ? <Banner tone="warning">{m.archived_banner()}</Banner> : null}
       {notice ? <Banner tone={notice.tone}>{notice.text}</Banner> : null}
       {writeError ? <Banner tone="conflict">{failureText(writeError, lists)}</Banner> : null}
 
-      <div className="resource-layout">
-        <div className="resource-main">
-          <form id="resource-form" className="t-panel form-grid" onSubmit={submit} noValidate>
-            <h2>{m.section_identity()}</h2>
+      <CardRow columns={['2fr', '3fr']}>
+        <form id="resource-form" className="t-panel" onSubmit={submit} noValidate>
+          <h2>{m.section_identity()}</h2>
+          <FormGrid>
             {kind === 'driver' ? (
               <>
                 <Field label={m.field_last_name()} error={errorFor('lastName')}>
@@ -382,7 +393,7 @@ function ResourceForm({
                     autoComplete="tel"
                   />
                 </Field>
-                <fieldset className="span-2 capabilities">
+                <fieldset className="t-span-all capabilities">
                   <legend>{m.section_driver_protective_equipment()}</legend>
                   <p className="t-field-hint">
                     {m.pe_held({
@@ -443,7 +454,7 @@ function ResourceForm({
                     onChange={(e) => set('makeModel', e.target.value)}
                   />
                 </Field>
-                <div className="span-2">
+                <div className="t-span-all">
                   <SegmentedControl
                     legend={m.field_vehicle_kind()}
                     value={vehicleKind}
@@ -511,7 +522,7 @@ function ResourceForm({
                 ) : (
                   <span />
                 )}
-                <div className="span-2">
+                <div className="t-span-all">
                   <Field
                     label={m.field_body_type()}
                     optional={
@@ -538,7 +549,7 @@ function ResourceForm({
                     </select>
                   </Field>
                 </div>
-                <fieldset className="span-2 capabilities">
+                <fieldset className="t-span-all capabilities">
                   <legend>{m.section_capabilities()}</legend>
                   <p className="t-field-hint">{m.capabilities_hint()}</p>
                   <div className="capability-list">
@@ -561,8 +572,8 @@ function ResourceForm({
                 </fieldset>
               </>
             )}
-          </form>
-        </div>
+          </FormGrid>
+        </form>
         <section className="t-panel resource-documents" aria-labelledby="documents-title">
           <h2 id="documents-title">{m.section_documents()}</h2>
           {resource ? (
@@ -571,7 +582,7 @@ function ResourceForm({
             <p className="t-field-hint">{m.documents_after_save()}</p>
           )}
         </section>
-      </div>
+      </CardRow>
       {resource ? <ResourceUnits resource={resource} /> : null}
       {resource ? (
         <p className="footnote">
@@ -657,7 +668,7 @@ function Documents({ resource, lists }: { resource: ResourceJson; lists: Referen
 
   return (
     <>
-      <div className="t-table-frame">
+      <TableFrame>
         <table className="t-table">
           <caption className="t-visually-hidden">{m.section_documents()}</caption>
           <thead>
@@ -724,15 +735,19 @@ function Documents({ resource, lists }: { resource: ResourceJson; lists: Referen
             })}
           </tbody>
         </table>
-      </div>
+      </TableFrame>
 
-      <form className="document-editor" onSubmit={submit} aria-labelledby="document-editor-title">
+      <form
+        className="document-editor t-container"
+        onSubmit={submit}
+        aria-labelledby="document-editor-title"
+      >
         <h3 id="document-editor-title">
           {editing
             ? m.editing_document({ type: entryLabel(typeOf(editing.documentTypeId)) })
             : m.adding_document()}
         </h3>
-        <div className="document-fields">
+        <FormGrid columns={4}>
           <Field label={m.field_document_type()}>
             <select
               value={draft.documentTypeId}
@@ -768,7 +783,7 @@ function Documents({ resource, lists }: { resource: ResourceJson; lists: Referen
               onChange={(e) => setDraft({ ...draft, expiresOn: e.target.value })}
             />
           </Field>
-          <div className="document-buttons">
+          <div className="t-form-actions">
             <Button
               type="submit"
               variant="primary"
@@ -787,7 +802,7 @@ function Documents({ resource, lists }: { resource: ResourceJson; lists: Referen
               </Button>
             ) : null}
           </div>
-        </div>
+        </FormGrid>
         {selected ? (
           <p className="t-field-hint">
             {m.document_rule({

@@ -19,14 +19,14 @@ import type {
   OpeningJson,
   SiteJson,
 } from '@timon/http';
-import { Banner, Button, Field, Plate } from '@timon/ui';
+import { Banner, Button, CardRow, CardStack, Field, FormGrid, Plate, TableFrame } from '@timon/ui';
 import { type FormEvent, useId, useState } from 'react';
 import { ApiError, api, ok } from '../api.ts';
 import { errorText, useReferenceLists } from '../data.ts';
 import { failureText, issueSentence } from '../issues.ts';
 import { capitalise } from '../labels.ts';
 import { m } from '../paraglide/messages.js';
-import { Breadcrumb } from '../resources/section.tsx';
+import { PageHeader } from '../resources/section.tsx';
 import {
   customerKeys,
   useCustomer,
@@ -284,28 +284,24 @@ function CustomerForm({ customer }: { customer: CustomerWithSitesJson | undefine
 
   return (
     <div className="page">
-      <header className="page-header">
-        <Breadcrumb>
-          <li>
-            <Link to="/customers">{m.customers_title()}</Link>
-          </li>
-          <li aria-current="page">{customer?.code ?? m.new_customer()}</li>
-        </Breadcrumb>
-        <div className="page-title-row">
-          <div className="page-title">
-            {customer ? <Plate>{customer.code}</Plate> : null}
-            <div>
-              <h1>{customer?.name ?? m.new_customer()}</h1>
-              {customer ? (
-                <span className="page-subtitle">
-                  {[customer.billingCity, countryName(customer.country)]
-                    .filter(Boolean)
-                    .join(' · ')}
-                </span>
-              ) : null}
-            </div>
-          </div>
-          <div className="page-actions">
+      <PageHeader
+        breadcrumb={
+          <>
+            <li>
+              <Link to="/customers">{m.customers_title()}</Link>
+            </li>
+            <li aria-current="page">{customer?.code ?? m.new_customer()}</li>
+          </>
+        }
+        lead={customer ? <Plate>{customer.code}</Plate> : null}
+        title={customer?.name ?? m.new_customer()}
+        subtitle={
+          customer
+            ? [customer.billingCity, countryName(customer.country)].filter(Boolean).join(' · ')
+            : null
+        }
+        actions={
+          <>
             {customer ? (
               <Button
                 variant="danger"
@@ -321,145 +317,151 @@ function CustomerForm({ customer }: { customer: CustomerWithSitesJson | undefine
             <Button type="submit" form="customer-form" variant="primary" disabled={save.isPending}>
               {customer ? m.action_save() : m.action_create()}
             </Button>
-          </div>
-        </div>
-      </header>
+          </>
+        }
+      />
 
       {customer?.archived ? <Banner tone="warning">{m.customer_archived_banner()}</Banner> : null}
       {notice ? <Banner tone="ok">{notice}</Banner> : null}
       {writeError ? <Banner tone="conflict">{failureText(writeError, lists)}</Banner> : null}
 
-      <form id="customer-form" className="customer-layout" onSubmit={submit} noValidate>
-        <div className="customer-column">
-          <section className="t-panel form-grid" aria-labelledby="identity-title">
-            <h2 id="identity-title">{m.section_customer_identity()}</h2>
-            <div className="span-2">
-              <Field label={m.field_legal_name()} error={errorFor('name')}>
-                <input value={state.name} onChange={(e) => set('name', e.target.value)} />
-              </Field>
-            </div>
-            <Field label={m.field_code()} hint={m.code_hint()} error={takenMessage('code')}>
-              <input
-                className="t-mono"
-                value={state.code}
-                onChange={(e) => set('code', e.target.value.toUpperCase())}
-              />
-            </Field>
-            <Field label={m.field_country()} error={errorFor('country')}>
-              <select value={state.country} onChange={(e) => set('country', e.target.value)}>
-                {countryOptions.map((code) => (
-                  <option key={code} value={code}>
-                    {countryName(code)}
-                  </option>
-                ))}
-              </select>
-            </Field>
-            {state.country === 'FR' ? (
-              <Field
-                label={m.field_siret()}
-                optional={m.optional()}
-                hint={siretValid ? `✓ ${m.siret_valid()} · ${m.siret_hint()}` : m.siret_hint()}
-                error={takenMessage('siret')}
-              >
-                <input
-                  className="t-mono"
-                  inputMode="numeric"
-                  value={state.siret}
-                  onChange={(e) => setSiret(e.target.value)}
-                />
-              </Field>
-            ) : null}
-            <Field
-              label={m.field_vat()}
-              optional={m.optional()}
-              hint={state.country === 'FR' ? m.vat_hint() : undefined}
-              error={errorFor('vatNumber')}
-            >
-              <input
-                className="t-mono"
-                value={state.vatNumber}
-                onChange={(e) => set('vatNumber', e.target.value.toUpperCase())}
-              />
-            </Field>
-          </section>
+      <form id="customer-form" onSubmit={submit} noValidate>
+        <CardRow columns={['2fr', '3fr']}>
+          <CardStack>
+            <section className="t-panel" aria-labelledby="identity-title">
+              <h2 id="identity-title">{m.section_customer_identity()}</h2>
+              <FormGrid>
+                <div className="t-span-all">
+                  <Field label={m.field_legal_name()} error={errorFor('name')}>
+                    <input value={state.name} onChange={(e) => set('name', e.target.value)} />
+                  </Field>
+                </div>
+                <Field label={m.field_code()} hint={m.code_hint()} error={takenMessage('code')}>
+                  <input
+                    className="t-mono"
+                    value={state.code}
+                    onChange={(e) => set('code', e.target.value.toUpperCase())}
+                  />
+                </Field>
+                <Field label={m.field_country()} error={errorFor('country')}>
+                  <select value={state.country} onChange={(e) => set('country', e.target.value)}>
+                    {countryOptions.map((code) => (
+                      <option key={code} value={code}>
+                        {countryName(code)}
+                      </option>
+                    ))}
+                  </select>
+                </Field>
+                {state.country === 'FR' ? (
+                  <Field
+                    label={m.field_siret()}
+                    optional={m.optional()}
+                    hint={siretValid ? `✓ ${m.siret_valid()} · ${m.siret_hint()}` : m.siret_hint()}
+                    error={takenMessage('siret')}
+                  >
+                    <input
+                      className="t-mono"
+                      inputMode="numeric"
+                      value={state.siret}
+                      onChange={(e) => setSiret(e.target.value)}
+                    />
+                  </Field>
+                ) : null}
+                <Field
+                  label={m.field_vat()}
+                  optional={m.optional()}
+                  hint={state.country === 'FR' ? m.vat_hint() : undefined}
+                  error={errorFor('vatNumber')}
+                >
+                  <input
+                    className="t-mono"
+                    value={state.vatNumber}
+                    onChange={(e) => set('vatNumber', e.target.value.toUpperCase())}
+                  />
+                </Field>
+              </FormGrid>
+            </section>
 
-          <section className="t-panel form-grid" aria-labelledby="billing-title">
-            <h2 id="billing-title">{m.section_billing()}</h2>
-            <div className="span-2">
-              <Field label={m.field_street()} optional={m.optional()}>
-                <input
-                  value={state.billingStreet1}
-                  onChange={(e) => set('billingStreet1', e.target.value)}
-                />
-              </Field>
-            </div>
-            <div className="span-2">
-              <Field label={m.field_street2()} optional={m.optional()}>
-                <input
-                  value={state.billingStreet2}
-                  onChange={(e) => set('billingStreet2', e.target.value)}
-                />
-              </Field>
-            </div>
-            <Field
-              label={m.field_postcode()}
-              optional={m.optional()}
-              error={errorFor('billingPostcode')}
-            >
-              <input
-                className="t-mono"
-                value={state.billingPostcode}
-                onChange={(e) => set('billingPostcode', e.target.value)}
-              />
-            </Field>
-            <Field label={m.field_city()} optional={m.optional()}>
-              <input
-                value={state.billingCity}
-                onChange={(e) => set('billingCity', e.target.value)}
-              />
-            </Field>
-          </section>
+            <section className="t-panel" aria-labelledby="billing-title">
+              <h2 id="billing-title">{m.section_billing()}</h2>
+              <FormGrid>
+                <div className="t-span-all">
+                  <Field label={m.field_street()} optional={m.optional()}>
+                    <input
+                      value={state.billingStreet1}
+                      onChange={(e) => set('billingStreet1', e.target.value)}
+                    />
+                  </Field>
+                </div>
+                <div className="t-span-all">
+                  <Field label={m.field_street2()} optional={m.optional()}>
+                    <input
+                      value={state.billingStreet2}
+                      onChange={(e) => set('billingStreet2', e.target.value)}
+                    />
+                  </Field>
+                </div>
+                <Field
+                  label={m.field_postcode()}
+                  optional={m.optional()}
+                  error={errorFor('billingPostcode')}
+                >
+                  <input
+                    className="t-mono"
+                    value={state.billingPostcode}
+                    onChange={(e) => set('billingPostcode', e.target.value)}
+                  />
+                </Field>
+                <Field label={m.field_city()} optional={m.optional()}>
+                  <input
+                    value={state.billingCity}
+                    onChange={(e) => set('billingCity', e.target.value)}
+                  />
+                </Field>
+              </FormGrid>
+            </section>
 
-          <section className="t-panel" aria-labelledby="notes-title">
-            <h2 id="notes-title">{m.section_notes()}</h2>
-            <Field label={m.section_notes()}>
-              <textarea value={state.notes} onChange={(e) => set('notes', e.target.value)} />
-            </Field>
-          </section>
-        </div>
+            <section className="t-panel" aria-labelledby="notes-title">
+              <h2 id="notes-title">{m.section_notes()}</h2>
+              <Field label={m.section_notes()}>
+                <textarea value={state.notes} onChange={(e) => set('notes', e.target.value)} />
+              </Field>
+            </section>
+          </CardStack>
 
-        <div className="customer-column">
-          <Contacts
-            contacts={state.contacts}
-            errorFor={errorFor}
-            onChange={setContact}
-            onAdd={() =>
-              setState((s) => ({
-                ...s,
-                contacts: [
-                  ...s.contacts,
-                  { key: newKey(), name: '', role: '', phone: '', email: '' },
-                ],
-              }))
-            }
-            onRemove={(key) => {
-              setState((s) => ({ ...s, contacts: s.contacts.filter((c) => c.key !== key) }));
-              setServerIssues([]);
-            }}
-          />
-          <UsualSites
-            sites={state.sites}
-            customerId={customer?.id}
-            today={today}
-            onAdd={(site) => set('sites', [...state.sites, site])}
-            onRemove={(siteId) =>
-              set(
-                'sites',
-                state.sites.filter((s) => s.id !== siteId),
-              )
-            }
-          />
-        </div>
+          <CardStack>
+            <Contacts
+              contacts={state.contacts}
+              errorFor={errorFor}
+              onChange={setContact}
+              onAdd={() =>
+                setState((s) => ({
+                  ...s,
+                  contacts: [
+                    ...s.contacts,
+                    { key: newKey(), name: '', role: '', phone: '', email: '' },
+                  ],
+                }))
+              }
+              onRemove={(key) => {
+                setState((s) => ({ ...s, contacts: s.contacts.filter((c) => c.key !== key) }));
+                setServerIssues([]);
+              }}
+            />
+            <UsualSites
+              sites={state.sites}
+              customerId={customer?.id}
+              today={today}
+              onAdd={(site) => set('sites', [...state.sites, site])}
+              onRemove={(siteId) =>
+                set(
+                  'sites',
+                  state.sites.filter((s) => s.id !== siteId),
+                )
+              }
+            />
+          </CardStack>
+        </CardRow>
       </form>
     </div>
   );
@@ -485,7 +487,7 @@ function Contacts({
         <Button onClick={onAdd}>{m.action_add_contact()}</Button>
       </div>
       {contacts.length === 0 ? <p className="t-field-hint">{m.contacts_empty()}</p> : null}
-      <div className="contact-list">
+      <div className="contact-list t-container">
         {contacts.map((contact, index) => {
           const rowError = errorFor(`contacts.${index}`);
           const label = m.contact_label({ n: index + 1 });
@@ -496,40 +498,44 @@ function Contacts({
               data-invalid={rowError ? 'true' : undefined}
             >
               <legend className="t-visually-hidden">{label}</legend>
-              <Field label={m.field_contact_name()} error={errorFor(`contacts.${index}.name`)}>
-                <input
-                  value={contact.name}
-                  onChange={(e) => onChange(contact.key, 'name', e.target.value)}
-                />
-              </Field>
-              <Field label={m.field_contact_role()} optional={m.optional()}>
-                <input
-                  value={contact.role}
-                  onChange={(e) => onChange(contact.key, 'role', e.target.value)}
-                />
-              </Field>
-              <Field label={m.field_contact_phone()}>
-                <input
-                  type="tel"
-                  className="t-mono"
-                  value={contact.phone}
-                  onChange={(e) => onChange(contact.key, 'phone', e.target.value)}
-                />
-              </Field>
-              <Field label={m.field_contact_email()} error={errorFor(`contacts.${index}.email`)}>
-                <input
-                  type="email"
-                  value={contact.email}
-                  onChange={(e) => onChange(contact.key, 'email', e.target.value)}
-                />
-              </Field>
-              <Button
-                variant="link"
-                onClick={() => onRemove(contact.key)}
-                aria-label={m.action_remove_named({ name: contact.name || label })}
-              >
-                {m.action_remove()}
-              </Button>
+              <FormGrid columns={4}>
+                <Field label={m.field_contact_name()} error={errorFor(`contacts.${index}.name`)}>
+                  <input
+                    value={contact.name}
+                    onChange={(e) => onChange(contact.key, 'name', e.target.value)}
+                  />
+                </Field>
+                <Field label={m.field_contact_role()} optional={m.optional()}>
+                  <input
+                    value={contact.role}
+                    onChange={(e) => onChange(contact.key, 'role', e.target.value)}
+                  />
+                </Field>
+                <Field label={m.field_contact_phone()}>
+                  <input
+                    type="tel"
+                    className="t-mono"
+                    value={contact.phone}
+                    onChange={(e) => onChange(contact.key, 'phone', e.target.value)}
+                  />
+                </Field>
+                <Field label={m.field_contact_email()} error={errorFor(`contacts.${index}.email`)}>
+                  <input
+                    type="email"
+                    value={contact.email}
+                    onChange={(e) => onChange(contact.key, 'email', e.target.value)}
+                  />
+                </Field>
+                <div className="t-form-actions">
+                  <Button
+                    variant="link"
+                    onClick={() => onRemove(contact.key)}
+                    aria-label={m.action_remove_named({ name: contact.name || label })}
+                  >
+                    {m.action_remove()}
+                  </Button>
+                </div>
+              </FormGrid>
               {rowError ? (
                 <p className="t-field-error contact-error" role="alert">
                   {rowError}
@@ -615,7 +621,7 @@ function UsualSites({
       {sites.length === 0 ? (
         <p className="t-field-hint">{m.usual_sites_empty()}</p>
       ) : (
-        <div className="t-table-frame">
+        <TableFrame>
           <table className="t-table">
             <caption className="t-visually-hidden">{m.section_usual_sites()}</caption>
             <thead>
@@ -662,7 +668,7 @@ function UsualSites({
               ))}
             </tbody>
           </table>
-        </div>
+        </TableFrame>
       )}
     </section>
   );
