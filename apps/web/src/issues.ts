@@ -1,5 +1,12 @@
 import type { ResourceKind, VehicleKind } from '@timon/domain';
-import type { CustomerOwnerJson, IssueJson, PlateOwnerJson, ReferenceListsJson } from '@timon/http';
+import type {
+  CustomerOwnerJson,
+  IssueJson,
+  PlateOwnerJson,
+  ReferenceListsJson,
+  UnitOverlapJson,
+  UnitRefJson,
+} from '@timon/http';
 import { ApiError } from './api.ts';
 import { weekdayName } from './customers/customer-labels.ts';
 import { errorText } from './data.ts';
@@ -12,6 +19,7 @@ import {
   vehicleKindLabel,
 } from './labels.ts';
 import { m } from './paraglide/messages.js';
+import { periodText, reasonText } from './units/unit-labels.ts';
 
 const fieldLabels: Record<string, () => string> = {
   lastName: m.field_last_name,
@@ -61,6 +69,14 @@ const fieldLabels: Record<string, () => string> = {
   semiTrailersAccepted: m.field_semi_trailers,
   gatePhone: m.field_gate_phone,
   instructions: m.field_instructions,
+  // Units
+  powerUnitId: m.col_power_unit,
+  trailerId: m.col_trailer,
+  driverId: m.col_driver,
+  start: m.field_start,
+  end: m.field_end,
+  from: m.field_from,
+  members: m.field_members,
 };
 
 const contactFields: Record<string, () => string> = {
@@ -185,6 +201,33 @@ export function issueText(issue: IssueJson, lists?: ReferenceListsJson): string 
       return m.issue_code_duplicated({ line: text(params.line) });
     case 'siret-duplicated':
       return m.issue_siret_duplicated({ line: text(params.line) });
+    case 'licence-missing':
+      return text(params.holds)
+        ? m.issue_licence_missing({
+            needs: text(params.needs),
+            driver: text(params.driver),
+            holds: text(params.holds),
+          })
+        : m.issue_licence_none({ needs: text(params.needs), driver: text(params.driver) });
+    case 'licence-not-supported':
+    case 'semi-trailer-needs-tractor':
+    case 'drawbar-trailer-needs-rigid-truck':
+    case 'light-van-no-trailer':
+      return inSentence(reasonText(issue));
+    case 'driver-or-trailer-required':
+      return m.issue_driver_or_trailer_required();
+    case 'resource-archived':
+      return m.issue_resource_archived({ field });
+    case 'subsidiary-mismatch':
+      return m.issue_subsidiary_mismatch();
+    case 'not-to-the-minute':
+      return m.issue_not_to_the_minute({ field });
+    case 'end-not-after-start':
+      return m.issue_end_not_after_start();
+    case 'outside-unit':
+      return m.issue_outside_unit();
+    case 'unchanged':
+      return m.issue_unchanged({ field });
     default:
       return `${field}: ${issue.code}`;
   }
@@ -203,6 +246,8 @@ export function failureText(error: unknown, lists?: ReferenceListsJson): string 
       return m.plate_taken({ name: body.owner.name, kind: ownerKind(body.owner) });
     }
     if (error.code === 'document-type-taken') return m.document_type_taken();
+    const unitFailure = unitFailureText(error);
+    if (unitFailure) return unitFailure;
     const customer = (error.body as { owner?: CustomerOwnerJson } | undefined)?.owner;
     if (error.code === 'code-taken' && customer) {
       return customer.archived
@@ -216,4 +261,26 @@ export function failureText(error: unknown, lists?: ReferenceListsJson): string 
     if (error.code === 'invalid' && first) return issueSentence(first, lists);
   }
   return errorText(error);
+}
+
+/** The refusals of SPEC-003, in one sentence each. */
+function unitFailureText(error: ApiError): string | undefined {
+  if (error.code === 'in-unit') {
+    const unit = (error.body as { unit?: UnitRefJson } | undefined)?.unit;
+    if (unit) return m.in_unit({ unit: unit.name, period: periodText(unit.start, unit.end) });
+  }
+  if (error.code === 'unit-overlap') {
+    const [first] = (error.body as UnitOverlapJson | undefined)?.conflicts ?? [];
+    if (first) {
+      return m.unit_overlap({
+        resource: first.resource.name,
+        unit: first.unit.name,
+        period: periodText(first.unit.start, first.unit.end),
+      });
+    }
+  }
+  if (error.code === 'started') return m.unit_started();
+  if (error.code === 'not-started') return m.unit_not_started();
+  if (error.code === 'ended') return m.unit_ended();
+  return undefined;
 }
