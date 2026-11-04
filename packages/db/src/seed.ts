@@ -11,8 +11,9 @@ import {
 import { count } from 'drizzle-orm';
 import type { Database } from './database.ts';
 import { createRepositories } from './repositories.ts';
-import { customer, documentType, resource } from './schema.ts';
+import { customer, documentType, resource, unit } from './schema.ts';
 import { moreauEquipment, seedCustomers } from './seed-customers.ts';
+import { seedUnits } from './seed-units.ts';
 
 // The haulier of the mockups, south of Lyon: 18 drivers, 12 power units, 15 trailers. Dates
 // are written as on the mockups, dated Tuesday 6 October 2026, and moved by as many days as
@@ -384,9 +385,9 @@ function build(lists: ReferenceLists, shift: number) {
 }
 
 /**
- * Writes the demo haulier: resources, then customers and sites. Each part is skipped when it
- * already exists, so it is safe to run at every start of the demo, and on a database seeded
- * before customers existed.
+ * Writes the demo haulier: resources, then customers and sites, then units. Each part is
+ * skipped when it already exists, so it is safe to run at every start of the demo, and on a
+ * database seeded before customers or units existed.
  */
 export async function seed(
   db: Database,
@@ -395,8 +396,10 @@ export async function seed(
   const repositories = createRepositories(db);
   const [resources] = await db.select({ n: count() }).from(resource);
   const [customers] = await db.select({ n: count() }).from(customer);
+  const [units] = await db.select({ n: count() }).from(unit);
   const writeResources = (resources?.n ?? 0) === 0;
   const writeCustomers = (customers?.n ?? 0) === 0;
+  const writeUnits = (units?.n ?? 0) === 0;
 
   if (writeResources) {
     // A list entry of this company, not one Timon provides: it has a name, not a code.
@@ -416,5 +419,6 @@ export async function seed(
     await repositories.resources.createMany(build(lists, mockupDay.until(today).days));
   }
   if (writeCustomers) await seedCustomers(repositories);
-  return writeResources || writeCustomers;
+  if (writeUnits) await seedUnits(repositories, today);
+  return writeResources || writeCustomers || writeUnits;
 }
