@@ -35,6 +35,7 @@ import {
   tradeLabel,
 } from './schema.ts';
 import { formatRange } from './tstzrange.ts';
+import { unitRepository } from './unit-repository.ts';
 
 /** The single subsidiary created by migration 0004, until subsidiaries have screens (#14). */
 export const defaultSubsidiaryId = '10000000-0000-4000-8000-000000000002';
@@ -50,6 +51,7 @@ export function createRepositories(db: Database, clock: Clock = systemClock): Re
     documents: documentRepository(db),
     referenceLists: referenceListRepository(db),
     bookings: bookingRepository(db),
+    units: unitRepository(db),
     customers: customerRepository(db),
     sites: siteRepository(db),
     clock,
@@ -88,6 +90,7 @@ function toResource(
 ): StoredResource {
   const common = {
     id: row.id,
+    subsidiaryId: row.subsidiaryId,
     archived: row.archivedAt !== null,
     createdAt: Temporal.Instant.fromEpochMilliseconds(row.createdAt.getTime()),
     updatedAt: Temporal.Instant.fromEpochMilliseconds(row.updatedAt.getTime()),

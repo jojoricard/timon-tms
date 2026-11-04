@@ -5,6 +5,7 @@ import {
   OpeningOverlapError,
   PlateTakenError,
   SiretTakenError,
+  UnitOverlapError,
 } from '@timon/app';
 
 // The database is the last word on these rules: its violations become the errors of the ports.
@@ -15,6 +16,7 @@ const violations: Record<string, () => Error> = {
   site_opening_site_id_weekday_start_minute_pk: () =>
     new OpeningOverlapError('Opening ranges overlap'),
   resource_booking_no_overlap: () => new BookingOverlapError('Overlapping booking'),
+  unit_member_no_overlap: () => new UnitOverlapError('Resource already in another unit'),
   resource_active_plate: () => new PlateTakenError('Plate used by another active resource'),
   document_resource_type: () => new DocumentTypeTakenError('Document type already recorded'),
 };
