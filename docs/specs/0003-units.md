@@ -2,9 +2,9 @@
 title: "Units"
 subtitle: "Functional specification"
 reference: TIMON-SPEC-003
-version: "0.1"
+version: "1.0"
 date: "October 27, 2026"
-status: "Draft"
+status: "Accepted"
 ---
 
 # TIMON-SPEC-003: Units
@@ -86,7 +86,9 @@ Here these statuses never block. A unit that lasts months will see documents exp
 - **Change driver or trailer**: from a running unit, a dialog that asks for the date and time and the new resource, and shows the two units that will result.
 - **Resource form**: a "Units" section added to the forms of SPEC-001, listing the resource's units, past, running and future.
 
-The screens follow the design system and are in French and English from the first screen. Mockups come in the next revision of this document.
+The screens follow the design system and are in French and English from the first screen. Mockups: [units](../design/mockups/units.png), [unit form](../design/mockups/unit-form.png), [change of driver](../design/mockups/unit-change.png), [units of a resource](../design/mockups/unit-history.png).
+
+![Units at a date, grouped by kind of power unit, with the resources free at that moment.](../design/mockups/units.png){width=100%}
 
 ## Acceptance criteria
 

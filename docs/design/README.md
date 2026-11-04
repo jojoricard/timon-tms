@@ -80,6 +80,10 @@ The interface is designed in French and English; the mockups here are the Englis
 | Site form, location, opening hours and requirements | [site-form.png](mockups/site-form.png) |
 | Sites CSV import, check and locate step | [site-import.png](mockups/site-import.png) |
 | Driver form, protective equipment held | [driver-protective-equipment.png](mockups/driver-protective-equipment.png) |
+| Units at a date and the resources free ([SPEC-003](../specs/0003-units.md)) | [units.png](mockups/units.png) |
+| Unit form, with the resources that cannot be chosen and why | [unit-form.png](mockups/unit-form.png) |
+| Changing the driver of a unit from a date | [unit-change.png](mockups/unit-change.png) |
+| Units of a resource, past and running | [unit-history.png](mockups/unit-history.png) |
 
 ![Order in conflict: solutions, route on the A7, goods, price and margin, emissions under ISO 14083.](mockups/order.png)
 
