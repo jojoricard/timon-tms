@@ -97,19 +97,19 @@ test('criterion 11: an archived driver is hidden, shown on request and restored'
   page,
 }) => {
   await open(page, '/resources/drivers');
-  await page.getByRole('link', { name: 'Julien Roux' }).click();
+  await page.getByRole('link', { name: 'Camille Dupuis' }).click();
   await page.getByRole('button', { name: 'Archive' }).click();
   await expect(page.getByText('This resource is archived')).toBeVisible();
 
   await page.getByRole('link', { name: 'Drivers' }).click();
   const table = page.getByRole('table');
   await expect(table.getByRole('row')).toHaveCount(18);
-  await expect(table).not.toContainText('Julien Roux');
+  await expect(table).not.toContainText('Camille Dupuis');
 
   await page.getByLabel('Show archived').check();
-  await table.getByRole('button', { name: 'Restore J. Roux' }).click();
+  await table.getByRole('button', { name: 'Restore C. Dupuis' }).click();
   await page.getByLabel('Show archived').uncheck();
-  await expect(table.getByRole('row', { name: /Julien Roux/ })).toBeVisible();
+  await expect(table.getByRole('row', { name: /Camille Dupuis/ })).toBeVisible();
 });
 
 test('criterion 13: in French, labels, statuses and errors are French', async ({ page }) => {
