@@ -2,8 +2,8 @@
 title: "Customers and sites"
 subtitle: "Functional specification"
 reference: TIMON-SPEC-002
-version: "1.1"
-date: "October 8, 2026"
+version: "1.2"
+date: "November 5, 2026"
 status: "Accepted"
 ---
 
@@ -38,9 +38,9 @@ The ordering customer is rarely the place being delivered: a logistics platform 
 | Code | Short code used in lists and orders (e.g. "DUPONT-IDF"), required, unique in the company, upper case |
 | Country | Required, France by default |
 | SIRET | France only, optional: 14 digits with a valid check digit, unique among active customers |
-| VAT number | Optional; for a French customer with a SIRET, Timon proposes the number computed from the SIREN |
+| VAT number | Optional; for a French customer with a SIRET, Timon proposes the number computed from the SIREN. Changing the country away from France clears the SIRET and a VAT number computed from it |
 | Billing address | Street lines, postcode, city, country |
-| Contacts | Any number: name, role, phone, email; at least a phone or an email |
+| Contacts | Any number: name, role, phone, email; at least a phone or an email; a phone follows SPEC-001, rule 10 |
 | Usual sites | Sites from the address book, in any number, each usable for pickups and deliveries |
 | Notes | Free text |
 
@@ -67,7 +67,7 @@ Protective equipment is a company list seeded with safety shoes, high-visibility
 
 ## Locating a site
 
-When the country is France, typing the address proposes matching addresses from the national address base, served by the IGN geocoding service. Choosing one fills the street, postcode, city and location. When nothing matches, when the site is abroad, or when the point is wrong (the entrance of a large plant is rarely at its postal address), the dispatcher places or moves the pin on the map.
+When the country is France, typing the address proposes matching addresses from the national address base, served by the IGN geocoding service. Choosing one fills the street, postcode, city and location. When nothing matches, when the site is abroad, or when the point is wrong (the entrance of a large plant is rarely at its postal address), the dispatcher places or moves the pin on the map. For a site abroad, the map centres on the chosen country. A pin placed outside the site's country raises a warning, which does not block.
 
 The site records how it was located: *address* (the exact number was found), *street* or *city* (only an approximate match), or *by hand*. A site may be saved without a location, for instance while the geocoding service cannot be reached; it is then marked *not located*. An order will not accept a site that is not located (issue #8).
 
@@ -78,11 +78,11 @@ This extends SPEC-001. A driver's form gains the list of protective equipment th
 ## Business rules
 
 1. A customer code is unique in the company, archived customers included, and compared without case. A SIRET is unique among active customers.
-2. A SIRET has fourteen digits and a valid check digit (Luhn; establishments of La Poste follow their own rule). The VAT number Timon proposes is `FR`, the key `(12 + 3 × (SIREN mod 97)) mod 97` on two digits, then the SIREN. The dispatcher can change it.
+2. A SIRET has fourteen digits and a valid check digit (Luhn; establishments of La Poste follow their own rule). The VAT number Timon proposes is `FR`, the key `(12 + 3 × (SIREN mod 97)) mod 97` on two digits, then the SIREN. The dispatcher can change it. A VAT number typed by hand is checked: for France, `FR`, two characters, then nine digits, with the key above when the two characters are digits; for another country, two letters then 2 to 13 letters or digits.
 3. A contact needs a name and at least a phone or an email. A removed contact is deleted, not archived: personal data is not kept once it is no longer needed.
 4. Within one day, opening ranges do not overlap and each ends after it starts; `24:00` is a valid end. A site open overnight has two ranges, one ending at `24:00`, the next starting at `00:00` on the following day.
 5. A site within 50 metres of an active site, or with the same street line, postcode and country (ignoring case, accents and punctuation), raises a warning naming that site. It does not block: two docks of one warehouse may be two sites.
-6. Customers and sites are never deleted once they exist; they are archived, hidden by default and can be restored. Archiving a customer does not archive its usual sites, which other customers may use.
+6. Customers and sites are never deleted once they exist; they are archived, hidden by default and can be restored. Archiving asks for confirmation first. Archiving a customer does not archive its usual sites, which other customers may use.
 7. A CSV import is all or nothing, as for resources: if one line is invalid, nothing is imported and every error is listed with its line number. A French site without coordinates is located during the preview; a site that cannot be located is not an error, it is imported as *not located* and the preview says so.
 
 <!-- pagebreak -->
@@ -90,8 +90,8 @@ This extends SPEC-001. A driver's form gains the list of protective equipment th
 ## Screens
 
 - **Customers**: a searchable table (code, name, city, SIRET, number of usual sites), a "show archived" toggle, a button to add, a button to import.
-- **Customer form**: identity and billing address, contacts as rows, then the usual sites with a search in the address book and a button to create a new site without leaving the form.
-- **Sites**: a searchable table (name, postcode and city, country, today's opening hours, booking, protective equipment as icons, location status), a filter "not located", buttons to add and to import.
+- **Customer form**: identity and billing address, contacts as rows, then the usual sites with a search in the address book and a button to create a new site without leaving the form, including while the customer is being created. Removing a usual site takes it off the customer's list only; the action is named "Remove from list", and the site itself stays in the address book.
+- **Sites**: a searchable table (name, postcode and city, country, today's opening hours, booking, protective equipment as text labels, location status), a filter "not located", buttons to add and to import.
 - **Site form**: address with suggestions, a map with a pin that can be moved, the opening hours as a week grid, requirements, access and instructions.
 - **Import**: the import screen of SPEC-001, with a template for customers and one for sites.
 - **Driver form**: the protective equipment block added to the existing form.
@@ -117,6 +117,11 @@ The screens follow the design system and are in French and English from the firs
 13. **Given** a valid CSV of 300 French sites without coordinates, one of which matches no address, **when** I confirm, **then** 300 sites exist, 299 located and one *not located*.
 14. **Given** a driver, **when** I tick safety shoes and high-visibility vest and save, **then** the driver's form and list show both items.
 15. **Given** the interface in English, **when** I switch to French, **then** every label, message and opening-hours format of these screens is in French.
+16. **Given** a new customer in France with the SIRET 404 833 048 00014 and the proposed VAT number, **when** I change the country to Germany, **then** the SIRET and the VAT number are cleared and the customer can be saved.
+17. **Given** a German customer, **when** I type the VAT number "DE123456789", **then** it is accepted; **when** I type "FR00MANUEL" for a French customer, **then** it is refused.
+18. **Given** a contact, **when** I enter the phone "zz" and no email, **then** the form refuses the phone and still asks for a phone or an email.
+19. **Given** a new site in Germany, **when** I open the map, **then** it is centred on Germany; **when** I place the pin near Lyon and save, **then** a warning says the pin is outside Germany and I can still save.
+20. **Given** a new customer not yet saved, **when** I create a site from its form, **then** the site is added to the address book and to the customer's usual sites, and the customer form keeps what I had typed.
 
 ## Out of scope
 

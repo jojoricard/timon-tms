@@ -2,8 +2,8 @@
 title: "Units"
 subtitle: "Functional specification"
 reference: TIMON-SPEC-003
-version: "1.1"
-date: "November 4, 2026"
+version: "1.2"
+date: "November 5, 2026"
 status: "Accepted"
 ---
 
@@ -75,7 +75,7 @@ Here these statuses never block. A unit that lasts months will see documents exp
 3. The end, when given, is after the start. Periods are half-open: a unit ending at 20:00 and another starting at 20:00 do not overlap.
 4. A resource belongs to at most one unit at any moment. A unit that would overlap another on any of its resources is refused, and the message names the other unit and its period.
 5. The driver must hold the category the unit needs (see above). Otherwise the unit is refused, and the message says which category is needed and which the driver holds.
-6. Units are never edited in place once started. Changing the driver or the trailer from a date ends the current unit at that minute and starts a new one with the same other members, in one step. A unit that has not started yet can be edited or deleted; a started unit can only be given an end.
+6. Units are never edited in place once started. Changing the driver or the trailer from a date ends the current unit at that minute and starts a new one with the same other members, in one step. A unit that has not started yet can be edited or deleted, after a confirmation; a started unit can only be given an end.
 7. A resource that belongs to a running or future unit can neither be archived nor change kind (a tractor becoming a rigid truck, for instance); the message names the unit.
 
 ## Screens
@@ -83,8 +83,8 @@ Here these statuses never block. A unit that lasts months will see documents exp
 - **Units**: the units valid at a date and time, now by default, as a table (unit name, power unit, trailer, driver, since, until, status), grouped by kind of power unit. A date picker moves through time, including the past.
 - **Free on this date**: beside the table, the drivers, power units and trailers that belong to no unit at that moment, each with a button to start a unit from it.
 - **Unit form**: the power unit, then the trailer and the driver, each chosen in a list that shows only active resources free over the whole period; resources that cannot be chosen stay visible, greyed, with the reason ("Holds C1, needs CE", "In Unit 5 until 20/10 18:00", "Semi-trailer: needs a tractor"). Below, the period, then the documents of the members with their status.
-- **Change driver or trailer**: from a running unit, a dialog that asks for the date and time and the new resource, and shows the two units that will result.
-- **Resource form**: a "Units" section added to the forms of SPEC-001, listing the resource's units, past, running and future.
+- **Change driver or trailer**: from a running unit, a dialog that asks for the date and time and the new resource, and shows the two units that will result. It lists the resources as the unit form does: those that cannot be chosen stay visible, greyed, with the reason.
+- **Resource form**: a "Units" section added to the forms of SPEC-001, listing the resource's units, past, running and future. The button that starts a new unit with the resource is disabled, with the reason, while the resource is in a unit with no end.
 
 The screens follow the design system and are in French and English from the first screen. Mockups: [units](../design/mockups/units.png), [unit form](../design/mockups/unit-form.png), [change of driver](../design/mockups/unit-change.png), [units of a resource](../design/mockups/unit-history.png).
 
@@ -104,6 +104,8 @@ The screens follow the design system and are in French and English from the firs
 10. **Given** a unit starting next Monday, **when** I delete it, **then** it no longer exists; **given** a running unit, **then** it cannot be deleted, only given an end.
 11. **Given** a trailer in a running unit, **when** I archive the trailer, **then** it is refused and the message names the unit.
 12. **Given** the interface in English, **when** I switch to French, **then** every label, reason and message of these screens is in French.
+13. **Given** Marc Laurent's running unit, **when** I open the change of driver, **then** Élodie Marchand is listed, greyed, with "Holds C1, needs CE".
+14. **Given** a tractor in a unit with no end, **when** I open its form, **then** "New unit with this vehicle" is disabled and names the unit.
 
 ## Out of scope
 
