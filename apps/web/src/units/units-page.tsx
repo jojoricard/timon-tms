@@ -1,4 +1,4 @@
-import { Link, useNavigate } from '@tanstack/react-router';
+import { Link } from '@tanstack/react-router';
 import type { UnitJson, UnitMemberJson, UnitsAtJson } from '@timon/http';
 import {
   Banner,
@@ -14,6 +14,7 @@ import {
 import { useState } from 'react';
 import { errorText, useReferenceLists } from '../data.ts';
 import { entryLabel, vehicleKindLabel } from '../labels.ts';
+import type { SetSearch, UnitsSearch } from '../list-search.ts';
 import { m } from '../paraglide/messages.js';
 import { PageHeader, SectionTabs } from '../resources/section.tsx';
 import { ChangeDialog } from './change-dialog.tsx';
@@ -62,15 +63,25 @@ function matches(unit: UnitJson, query: string): boolean {
 }
 
 /** The units valid at a date and time, now by default, and the resources left free. */
-export function UnitsPage({ at }: { at?: LocalTime | undefined }) {
-  const navigate = useNavigate();
+export function UnitsPage({
+  search,
+  setSearch,
+}: {
+  search: UnitsSearch;
+  setSearch: SetSearch<UnitsSearch>;
+}) {
+  const at: LocalTime | undefined = search.at;
   const data = useUnitsAt(at);
-  const [query, setQuery] = useState('');
-  const [filter, setFilter] = useState<Filter>('all');
+  const query = search.q ?? '';
+  const filter: Filter = search.filter ?? 'all';
+  const setQuery = (q: string) => setSearch({ q: q || undefined }, { replace: true });
+  const setFilter = (value: Filter) => setSearch({ filter: value === 'all' ? undefined : value });
   const [changing, setChanging] = useState<UnitJson | undefined>();
   const shown = at ?? (data.data ? toLocal(data.data.at) : nowLocal());
-  const go = (next: LocalTime | undefined) =>
-    navigate({ to: '/resources/units', search: next ? { at: next } : {} });
+  const go = (next: LocalTime | undefined) => setSearch({ at: next });
+  // From the date in the address when the click runs: quick clicks each move a day.
+  const step = (days: number) =>
+    setSearch((current) => ({ at: addDays(current.at ?? shown, days) }));
 
   const units = data.data?.units ?? [];
   const searched = units.filter((u) => query.trim() === '' || matches(u, query.trim()));
@@ -115,7 +126,7 @@ export function UnitsPage({ at }: { at?: LocalTime | undefined }) {
       <div className="toolbar">
         <div className="toolbar-start">
           <div className="moment-picker">
-            <Button aria-label={m.units_previous_day()} onClick={() => go(addDays(shown, -1))}>
+            <Button aria-label={m.units_previous_day()} onClick={() => step(-1)}>
               ‹
             </Button>
             <label>
@@ -129,7 +140,7 @@ export function UnitsPage({ at }: { at?: LocalTime | undefined }) {
                 }}
               />
             </label>
-            <Button aria-label={m.units_next_day()} onClick={() => go(addDays(shown, 1))}>
+            <Button aria-label={m.units_next_day()} onClick={() => step(1)}>
               ›
             </Button>
             <Button onClick={() => go(undefined)}>{m.units_now()}</Button>

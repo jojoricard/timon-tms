@@ -12,7 +12,7 @@ import {
   StatusBadge,
   TableFrame,
 } from '@timon/ui';
-import { type ReactNode, useState } from 'react';
+import type { ReactNode } from 'react';
 import { api, ok } from '../api.ts';
 import { EquipmentTags } from '../customers/section.tsx';
 import {
@@ -36,6 +36,7 @@ import {
   textTone,
   vehicleKindLabel,
 } from '../labels.ts';
+import type { ResourceListSearch, SetSearch } from '../list-search.ts';
 import { m } from '../paraglide/messages.js';
 import { useSubmit } from '../submit.ts';
 import { PageHeader, SectionTabs } from './section.tsx';
@@ -43,13 +44,21 @@ import { PageHeader, SectionTabs } from './section.tsx';
 export function ListPage({
   kind,
   imported,
+  search,
+  setSearch,
 }: {
   kind: ResourceKind;
   imported?: number | undefined;
+  search: ResourceListSearch;
+  setSearch: SetSearch<ResourceListSearch>;
 }) {
-  const [query, setQuery] = useState('');
-  const [status, setStatus] = useState<StatusFilter>('all');
-  const [archived, setArchived] = useState(false);
+  const query = search.q ?? '';
+  const status: StatusFilter = search.status ?? 'all';
+  const archived = search.archived === true;
+  const setQuery = (q: string) => setSearch({ q: q || undefined }, { replace: true });
+  const setStatus = (value: StatusFilter) =>
+    setSearch({ status: value === 'all' ? undefined : value });
+  const setArchived = (on: boolean) => setSearch({ archived: on || undefined });
   const list = useResourceList(kind, query.trim(), status, archived);
   const lists = useReferenceLists().data;
   const summary = useSummary().data;
