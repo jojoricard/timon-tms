@@ -58,8 +58,11 @@ test('criterion 4: a contact with a name only asks for a phone or an email', asy
     .getByLabel('Name', { exact: true })
     .fill('Yanis Mercier');
   await page.getByRole('button', { name: 'Create' }).click();
+  // Under the contact it is about, not in a banner.
   await expect(
-    page.getByRole('alert').filter({ hasText: 'A contact needs a phone or an email.' }),
+    page
+      .getByRole('group', { name: 'Contact 1' })
+      .getByText('A contact needs a phone or an email.'),
   ).toBeVisible();
   await expect(page.getByRole('heading', { level: 1, name: 'New customer' })).toBeVisible();
 });

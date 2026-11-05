@@ -1,8 +1,8 @@
 import { Link } from '@tanstack/react-router';
 import type { CustomerJson } from '@timon/http';
 import { Banner, Checkbox, Chip, ChipGroup, Columns, TableFrame } from '@timon/ui';
-import { useState } from 'react';
 import { errorText } from '../data.ts';
+import type { CustomersSearch, SetSearch } from '../list-search.ts';
 import { m } from '../paraglide/messages.js';
 import { PageHeader } from '../resources/section.tsx';
 import { type CountryFilter, useCustomerSummary, useCustomers } from './customer-data.ts';
@@ -14,10 +14,22 @@ export function formatSiret(siret: string): string {
   return siret.replace(/^(\d{3})(\d{3})(\d{3})(\d{5})$/, '$1 $2 $3 $4');
 }
 
-export function CustomersPage({ imported }: { imported?: number | undefined }) {
-  const [query, setQuery] = useState('');
-  const [country, setCountry] = useState<CountryFilter>('all');
-  const [archived, setArchived] = useState(false);
+export function CustomersPage({
+  imported,
+  search,
+  setSearch,
+}: {
+  imported?: number | undefined;
+  search: CustomersSearch;
+  setSearch: SetSearch<CustomersSearch>;
+}) {
+  const query = search.q ?? '';
+  const country: CountryFilter = search.country ?? 'all';
+  const archived = search.archived === true;
+  const setQuery = (q: string) => setSearch({ q: q || undefined }, { replace: true });
+  const setCountry = (value: CountryFilter) =>
+    setSearch({ country: value === 'all' ? undefined : value });
+  const setArchived = (on: boolean) => setSearch({ archived: on || undefined });
   const list = useCustomers(query.trim(), country, archived);
   const summary = useCustomerSummary().data;
 
@@ -32,7 +44,7 @@ export function CustomersPage({ imported }: { imported?: number | undefined }) {
       <PageHeader
         breadcrumb={<li>{m.customers_title()}</li>}
         title={m.customers_title()}
-        subtitle={summary ? m.customers_subtitle({ count: summary.customers }) : null}
+        subtitle={summary ? m.customers_subtitle({ count: summary.customers }) : ''}
         actions={
           <>
             <Link className="t-button" to="/customers/import">
@@ -116,7 +128,7 @@ function CustomerTable({ customers }: { customers: readonly CustomerJson[] }) {
       <tbody>
         {customers.length === 0 ? (
           <tr>
-            <td colSpan={7}>{m.list_empty()}</td>
+            <td colSpan={7}>{m.customers_empty()}</td>
           </tr>
         ) : null}
         {customers.map((c) => (
@@ -132,7 +144,7 @@ function CustomerTable({ customers }: { customers: readonly CustomerJson[] }) {
               ) : null}
             </th>
             <td>
-              {c.billingCity}
+              {c.billingCity ?? '—'}
               {c.country !== 'FR' ? ` · ${countryName(c.country)}` : ''}
             </td>
             <td className="t-mono">{c.siret ? formatSiret(c.siret) : '—'}</td>

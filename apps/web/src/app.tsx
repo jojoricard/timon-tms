@@ -20,7 +20,20 @@ import { CustomerImportPage, SiteImportPage } from './customers/import-pages.tsx
 import { SitePage } from './customers/site-page.tsx';
 import { SitesPage } from './customers/sites-page.tsx';
 import { kindFromSlug } from './kinds.ts';
-import { LanguageSwitch } from './language-switch.tsx';
+import { LanguageSwitch, localised } from './language-switch.tsx';
+import {
+  applySearch,
+  type CustomersSearch,
+  clean,
+  type ExpiriesSearch,
+  flag,
+  oneOf,
+  type ResourceListSearch,
+  type SetSearch,
+  type SitesSearch,
+  text,
+  type UnitsSearch,
+} from './list-search.ts';
 import { m } from './paraglide/messages.js';
 import { getLocale } from './paraglide/runtime.js';
 import { ExpiriesPage } from './resources/expiries-page.tsx';
@@ -62,7 +75,7 @@ function SectionLinks() {
 }
 
 const rootRoute = createRootRoute({
-  component: () => (
+  component: localised(() => (
     <div className="layout">
       <header className="appbar">
         <span className="wordmark">Timon</span>
@@ -77,13 +90,24 @@ const rootRoute = createRootRoute({
         <Outlet />
       </main>
     </div>
-  ),
-  notFoundComponent: () => (
-    <div className="page">
-      <Banner tone="warning">{m.not_found()}</Banner>
+  )),
+  notFoundComponent: localised(() => (
+    <div className="page not-found">
+      <h1>{m.page_not_found_title()}</h1>
+      <p>{m.page_not_found_text()}</p>
+      <p>
+        <Link to="/resources/$kind" params={{ kind: 'drivers' }}>
+          {m.action_back_home()}
+        </Link>
+      </p>
     </div>
-  ),
+  )),
 });
+
+const count = (value: unknown) => {
+  const n = Number(value);
+  return Number.isInteger(n) && n >= 0 ? n : undefined;
+};
 
 // Resources is the home screen.
 const indexRoute = createRoute({
@@ -97,22 +121,42 @@ const indexRoute = createRoute({
 const expiriesRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/resources/expiries',
-  component: ExpiriesPage,
+  validateSearch: (search: Record<string, unknown>): ExpiriesSearch =>
+    clean<ExpiriesSearch>({
+      kind: oneOf(search.kind, ['driver', 'power-unit', 'trailer'] as const),
+      blocking: flag(search.blocking),
+    }),
+  component: localised(function Expiries() {
+    const search = expiriesRoute.useSearch();
+    const navigate = expiriesRoute.useNavigate();
+    const setSearch: SetSearch<ExpiriesSearch> = (patch, options) =>
+      navigate({
+        search: (current) => applySearch(current, patch),
+        replace: options?.replace === true,
+      });
+    return <ExpiriesPage search={search} setSearch={setSearch} />;
+  }),
 });
-
-const text = (value: unknown) => (typeof value === 'string' && value !== '' ? value : undefined);
 
 const unitsRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/resources/units',
-  validateSearch: (search: Record<string, unknown>): { at?: string } => {
-    const at = text(search.at);
-    return at ? { at } : {};
-  },
-  component: function Units() {
-    const { at } = unitsRoute.useSearch();
-    return <UnitsPage at={at} />;
-  },
+  validateSearch: (search: Record<string, unknown>): UnitsSearch =>
+    clean<UnitsSearch>({
+      at: text(search.at),
+      q: text(search.q),
+      filter: oneOf(search.filter, ['documents', 'no-driver'] as const),
+    }),
+  component: localised(function Units() {
+    const search = unitsRoute.useSearch();
+    const navigate = unitsRoute.useNavigate();
+    const setSearch: SetSearch<UnitsSearch> = (patch, options) =>
+      navigate({
+        search: (current) => applySearch(current, patch),
+        replace: options?.replace === true,
+      });
+    return <UnitsPage search={search} setSearch={setSearch} />;
+  }),
 });
 
 const newUnitRoute = createRoute({
@@ -125,19 +169,19 @@ const newUnitRoute = createRoute({
         return value ? [[key, value]] : [];
       }),
     ),
-  component: function NewUnit() {
+  component: localised(function NewUnit() {
     const initial = newUnitRoute.useSearch();
     return <UnitPage initial={initial} />;
-  },
+  }),
 });
 
 const unitRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/resources/units/$id',
-  component: function Unit() {
+  component: localised(function Unit() {
     const { id } = unitRoute.useParams();
     return <UnitPage key={id} id={id} />;
-  },
+  }),
 });
 
 const kindOf = (slug: string) => {
@@ -146,92 +190,134 @@ const kindOf = (slug: string) => {
   return kind;
 };
 
+type ListRouteSearch = ResourceListSearch & { imported?: number };
+
 export const listRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/resources/$kind',
-  validateSearch: (search: Record<string, unknown>): { imported?: number } => {
-    const imported = Number(search.imported);
-    return Number.isInteger(imported) && imported > 0 ? { imported } : {};
-  },
-  component: function List() {
+  validateSearch: (search: Record<string, unknown>): ListRouteSearch =>
+    clean<ListRouteSearch>({
+      imported: count(search.imported) || undefined,
+      q: text(search.q),
+      status: oneOf(search.status, ['expiring', 'expired'] as const),
+      archived: flag(search.archived),
+    }),
+  component: localised(function List() {
     const { kind } = listRoute.useParams();
-    const { imported } = listRoute.useSearch();
-    return <ListPage key={kind} kind={kindOf(kind)} imported={imported} />;
-  },
+    const { imported, ...search } = listRoute.useSearch();
+    const navigate = listRoute.useNavigate();
+    const setSearch: SetSearch<ResourceListSearch> = (patch, options) =>
+      navigate({
+        search: (current) => applySearch<ListRouteSearch>(current, patch, ['imported']),
+        replace: options?.replace === true,
+      });
+    return (
+      <ListPage
+        key={kind}
+        kind={kindOf(kind)}
+        imported={imported}
+        search={search}
+        setSearch={setSearch}
+      />
+    );
+  }),
 });
 
 const newRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/resources/$kind/new',
-  component: function New() {
+  component: localised(function New() {
     const { kind } = newRoute.useParams();
     return <ResourcePage key={kind} kind={kindOf(kind)} />;
-  },
+  }),
 });
 
 const importRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/resources/$kind/import',
-  component: function Import() {
+  component: localised(function Import() {
     const { kind } = importRoute.useParams();
     return <ImportPage key={kind} kind={kindOf(kind)} />;
-  },
+  }),
 });
 
 const resourceRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/resources/$kind/$id',
-  component: function Resource() {
+  component: localised(function Resource() {
     const { kind, id } = resourceRoute.useParams();
     return <ResourcePage key={id} kind={kindOf(kind)} id={id} />;
-  },
+  }),
 });
 
-const count = (value: unknown) => {
-  const n = Number(value);
-  return Number.isInteger(n) && n >= 0 ? n : undefined;
-};
+type CustomersRouteSearch = CustomersSearch & { imported?: number };
 
 const customersRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/customers',
-  validateSearch: (search: Record<string, unknown>): { imported?: number } => {
-    const imported = count(search.imported);
-    return imported ? { imported } : {};
-  },
-  component: function Customers() {
-    const { imported } = customersRoute.useSearch();
-    return <CustomersPage imported={imported} />;
-  },
+  validateSearch: (search: Record<string, unknown>): CustomersRouteSearch =>
+    clean<CustomersRouteSearch>({
+      imported: count(search.imported) || undefined,
+      q: text(search.q),
+      country: oneOf(search.country, ['france', 'abroad'] as const),
+      archived: flag(search.archived),
+    }),
+  component: localised(function Customers() {
+    const { imported, ...search } = customersRoute.useSearch();
+    const navigate = customersRoute.useNavigate();
+    const setSearch: SetSearch<CustomersSearch> = (patch, options) =>
+      navigate({
+        search: (current) => applySearch<CustomersRouteSearch>(current, patch, ['imported']),
+        replace: options?.replace === true,
+      });
+    return <CustomersPage imported={imported} search={search} setSearch={setSearch} />;
+  }),
 });
 
 const newCustomerRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/customers/new',
-  component: () => <CustomerPage />,
+  component: localised(() => <CustomerPage />),
 });
 
 const customerImportRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/customers/import',
-  component: CustomerImportPage,
+  component: localised(CustomerImportPage),
 });
+
+type SitesRouteSearch = SitesSearch & { imported?: number; notLocated?: number };
 
 const sitesRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/customers/sites',
-  validateSearch: (search: Record<string, unknown>): { imported?: number; notLocated?: number } => {
-    const imported = count(search.imported);
-    return imported ? { imported, notLocated: count(search.notLocated) ?? 0 } : {};
+  validateSearch: (search: Record<string, unknown>): SitesRouteSearch => {
+    const imported = count(search.imported) || undefined;
+    return clean<SitesRouteSearch>({
+      imported,
+      notLocated: imported ? (count(search.notLocated) ?? 0) : undefined,
+      q: text(search.q),
+      filter: oneOf(search.filter, ['not-located', 'booking', 'protective-equipment'] as const),
+      archived: flag(search.archived),
+    });
   },
-  component: function Sites() {
-    const { imported, notLocated } = sitesRoute.useSearch();
+  component: localised(function Sites() {
+    const { imported, notLocated, ...search } = sitesRoute.useSearch();
+    const navigate = sitesRoute.useNavigate();
+    const setSearch: SetSearch<SitesSearch> = (patch, options) =>
+      navigate({
+        search: (current) =>
+          applySearch<SitesRouteSearch>(current, patch, ['imported', 'notLocated']),
+        replace: options?.replace === true,
+      });
     return (
       <SitesPage
         imported={imported ? { count: imported, notLocated: notLocated ?? 0 } : undefined}
+        search={search}
+        setSearch={setSearch}
       />
     );
-  },
+  }),
 });
 
 const newSiteRoute = createRoute({
@@ -239,34 +325,34 @@ const newSiteRoute = createRoute({
   path: '/customers/sites/new',
   validateSearch: (search: Record<string, unknown>): { customer?: string } =>
     typeof search.customer === 'string' ? { customer: search.customer } : {},
-  component: function NewSite() {
+  component: localised(function NewSite() {
     const { customer } = newSiteRoute.useSearch();
     return <SitePage customerId={customer} />;
-  },
+  }),
 });
 
 const siteImportRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/customers/sites/import',
-  component: SiteImportPage,
+  component: localised(SiteImportPage),
 });
 
 const siteRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/customers/sites/$id',
-  component: function Site() {
+  component: localised(function Site() {
     const { id } = siteRoute.useParams();
     return <SitePage key={id} id={id} />;
-  },
+  }),
 });
 
 const customerRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/customers/$id',
-  component: function Customer() {
+  component: localised(function Customer() {
     const { id } = customerRoute.useParams();
     return <CustomerPage key={id} id={id} />;
-  },
+  }),
 });
 
 const router = createRouter({

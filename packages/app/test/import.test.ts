@@ -120,7 +120,12 @@ describe('checkImport', () => {
     expect((await checkImport(ports, 'driver', drivers(2_000))).problem).toBeNull();
     expect((await checkImport(ports, 'trailer', 'plate;kind\nSR-1;semi-trailer')).problem).toEqual({
       code: 'missing-columns',
-      params: { fields: ['category', 'gvwKg'] },
+      params: { fields: ['category', 'gvwKg'], columns: 2 },
+    });
+    // A separator the import does not know reads the header as one column: the screen says so.
+    expect((await checkImport(ports, 'driver', 'nom|prenom\nPipe|Paul')).problem).toEqual({
+      code: 'missing-columns',
+      params: { fields: ['lastName', 'firstName'], columns: 1 },
     });
     expect((await checkImport(ports, 'trailer', 'plate;kind;category;gvw_kg\n\n')).problem).toEqual(
       {

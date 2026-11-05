@@ -26,6 +26,7 @@ export function PageHeader({
   /** Before the title, such as a plate or a code. */
   lead?: ReactNode;
   title: ReactNode;
+  /** Under the title. An empty string keeps its line while the text loads. */
   subtitle?: ReactNode;
   /** After the title, such as status badges. */
   badges?: ReactNode;
@@ -40,10 +41,14 @@ export function PageHeader({
         <div className="t-page-title">
           {lead}
           <div className="t-page-heading">
-            <h1>{title}</h1>
-            {subtitle ? <span className="t-page-subtitle">{subtitle}</span> : null}
+            <div className="t-page-heading-line">
+              <h1>{title}</h1>
+              {badges}
+            </div>
+            {subtitle || subtitle === '' ? (
+              <span className="t-page-subtitle">{subtitle}</span>
+            ) : null}
           </div>
-          {badges}
         </div>
         {actions ? <div className="t-actions">{actions}</div> : null}
       </div>
@@ -146,11 +151,19 @@ function useScrollEdges<T extends HTMLElement>() {
  * stays in place; once scrolled, its edge casts a shadow over the columns passing under it. While
  * more columns lie past the trailing edge, that edge is shaded too.
  */
-export function TableFrame({ children }: { children: ReactNode }) {
+export function TableFrame({
+  actions = false,
+  children,
+}: {
+  /** The last column holds the actions of the row: it stays in place while the row scrolls. */
+  actions?: boolean;
+  children: ReactNode;
+}) {
   const { ref, edges, update } = useScrollEdges<HTMLDivElement>();
   return (
     <div
       className="t-table-frame"
+      data-actions={actions || undefined}
       data-scrolled={edges.before || undefined}
       data-more={edges.after || undefined}
     >

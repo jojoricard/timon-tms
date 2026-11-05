@@ -1,5 +1,5 @@
-import { useMutation } from '@tanstack/react-query';
 import { Link, useNavigate } from '@tanstack/react-router';
+import { textLimits, unitFields } from '@timon/domain';
 import type {
   IssueJson,
   UnitDocumentsJson,
@@ -21,10 +21,13 @@ import {
 import { type FormEvent, useState } from 'react';
 import { ApiError, api, ok } from '../api.ts';
 import { errorText } from '../data.ts';
-import { failureText, issueSentence } from '../issues.ts';
+import { bannerError, IssueBanner, useFormIssues } from '../form.tsx';
+import { type FieldLabels, failureText } from '../issues.ts';
 import { formatDate } from '../labels.ts';
+import { changed, useLeaveGuard } from '../leave-guard.tsx';
 import { m } from '../paraglide/messages.js';
 import { PageHeader } from '../resources/section.tsx';
+import { useSubmit } from '../submit.ts';
 import { ChangeDialog } from './change-dialog.tsx';
 import {
   formatTime,
@@ -78,6 +81,36 @@ export function UnitPage({ id, initial }: { id?: string; initial?: UnitStart }) 
   return <UnitForm key={unit.data?.id ?? 'new'} unit={unit.data} initial={initial ?? {}} />;
 }
 
+/** On this form, `name` is the name of the unit. */
+const unitLabels: FieldLabels = { name: m.field_unit_name };
+
+/** The inputs that show their own error; `members` and the rest go to the banner. */
+const unitInputs = ['name', 'start', 'end', 'powerUnitId', 'trailerId', 'driverId'];
+
+/** What the form checks before sending: a start, a readable end after it, a vehicle. */
+function unitIssues({
+  start,
+  startInstant,
+  end,
+  endInstant,
+  powerUnit,
+}: {
+  start: string;
+  startInstant: string | undefined;
+  end: string;
+  endInstant: string | undefined;
+  powerUnit: string | null;
+}): IssueJson[] {
+  const issues: IssueJson[] = [];
+  if (!powerUnit) issues.push({ field: 'powerUnitId', code: 'required' });
+  if (!start || !startInstant) issues.push({ field: 'start', code: 'required' });
+  if (end && !endInstant) issues.push({ field: 'end', code: 'required' });
+  if (startInstant && endInstant && Date.parse(endInstant) <= Date.parse(startInstant)) {
+    issues.push({ field: 'end', code: 'end-not-after-start' });
+  }
+  return issues;
+}
+
 function unitBreadcrumb(name: string) {
   return (
     <>
@@ -107,10 +140,16 @@ function UnitForm({ unit, initial }: { unit: UnitJson | undefined; initial: Unit
     trailer: unit?.trailer?.id ?? initial.trailer ?? null,
     driver: unit?.driver?.id ?? initial.driver ?? null,
   });
-  const [issues, setIssues] = useState<IssueJson[]>([]);
-
+  const [opened] = useState(() => ({ name, start, end, members }));
+  const guard = useLeaveGuard(changed(opened, { name, start, end, members }));
   const startInstant = fromLocal(start);
   const endInstant = end ? fromLocal(end) : undefined;
+  const form = useFormIssues({
+    issues: unitIssues({ start, startInstant, end, endInstant, powerUnit: members['power-unit'] }),
+    placed: unitInputs,
+    labels: unitLabels,
+  });
+  const { errorFor } = form;
   const options = useUnitOptions(
     startInstant
       ? {
@@ -132,25 +171,21 @@ function UnitForm({ unit, initial }: { unit: UnitJson | undefined; initial: Unit
     start: startInstant ?? '',
     end: endInstant ?? null,
   };
-  const save = useMutation({
+  const save = useSubmit({
     mutationFn: async () =>
       ok(
         unit
           ? await api.units[':id'].$put({ param: { id: unit.id }, json })
           : await api.units.$post({ json }),
       ),
-    onMutate: () => setIssues([]),
     onSuccess: async (saved) => {
+      guard.release();
       await refresh();
       await navigate({ to: '/resources/units', search: { at: toLocal(saved.start) } });
     },
-    onError: (error) => {
-      if (error instanceof ApiError && error.code === 'invalid') {
-        setIssues((error.body as { issues?: IssueJson[] }).issues ?? []);
-      }
-    },
+    onError: form.refused,
   });
-  const remove = useMutation({
+  const remove = useSubmit({
     mutationFn: async () => {
       const response = await api.units[':id'].$delete({ param: { id: unit?.id ?? '' } });
       if (!response.ok) throw new ApiError(response.status, await response.json());
@@ -163,24 +198,16 @@ function UnitForm({ unit, initial }: { unit: UnitJson | undefined; initial: Unit
 
   const submit = (event: FormEvent) => {
     event.preventDefault();
-    if (!startInstant) {
-      setIssues([{ field: 'start', code: 'required' }]);
-      return;
-    }
-    if (end && !endInstant) {
-      setIssues([{ field: 'end', code: 'required' }]);
-      return;
-    }
-    save.mutate();
+    if (form.submit()) save.mutate();
   };
 
-  const choose = (role: Role, id: string | null) =>
+  const choose = (role: Role, id: string | null) => {
     setMembers((current) => ({ ...current, [role]: id }));
+    form.touch(unitFields[role]);
+    form.touch('members');
+  };
   const title = unit ? unit.name : m.new_unit();
-  const writeError =
-    save.error && !(save.error instanceof ApiError && save.error.code === 'invalid')
-      ? save.error
-      : remove.error;
+  const writeError = bannerError(save.error) ?? remove.error;
 
   return (
     <div className="page">
@@ -198,32 +225,25 @@ function UnitForm({ unit, initial }: { unit: UnitJson | undefined; initial: Unit
         actions={
           <>
             {unit ? (
-              <Button variant="danger" onClick={() => remove.mutate()} disabled={remove.isPending}>
+              <Button variant="danger" onClick={() => remove.mutate()} busy={remove.isPending}>
                 {m.action_delete_unit()}
               </Button>
             ) : null}
             <Link className="t-button" to="/resources/units">
               {m.action_cancel()}
             </Link>
-            <Button type="submit" form="unit-form" variant="primary" disabled={save.isPending}>
+            <Button type="submit" form="unit-form" variant="primary" busy={save.isPending}>
               {m.action_save_unit()}
             </Button>
           </>
         }
       />
 
-      {issues.length > 0 ? (
-        <Banner tone="conflict">
-          <ul className="issue-list">
-            {issues.map((issue) => (
-              <li key={`${issue.field}-${issue.code}`}>{issueSentence(issue)}</li>
-            ))}
-          </ul>
-        </Banner>
-      ) : null}
+      {guard.dialog}
+      <IssueBanner issues={form.unplaced} labels={unitLabels} />
       {writeError ? <Banner tone="conflict">{failureText(writeError)}</Banner> : null}
 
-      <form id="unit-form" className="unit-form" onSubmit={submit} noValidate>
+      <form id="unit-form" ref={form.formRef} className="unit-form" onSubmit={submit} noValidate>
         <CandidateColumn
           place="power-unit"
           title={m.col_power_unit()}
@@ -231,6 +251,7 @@ function UnitForm({ unit, initial }: { unit: UnitJson | undefined; initial: Unit
           placeholder={m.search_plate_or_model()}
           hint={m.power_unit_hint()}
           options={options.data}
+          error={errorFor('powerUnitId')}
           chosen={members['power-unit']}
           onChoose={(id) => choose('power-unit', id)}
         />
@@ -240,6 +261,7 @@ function UnitForm({ unit, initial }: { unit: UnitJson | undefined; initial: Unit
           placeholder={m.search_plate()}
           noneLabel={m.no_trailer()}
           options={options.data}
+          error={errorFor('trailerId')}
           chosen={members.trailer}
           onChoose={(id) => choose('trailer', id)}
         />
@@ -249,6 +271,7 @@ function UnitForm({ unit, initial }: { unit: UnitJson | undefined; initial: Unit
           placeholder={m.search_name()}
           noneLabel={m.no_driver()}
           options={options.data}
+          error={errorFor('driverId')}
           chosen={members.driver}
           onChoose={(id) => choose('driver', id)}
         />
@@ -256,20 +279,27 @@ function UnitForm({ unit, initial }: { unit: UnitJson | undefined; initial: Unit
           <section className="t-panel" aria-labelledby="period-title">
             <h2 id="period-title">{m.period_title()}</h2>
             <FormGrid>
-              <Field label={m.field_start()}>
+              <Field label={m.field_start()} error={errorFor('start')}>
                 <input
                   type="datetime-local"
                   className="datetime-input"
                   value={start}
-                  onChange={(e) => setStart(e.target.value)}
+                  onChange={(e) => {
+                    setStart(e.target.value);
+                    form.touch('start');
+                    form.touch('end');
+                  }}
                 />
               </Field>
-              <Field label={m.field_end()} optional={m.optional()}>
+              <Field label={m.field_end()} optional={m.optional()} error={errorFor('end')}>
                 <input
                   type="datetime-local"
                   className="datetime-input"
                   value={end}
-                  onChange={(e) => setEnd(e.target.value)}
+                  onChange={(e) => {
+                    setEnd(e.target.value);
+                    form.touch('end');
+                  }}
                 />
               </Field>
               <p className="t-field-hint t-span-all">{m.period_hint()}</p>
@@ -278,15 +308,23 @@ function UnitForm({ unit, initial }: { unit: UnitJson | undefined; initial: Unit
                   label={m.field_unit_name()}
                   optional={m.optional()}
                   hint={m.unit_name_hint()}
+                  error={errorFor('name')}
                 >
-                  <input value={name} maxLength={100} onChange={(e) => setName(e.target.value)} />
+                  <input
+                    value={name}
+                    maxLength={textLimits.unit.name}
+                    onChange={(e) => {
+                      setName(e.target.value);
+                      form.touch('name');
+                    }}
+                  />
                 </Field>
               </div>
             </FormGrid>
           </section>
           <LicencePanel options={options.data} driverId={members.driver} />
           <section className="t-panel" aria-labelledby="documents-title">
-            <MembersDocuments documents={options.data?.documents ?? null} />
+            <MembersDocuments documents={options.data?.documents ?? null} editable />
           </section>
         </div>
       </form>
@@ -302,6 +340,7 @@ function CandidateColumn({
   hint,
   noneLabel,
   options,
+  error,
   chosen,
   onChoose,
 }: {
@@ -312,9 +351,14 @@ function CandidateColumn({
   hint?: string;
   noneLabel?: string;
   options: UnitOptionsJson | undefined;
+  error?: string | undefined;
   chosen: string | null;
   onChoose: (id: string | null) => void;
 }) {
+  const errorId = `unit-${place}-error`;
+  const invalid = error
+    ? ({ 'aria-invalid': true, 'aria-describedby': errorId } as const)
+    : ({} as const);
   const [query, setQuery] = useState('');
   const words = query.trim().toLocaleLowerCase();
   const candidates = (options?.candidates[place] ?? []).filter(
@@ -327,7 +371,7 @@ function CandidateColumn({
   );
   const name = `unit-${place}`;
   return (
-    <fieldset className="t-panel candidate-column">
+    <fieldset className="t-panel candidate-column" data-invalid={error ? 'true' : undefined}>
       <legend className="candidate-title">
         {title}{' '}
         {required ? (
@@ -336,6 +380,11 @@ function CandidateColumn({
           <span className="t-field-optional">{m.optional()}</span>
         )}
       </legend>
+      {error ? (
+        <p className="t-field-error" id={errorId}>
+          {error}
+        </p>
+      ) : null}
       <label className="search">
         <span className="t-visually-hidden">{placeholder}</span>
         <input
@@ -353,6 +402,7 @@ function CandidateColumn({
                 type="radio"
                 name={name}
                 checked={chosen === null}
+                {...invalid}
                 onChange={() => onChoose(null)}
               />
               <span className="candidate-name">{noneLabel}</span>
@@ -373,6 +423,7 @@ function CandidateColumn({
                   name={name}
                   checked={isChosen}
                   disabled={reason !== null && !isChosen}
+                  {...invalid}
                   onChange={() => onChoose(resource.id)}
                 />
                 <span className="candidate-text">
@@ -435,7 +486,14 @@ function LicencePanel({
   );
 }
 
-function MembersDocuments({ documents }: { documents: UnitDocumentsJson | null }) {
+function MembersDocuments({
+  documents,
+  editable,
+}: {
+  documents: UnitDocumentsJson | null;
+  /** A unit being created or edited: a warning on a document does not stop saving it. */
+  editable: boolean;
+}) {
   return (
     <>
       <div className="panel-title-row">
@@ -479,7 +537,7 @@ function MembersDocuments({ documents }: { documents: UnitDocumentsJson | null }
               </tbody>
             </table>
           </TableFrame>
-          <p className="t-field-hint">{m.documents_warning_only()}</p>
+          {editable ? <p className="t-field-hint">{m.documents_warning_only()}</p> : null}
         </>
       ) : (
         <p className="t-field-hint">{m.documents_choose_power_unit()}</p>
@@ -495,7 +553,11 @@ function StartedUnit({ unit }: { unit: UnitJson }) {
   const [changing, setChanging] = useState(false);
   const [end, setEnd] = useState<LocalTime>(unit.end ? toLocal(unit.end) : nextHourLocal());
   const endInstant = fromLocal(end);
-  const setEndMutation = useMutation({
+  const endForm = useFormIssues({
+    issues: endInstant ? [] : [{ field: 'end', code: 'required' }],
+    placed: ['end'],
+  });
+  const setEndMutation = useSubmit({
     mutationFn: async () =>
       ok(
         await api.units[':id'].end.$post({
@@ -504,7 +566,9 @@ function StartedUnit({ unit }: { unit: UnitJson }) {
         }),
       ),
     onSuccess: refresh,
+    onError: endForm.refused,
   });
+  const endError = bannerError(setEndMutation.error);
   const member = (label: string, value: UnitMemberJson | null, empty: string) => (
     <div>
       <dt>{label}</dt>
@@ -548,9 +612,8 @@ function StartedUnit({ unit }: { unit: UnitJson }) {
         }
       />
       <p className="t-field-hint">{m.unit_started_hint()}</p>
-      {setEndMutation.error ? (
-        <Banner tone="conflict">{failureText(setEndMutation.error)}</Banner>
-      ) : null}
+      {endError ? <Banner tone="conflict">{failureText(endError)}</Banner> : null}
+      <IssueBanner issues={endForm.unplaced} />
       {setEndMutation.isSuccess ? (
         <Banner tone="ok">
           {m.end_saved({ date: formatTime(setEndMutation.data.end, { year: true }) })}
@@ -568,28 +631,29 @@ function StartedUnit({ unit }: { unit: UnitJson }) {
           </section>
           {unit.state === 'running' ? (
             <form
+              ref={endForm.formRef}
               className="t-panel"
+              noValidate
               onSubmit={(e) => {
                 e.preventDefault();
-                if (endInstant) setEndMutation.mutate();
+                if (endForm.submit()) setEndMutation.mutate();
               }}
             >
               <h2>{m.action_set_end()}</h2>
               <FormGrid>
-                <Field label={m.field_end()}>
+                <Field label={m.field_end()} error={endForm.errorFor('end')}>
                   <input
                     type="datetime-local"
                     className="datetime-input"
                     value={end}
-                    onChange={(e) => setEnd(e.target.value)}
+                    onChange={(e) => {
+                      setEnd(e.target.value);
+                      endForm.touch('end');
+                    }}
                   />
                 </Field>
                 <div className="form-submit">
-                  <Button
-                    type="submit"
-                    variant="primary"
-                    disabled={!endInstant || setEndMutation.isPending}
-                  >
+                  <Button type="submit" variant="primary" busy={setEndMutation.isPending}>
                     {m.action_set_end()}
                   </Button>
                 </div>
@@ -598,7 +662,7 @@ function StartedUnit({ unit }: { unit: UnitJson }) {
           ) : null}
         </CardStack>
         <section className="t-panel" aria-labelledby="documents-title">
-          <MembersDocuments documents={unit.documents} />
+          <MembersDocuments documents={unit.documents} editable={false} />
         </section>
       </CardRow>
       {changing ? (

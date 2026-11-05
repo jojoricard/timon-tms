@@ -1,5 +1,11 @@
 import { z } from '@hono/zod-openapi';
-import { documentStatuses, licenceCategories, unitRoles, vehicleKinds } from '@timon/domain';
+import {
+  documentStatuses,
+  licenceCategories,
+  textLimits,
+  unitRoles,
+  vehicleKinds,
+} from '@timon/domain';
 import { Issue, instant, Problem, UnitRef } from './schemas.ts';
 
 const day = z.iso.date().openapi({ example: '2026-10-27' });
@@ -90,7 +96,7 @@ const optionalId = z.uuid().nullable().optional();
 
 export const UnitInput = z
   .object({
-    name: z.string().max(100).nullable().optional(),
+    name: z.string().max(textLimits.unit.name).nullable().optional(),
     powerUnitId: optionalId,
     trailerId: optionalId,
     driverId: optionalId,

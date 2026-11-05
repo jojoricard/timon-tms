@@ -8,7 +8,7 @@
   "demo_unavailable": "The demo's database could not start in this browser. Reload the page; if it happens again, try another browser.",
   "server_unreachable": "The server cannot be reached. Check your connection and try again.",
   "demo_service_worker_unavailable": "The demo runs entirely in your browser and needs a service worker, which this window does not allow (private browsing, for example). Open the demo in a normal window or in another browser.",
-  "not_found": "This resource does not exist.",
+  "not_found": "This record does not exist.",
   "optional": "(optional)",
   "none": "None",
   "or": "or",
@@ -56,7 +56,16 @@
   "severity_expired_not_blocking": "Expired · not blocking",
   "rule_blocking": "Blocking",
   "rule_not_blocking": "Not blocking",
-  "rule_warns": "warns {days} days ahead",
+  "rule_warns": [
+    {
+      "declarations": ["input days", "local daysPlural = days: plural"],
+      "selectors": ["daysPlural"],
+      "match": {
+        "daysPlural=one": "warns {days} day ahead",
+        "daysPlural=*": "warns {days} days ahead"
+      }
+    }
+  ],
   "archived": "Archived",
   "resources_title": "Resources",
   "resources_active": "{count} active",
@@ -112,7 +121,16 @@
   "col_note": "Note",
   "note_blocked": "Unavailable for the work that needs it",
   "note_warning_only": "Warning only",
-  "note_warns": "Warns {days} days ahead",
+  "note_warns": [
+    {
+      "declarations": ["input days", "local daysPlural = days: plural"],
+      "selectors": ["daysPlural"],
+      "match": {
+        "daysPlural=one": "Warns {days} day ahead",
+        "daysPlural=*": "Warns {days} days ahead"
+      }
+    }
+  ],
   "expiries_caption": "Documents expired or within their warning period, status on {date}",
   "expiries_footer": "Sorted by date, expired first · status on {date}, Europe/Paris · a document expires at the end of its expiry day · each type warns at its own lead time",
   "expiries_empty": "Nothing has expired or is about to.",
@@ -161,11 +179,19 @@
   "col_reference": "Reference",
   "col_issued": "Issued",
   "adding_document": "Adding a document",
-  "editing_document": "Renewing: {type}",
-  "document_rule": "{type}: {rule}, warns {days} days ahead.",
+  "editing_document": "Editing: {type}",
+  "document_rule": [
+    {
+      "declarations": ["input type", "input rule", "input days", "local daysPlural = days: plural"],
+      "selectors": ["daysPlural"],
+      "match": {
+        "daysPlural=one": "{type}: {rule}, warns {days} day ahead.",
+        "daysPlural=*": "{type}: {rule}, warns {days} days ahead."
+      }
+    }
+  ],
   "saved": "Saved.",
-  "archived_banner": "This resource is archived: it is hidden from the lists and the planning.",
-  "archived_done": "{name} is archived. It is never deleted and can be restored.",
+  "archived_banner": "This resource is archived: it is hidden from the lists and the planning. It is never deleted and can be restored.",
   "created_footer": "Created {created} · last changed {updated} · never deleted, only archived",
   "issue_required": "{field} is required",
   "issue_category_not_allowed": "A {kind} is {allowed}, not {category}",
@@ -220,7 +246,16 @@
   "rule_kinds": "Kind and category must agree",
   "rule_formats": "Dates as dd/mm/yyyy, weights in kilograms",
   "action_import_all": "Import every line ({count})",
-  "imported": "Imported: {count}. They are now in the list.",
+  "imported": [
+    {
+      "declarations": ["input count", "local countPlural = count: plural"],
+      "selectors": ["countPlural"],
+      "match": {
+        "countPlural=one": "Imported: {count}. It is now in the list.",
+        "countPlural=*": "Imported: {count}. They are now in the list."
+      }
+    }
+  ],
   "problem_too_large": "The file is over {max} MB.",
   "problem_too_many_lines": "The file has more than {max} lines.",
   "problem_empty": "The file has no line to import.",
@@ -342,6 +377,7 @@
   "issue_booking_method_required": "Say how to book",
   "issue_location_invalid": "The location is not valid",
   "issue_opening_invalid": "{day}: {start}–{end} is not a valid range",
+  "issue_time_invalid": "{day}: {value} is not a valid time",
   "issue_opening_overlap": "{day}: {first} and {second} overlap",
   "issue_openings_overlap": "Two opening ranges of one day overlap",
   "issue_code_taken": "{code} already exists ({name})",
@@ -533,5 +569,19 @@
   "issue_end_not_after_start": "the end must be after the start",
   "issue_outside_unit": "the change must fall after the start of the unit and before its end",
   "issue_unchanged": "{field} is already in this unit",
-  "action_change_short": "Change"
+  "issue_too_long": "{field}: {max} characters at most",
+  "issue_invalid_value": "{field} is not valid",
+  "action_change_short": "Change",
+  "leave_title": "Leave without saving?",
+  "leave_text": "The changes on this page are not saved. Leaving loses them.",
+  "action_stay": "Stay on the page",
+  "action_leave": "Leave without saving",
+  "page_not_found_title": "Page not found",
+  "page_not_found_text": "There is no page at this address. It may have moved, or the link may be wrong.",
+  "action_back_home": "Back to the resources",
+  "customers_empty": "No customer matches.",
+  "sites_empty": "No site matches.",
+  "rule_formats_driver": "Dates as dd/mm/yyyy",
+  "problem_one_column": "Missing columns: {columns}. The file reads as a single column: are its columns separated by ; or ,?",
+  "issue_opening_unreadable": "{day}: “{value}” cannot be read; write hours as 06:00-12:00/14:00-18:00, or leave the cell empty when closed"
 }

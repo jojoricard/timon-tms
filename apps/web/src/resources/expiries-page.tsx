@@ -13,7 +13,6 @@ import {
   StatusBadge,
   TableFrame,
 } from '@timon/ui';
-import { useState } from 'react';
 import { errorText, useExpiries, useReferenceLists } from '../data.ts';
 import { ownerKind } from '../issues.ts';
 import { kindSlugs, tabLabel } from '../kinds.ts';
@@ -26,14 +25,23 @@ import {
   severityTone,
   textTone,
 } from '../labels.ts';
+import type { ExpiriesSearch, SetSearch } from '../list-search.ts';
 import { m } from '../paraglide/messages.js';
 import { PageHeader, SectionTabs } from './section.tsx';
 
 const kinds: ResourceKind[] = ['driver', 'power-unit', 'trailer'];
 
-export function ExpiriesPage() {
-  const [kind, setKind] = useState<ResourceKind | undefined>();
-  const [blocking, setBlocking] = useState(false);
+export function ExpiriesPage({
+  search,
+  setSearch,
+}: {
+  search: ExpiriesSearch;
+  setSearch: SetSearch<ExpiriesSearch>;
+}) {
+  const kind: ResourceKind | undefined = search.kind;
+  const blocking = search.blocking === true;
+  const setKind = (value: ResourceKind | undefined) => setSearch({ kind: value });
+  const setBlocking = (on: boolean) => setSearch({ blocking: on || undefined });
   const expiries = useExpiries(kind, blocking);
   const lists = useReferenceLists().data;
   const data = expiries.data;

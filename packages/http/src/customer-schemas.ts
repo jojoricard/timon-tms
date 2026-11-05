@@ -1,6 +1,6 @@
 import { z } from '@hono/zod-openapi';
 import { suggestionLimits } from '@timon/app';
-import { bookingMethods, locatedByValues } from '@timon/domain';
+import { bookingMethods, locatedByValues, textLimits } from '@timon/domain';
 import { Issue } from './schemas.ts';
 
 const instant = z.iso.datetime({ offset: true });
@@ -87,11 +87,11 @@ export const SiteList = z
 
 export const SiteInput = z
   .object({
-    name: z.string().max(200),
-    street1: z.string().max(200),
-    street2: text(200),
-    postcode: z.string().max(20),
-    city: z.string().max(100),
+    name: z.string().max(textLimits.site.name),
+    street1: z.string().max(textLimits.site.street1),
+    street2: text(textLimits.site.street2),
+    postcode: z.string().max(textLimits.site.postcode),
+    city: z.string().max(textLimits.site.city),
     country: z.string().length(2),
     latitude: z.number().nullable(),
     longitude: z.number().nullable(),
@@ -99,14 +99,14 @@ export const SiteInput = z
     openings: z.array(Opening).max(70),
     bookingRequired: z.boolean(),
     bookingMethod: z.enum(bookingMethods).nullable().optional(),
-    bookingDetail: text(200),
+    bookingDetail: text(textLimits.site.bookingDetail),
     protectiveEquipmentIds: z.array(z.uuid()).max(20),
     maxLengthCm: z.number().int().nullable().optional(),
     maxWeightKg: z.number().int().nullable().optional(),
     loadingDock: z.boolean(),
     semiTrailersAccepted: z.boolean(),
-    gatePhone: text(40),
-    instructions: text(2000),
+    gatePhone: text(textLimits.site.gatePhone),
+    instructions: text(textLimits.site.instructions),
   })
   .openapi('SiteInput');
 
@@ -156,24 +156,24 @@ export const CustomerList = z
 
 export const CustomerInput = z
   .object({
-    code: z.string().max(40),
-    name: z.string().max(200),
+    code: z.string().max(textLimits.customer.code),
+    name: z.string().max(textLimits.customer.name),
     country: z.string().length(2),
-    siret: text(30),
-    vatNumber: text(30),
-    billingStreet1: text(200),
-    billingStreet2: text(200),
-    billingPostcode: text(20),
-    billingCity: text(100),
-    notes: text(2000),
+    siret: text(textLimits.customer.siret),
+    vatNumber: text(textLimits.customer.vatNumber),
+    billingStreet1: text(textLimits.customer.billingStreet1),
+    billingStreet2: text(textLimits.customer.billingStreet2),
+    billingPostcode: text(textLimits.customer.billingPostcode),
+    billingCity: text(textLimits.customer.billingCity),
+    notes: text(textLimits.customer.notes),
     contacts: z
       .array(
         z.object({
           id: z.uuid().optional(),
-          name: z.string().max(200),
-          role: text(200),
-          phone: text(40),
-          email: text(200),
+          name: z.string().max(textLimits.contact.name),
+          role: text(textLimits.contact.role),
+          phone: text(textLimits.contact.phone),
+          email: text(textLimits.contact.email),
         }),
       )
       .max(50),

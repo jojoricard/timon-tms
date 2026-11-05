@@ -145,9 +145,11 @@ function parseLine(
 
   const openings: OpeningRange[] = [];
   for (const weekday of weekdays) {
-    const day = parseOpeningDay(weekday, value(`openings.${weekday}`));
-    if (day === undefined) unknown(`openings.${weekday}`);
-    else openings.push(...day);
+    const field = `openings.${weekday}`;
+    const day = parseOpeningDay(weekday, value(field));
+    if (day === undefined) {
+      issues.push({ field, code: 'opening-unreadable', params: { weekday, value: value(field) } });
+    } else openings.push(...day);
   }
 
   const bookingText = simplify(value('bookingMethod'));

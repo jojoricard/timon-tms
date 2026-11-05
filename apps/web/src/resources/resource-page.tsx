@@ -1,13 +1,13 @@
-import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQueryClient } from '@tanstack/react-query';
 import { Link, useNavigate } from '@tanstack/react-router';
 import {
   allowedCategories,
   canHaveBodyType,
   canPull,
   checkResource,
-  type Issue,
   type ResourceDetails,
   type ResourceKind,
+  textLimits,
   type VehicleCategory,
   type VehicleKind,
   vehicleKindsOf,
@@ -32,10 +32,11 @@ import {
   StatusBadge,
   TableFrame,
 } from '@timon/ui';
-import { type FormEvent, useState } from 'react';
+import { type FormEvent, useEffect, useState } from 'react';
 import { ApiError, api, ok } from '../api.ts';
 import { equipmentLabel } from '../customers/customer-labels.ts';
 import { errorText, keys, useReferenceLists, useRefreshResources, useResource } from '../data.ts';
+import { bannerError, IssueBanner, useFormIssues } from '../form.tsx';
 import { failureText, issueSentence, ownerKind } from '../issues.ts';
 import { kindSlugs, newTitle, tabLabel } from '../kinds.ts';
 import {
@@ -48,7 +49,9 @@ import {
   severityTone,
   vehicleKindLabel,
 } from '../labels.ts';
+import { changed, useLeaveGuard } from '../leave-guard.tsx';
 import { m } from '../paraglide/messages.js';
+import { useSubmit } from '../submit.ts';
 import { ResourceUnits } from '../units/resource-units.tsx';
 import { PageHeader } from './section.tsx';
 
@@ -128,11 +131,18 @@ function initialState(kind: ResourceKind, r: ResourceJson | undefined): FormStat
   };
 }
 
-const weight = (value: string) =>
-  value.trim() === '' ? null : Number(value.replace(/[\s  ]/g, ''));
+/** Kilograms as digits, thousands apart or not: "19 000". Undefined when it is not that. */
+const weight = (value: string): number | null | undefined => {
+  const digits = value.replace(/[\s\u00a0\u202f]/g, '');
+  if (digits === '') return null;
+  return /^\d+$/.test(digits) ? Number(digits) : undefined;
+};
 
 /** The form as the API's input, or the issues that stop it from being one. */
-function toInput(kind: ResourceKind, s: FormState): { input?: ResourceInputJson; issues: Issue[] } {
+function toInput(
+  kind: ResourceKind,
+  s: FormState,
+): { input?: ResourceInputJson; issues: IssueJson[] } {
   if (kind === 'driver') {
     const input = {
       kind,
@@ -152,10 +162,17 @@ function toInput(kind: ResourceKind, s: FormState): { input?: ResourceInputJson;
     });
     return { input, issues };
   }
-  const missing: Issue[] = [];
+  // What the domain cannot check yet: a field left empty, a weight that is not digits.
+  const missing: IssueJson[] = [];
+  if (s.plate.trim() === '') missing.push({ field: 'plate', code: 'required' });
   if (!s.vehicleKind) missing.push({ field: 'vehicleKind', code: 'required' });
   if (!s.category) missing.push({ field: 'category', code: 'required' });
   if (s.gvwKg.trim() === '') missing.push({ field: 'gvwKg', code: 'required' });
+  for (const field of ['gvwKg', 'gcwKg'] as const) {
+    if (s[field].trim() !== '' && weight(s[field]) === undefined) {
+      missing.push({ field, code: 'invalid-number', params: { value: s[field].trim() } });
+    }
+  }
   if (!s.vehicleKind || !s.category) return { issues: missing };
   const details: ResourceDetails = {
     kind,
@@ -163,7 +180,7 @@ function toInput(kind: ResourceKind, s: FormState): { input?: ResourceInputJson;
     vehicleKind: s.vehicleKind,
     category: s.category,
     gvwKg: weight(s.gvwKg) ?? Number.NaN,
-    gcwKg: canPull(s.vehicleKind) ? weight(s.gcwKg) : null,
+    gcwKg: canPull(s.vehicleKind) ? (weight(s.gcwKg) ?? null) : null,
     makeModel: s.makeModel || null,
     bodyTypeId: canHaveBodyType(s.vehicleKind) ? s.bodyTypeId || null : null,
     tradeLabelId: s.tradeLabelId || null,
@@ -192,35 +209,35 @@ function ResourceForm({
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const refresh = useRefreshResources();
-  const [state, setState] = useState(() => initialState(kind, resource));
-  const [touched, setTouched] = useState<ReadonlySet<string>>(new Set());
-  const [submitted, setSubmitted] = useState(false);
-  const [serverIssues, setServerIssues] = useState<IssueJson[]>([]);
+  const [initial] = useState(() => initialState(kind, resource));
+  const [state, setState] = useState(initial);
   const [plateOwner, setPlateOwner] = useState<PlateOwnerJson>();
+  const [documentChanged, setDocumentChanged] = useState(false);
+  const guard = useLeaveGuard(changed(initial, state) || documentChanged);
 
   const { input, issues } = toInput(kind, state);
-  const shown = [
-    ...issues.filter((i) => submitted || touched.has(i.field)),
-    ...serverIssues.filter((s) => !issues.some((i) => i.field === s.field)),
-  ];
-  const errorFor = (field: string) => {
-    const issue = shown.find((i) => i.field === field);
-    return issue ? issueSentence(issue as IssueJson, lists) : undefined;
-  };
+  const form = useFormIssues({
+    issues: issues.map((i) => ({ ...i })),
+    placed: Object.keys(state),
+    lists,
+  });
+  const { errorFor } = form;
 
   const set = <K extends keyof FormState>(field: K, value: FormState[K]) => {
     setState((s) => ({ ...s, [field]: value }));
-    setTouched((t) => new Set(t).add(field));
-    setServerIssues((list) => list.filter((i) => i.field !== field));
+    form.touch(field);
+    onNotice(undefined);
     if (field === 'plate') setPlateOwner(undefined);
   };
+  const limit = textLimits.resource;
 
-  const save = useMutation({
+  const save = useSubmit({
     mutationFn: async (body: ResourceInputJson) =>
       resource
         ? ok(await api.resources[':id'].$put({ param: { id: resource.id }, json: body }))
         : ok(await api.resources.$post({ json: body })),
     onSuccess: async (saved) => {
+      if (!documentChanged) guard.release();
       queryClient.setQueryData(keys.resource(saved.id), saved);
       await refresh();
       if (resource) {
@@ -233,14 +250,14 @@ function ResourceForm({
       }
     },
     onError: (error) => {
-      if (!(error instanceof ApiError)) return;
-      const body = error.body as { issues?: IssueJson[]; owner?: PlateOwnerJson };
-      if (error.code === 'invalid') setServerIssues(body.issues ?? []);
-      if (error.code === 'plate-taken') setPlateOwner(body.owner);
+      form.refused(error);
+      if (error instanceof ApiError && error.code === 'plate-taken') {
+        setPlateOwner((error.body as { owner?: PlateOwnerJson }).owner);
+      }
     },
   });
 
-  const archive = useMutation({
+  const archive = useSubmit({
     mutationFn: async (archived: boolean) => {
       const param = { param: { id: resource?.id ?? '' } };
       return ok(
@@ -251,31 +268,23 @@ function ResourceForm({
     },
     onSuccess: async (saved) => {
       queryClient.setQueryData(keys.resource(saved.id), saved);
-      onNotice(
-        saved.archived
-          ? { tone: 'warning', text: m.archived_done({ name: saved.name }) }
-          : { tone: 'ok', text: m.restored({ name: saved.name }) },
-      );
+      // Archived, the banner of the page says so; restored, a notice says it is back.
+      onNotice(saved.archived ? undefined : { tone: 'ok', text: m.restored({ name: saved.name }) });
       await refresh();
     },
   });
 
   const submit = (event: FormEvent) => {
     event.preventDefault();
-    setSubmitted(true);
     onNotice(undefined);
-    if (input && issues.length === 0) save.mutate(input);
+    if (form.submit() && input) save.mutate(input);
   };
 
   const vehicleKind = state.vehicleKind;
   const categories =
     kind === 'power-unit' ? (['N1', 'N2', 'N3'] as const) : (['O1', 'O2', 'O3', 'O4'] as const);
   const kindText = vehicleKind ? vehicleKindLabel[vehicleKind]() : '';
-  const writeError =
-    save.error &&
-    !(save.error instanceof ApiError && ['invalid', 'plate-taken'].includes(save.error.code ?? ''))
-      ? save.error
-      : archive.error;
+  const writeError = bannerError(save.error, ['plate-taken']) ?? archive.error;
 
   return (
     <div className="page">
@@ -329,7 +338,7 @@ function ResourceForm({
               <Button
                 variant="danger"
                 onClick={() => archive.mutate(!resource.archived)}
-                disabled={archive.isPending}
+                busy={archive.isPending}
               >
                 {resource.archived ? m.action_restore() : m.action_archive()}
               </Button>
@@ -337,19 +346,27 @@ function ResourceForm({
             <Link className="t-button" to="/resources/$kind" params={{ kind: kindSlugs[kind] }}>
               {m.action_cancel()}
             </Link>
-            <Button type="submit" form="resource-form" variant="primary" disabled={save.isPending}>
+            <Button type="submit" form="resource-form" variant="primary" busy={save.isPending}>
               {resource ? m.action_save() : m.action_create()}
             </Button>
           </>
         }
       />
 
+      {guard.dialog}
       {resource?.archived ? <Banner tone="warning">{m.archived_banner()}</Banner> : null}
       {notice ? <Banner tone={notice.tone}>{notice.text}</Banner> : null}
       {writeError ? <Banner tone="conflict">{failureText(writeError, lists)}</Banner> : null}
+      <IssueBanner issues={form.unplaced} lists={lists} />
 
       <CardRow columns={['2fr', '3fr']}>
-        <form id="resource-form" className="t-panel" onSubmit={submit} noValidate>
+        <form
+          id="resource-form"
+          ref={form.formRef}
+          className="t-panel"
+          onSubmit={submit}
+          noValidate
+        >
           <h2>{m.section_identity()}</h2>
           <FormGrid>
             {kind === 'driver' ? (
@@ -357,6 +374,7 @@ function ResourceForm({
                 <Field label={m.field_last_name()} error={errorFor('lastName')}>
                   <input
                     value={state.lastName}
+                    maxLength={limit.lastName}
                     onChange={(e) => set('lastName', e.target.value)}
                     autoComplete="family-name"
                   />
@@ -364,6 +382,7 @@ function ResourceForm({
                 <Field label={m.field_first_name()} error={errorFor('firstName')}>
                   <input
                     value={state.firstName}
+                    maxLength={limit.firstName}
                     onChange={(e) => set('firstName', e.target.value)}
                     autoComplete="given-name"
                   />
@@ -376,19 +395,26 @@ function ResourceForm({
                 >
                   <input
                     value={state.displayName}
+                    maxLength={limit.displayName}
                     onChange={(e) => set('displayName', e.target.value)}
                   />
                 </Field>
-                <Field label={m.field_employee_number()} optional={m.optional()}>
+                <Field
+                  label={m.field_employee_number()}
+                  optional={m.optional()}
+                  error={errorFor('employeeNumber')}
+                >
                   <input
                     value={state.employeeNumber}
+                    maxLength={limit.employeeNumber}
                     onChange={(e) => set('employeeNumber', e.target.value)}
                   />
                 </Field>
-                <Field label={m.field_phone()} optional={m.optional()}>
+                <Field label={m.field_phone()} optional={m.optional()} error={errorFor('phone')}>
                   <input
                     type="tel"
                     value={state.phone}
+                    maxLength={limit.phone}
                     onChange={(e) => set('phone', e.target.value)}
                     autoComplete="tel"
                   />
@@ -445,12 +471,18 @@ function ResourceForm({
                   <input
                     className="t-mono"
                     value={state.plate}
+                    maxLength={limit.plate}
                     onChange={(e) => set('plate', e.target.value)}
                   />
                 </Field>
-                <Field label={m.field_make_model()} optional={m.optional()}>
+                <Field
+                  label={m.field_make_model()}
+                  optional={m.optional()}
+                  error={errorFor('makeModel')}
+                >
                   <input
                     value={state.makeModel}
+                    maxLength={limit.makeModel}
                     onChange={(e) => set('makeModel', e.target.value)}
                   />
                 </Field>
@@ -577,7 +609,12 @@ function ResourceForm({
         <section className="t-panel resource-documents" aria-labelledby="documents-title">
           <h2 id="documents-title">{m.section_documents()}</h2>
           {resource ? (
-            <Documents resource={resource} lists={lists} />
+            <Documents
+              resource={resource}
+              lists={lists}
+              onChanged={setDocumentChanged}
+              onAction={() => onNotice(undefined)}
+            />
           ) : (
             <p className="t-field-hint">{m.documents_after_save()}</p>
           )}
@@ -609,11 +646,62 @@ const emptyDraft: DocumentDraft = {
   expiresOn: '',
 };
 
-function Documents({ resource, lists }: { resource: ResourceJson; lists: ReferenceListsJson }) {
+/** The rules a document's form checks before sending, as the API checks them. */
+function draftIssues(draft: DocumentDraft): IssueJson[] {
+  const issues: IssueJson[] = [];
+  if (!draft.documentTypeId) issues.push({ field: 'documentTypeId', code: 'required' });
+  if (!draft.expiresOn) issues.push({ field: 'expiresOn', code: 'required' });
+  if (draft.issuedOn && draft.expiresOn && draft.issuedOn > draft.expiresOn) {
+    issues.push({ field: 'issuedOn', code: 'issued-after-expiry' });
+  }
+  return issues;
+}
+
+const documentFields = ['documentTypeId', 'reference', 'issuedOn', 'expiresOn'];
+
+function Documents({
+  resource,
+  lists,
+  onChanged,
+  onAction,
+}: {
+  resource: ResourceJson;
+  lists: ReferenceListsJson;
+  /** Whether the document form holds input not saved yet, for the page to keep it. */
+  onChanged: (changed: boolean) => void;
+  /** A document is written or removed: the notice of an earlier action goes. */
+  onAction: () => void;
+}) {
   const queryClient = useQueryClient();
   const refresh = useRefreshResources();
   const [editing, setEditing] = useState<DocumentJson>();
   const [draft, setDraft] = useState<DocumentDraft>(emptyDraft);
+  const [editRequest, setEditRequest] = useState(0);
+  const original: DocumentDraft = editing
+    ? {
+        documentTypeId: editing.documentTypeId,
+        reference: editing.reference ?? '',
+        issuedOn: editing.issuedOn ?? '',
+        expiresOn: editing.expiresOn,
+      }
+    : emptyDraft;
+  const draftChanged = changed(original, draft);
+  useEffect(() => onChanged(draftChanged), [draftChanged, onChanged]);
+  const form = useFormIssues({ issues: draftIssues(draft), placed: documentFields, lists });
+  const change = (field: keyof DocumentDraft, value: string) => {
+    setDraft((current) => ({ ...current, [field]: value }));
+    form.touch(field);
+  };
+
+  // Editing a row brings its form into view, the focus on the first field it can change.
+  useEffect(() => {
+    if (editRequest === 0) return;
+    const editor = form.formRef.current;
+    editor?.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+    editor
+      ?.querySelector<HTMLElement>('input:not(:disabled), select:not(:disabled)')
+      ?.focus({ preventScroll: true });
+  }, [editRequest, form.formRef]);
 
   const typeOf = (id: string) => lists.documentTypes.find((t) => t.id === id);
   const applicable = lists.documentTypes.filter(
@@ -628,10 +716,11 @@ function Documents({ resource, lists }: { resource: ResourceJson; lists: Referen
     queryClient.setQueryData(keys.resource(saved.id), saved);
     setEditing(undefined);
     setDraft(emptyDraft);
+    form.clear();
     await refresh();
   };
 
-  const write = useMutation({
+  const write = useSubmit({
     mutationFn: async () => {
       const json = {
         documentTypeId: draft.documentTypeId,
@@ -644,9 +733,10 @@ function Documents({ resource, lists }: { resource: ResourceJson; lists: Referen
         : ok(await api.resources[':id'].documents.$post({ param: { id: resource.id }, json }));
     },
     onSuccess: done,
+    onError: form.refused,
   });
 
-  const remove = useMutation({
+  const remove = useSubmit({
     mutationFn: async (id: string) => ok(await api.documents[':id'].$delete({ param: { id } })),
     onSuccess: done,
   });
@@ -659,16 +749,22 @@ function Documents({ resource, lists }: { resource: ResourceJson; lists: Referen
       issuedOn: d.issuedOn ?? '',
       expiresOn: d.expiresOn,
     });
+    form.clear();
+    setEditRequest((n) => n + 1);
   };
 
   const submit = (event: FormEvent) => {
     event.preventDefault();
-    if (draft.documentTypeId && draft.expiresOn) write.mutate();
+    if (form.submit()) {
+      onAction();
+      write.mutate();
+    }
   };
+  const writeError = bannerError(write.error) ?? remove.error;
 
   return (
     <>
-      <TableFrame>
+      <TableFrame actions>
         <table className="t-table">
           <caption className="t-visually-hidden">{m.section_documents()}</caption>
           <thead>
@@ -703,12 +799,15 @@ function Documents({ resource, lists }: { resource: ResourceJson; lists: Referen
                   </th>
                   <td className="t-mono">{d.reference}</td>
                   <td className="t-mono">{formatDate(d.issuedOn)}</td>
-                  <td className="t-mono">{formatDate(d.expiresOn)}</td>
+                  <td>
+                    <span className="t-mono">{formatDate(d.expiresOn)}</span>
+                    {d.status !== 'valid' ? (
+                      <span className="t-secondary">{formatDays(d.daysUntil)}</span>
+                    ) : null}
+                  </td>
                   <td>
                     <StatusBadge tone={severityTone[d.severity]}>
-                      {d.status === 'expiring'
-                        ? formatDays(d.daysUntil)
-                        : severityLabel[d.severity]()}
+                      {severityLabel[d.severity]()}
                     </StatusBadge>
                   </td>
                   <td className="t-end">
@@ -722,8 +821,11 @@ function Documents({ resource, lists }: { resource: ResourceJson; lists: Referen
                       </Button>
                       <Button
                         variant="link"
-                        onClick={() => remove.mutate(d.id)}
-                        disabled={remove.isPending}
+                        onClick={() => {
+                          onAction();
+                          remove.mutate(d.id);
+                        }}
+                        busy={remove.isPending}
                         aria-label={m.action_remove_named({ name: label })}
                       >
                         {m.action_remove()}
@@ -738,9 +840,11 @@ function Documents({ resource, lists }: { resource: ResourceJson; lists: Referen
       </TableFrame>
 
       <form
+        ref={form.formRef}
         className="document-editor t-container"
         onSubmit={submit}
         aria-labelledby="document-editor-title"
+        noValidate
       >
         <h3 id="document-editor-title">
           {editing
@@ -748,11 +852,11 @@ function Documents({ resource, lists }: { resource: ResourceJson; lists: Referen
             : m.adding_document()}
         </h3>
         <FormGrid columns={4}>
-          <Field label={m.field_document_type()}>
+          <Field label={m.field_document_type()} error={form.errorFor('documentTypeId')}>
             <select
               value={draft.documentTypeId}
               disabled={editing !== undefined}
-              onChange={(e) => setDraft({ ...draft, documentTypeId: e.target.value })}
+              onChange={(e) => change('documentTypeId', e.target.value)}
             >
               <option value="" />
               {applicable.map((t) => (
@@ -762,33 +866,34 @@ function Documents({ resource, lists }: { resource: ResourceJson; lists: Referen
               ))}
             </select>
           </Field>
-          <Field label={m.field_reference()} optional={m.optional()}>
+          <Field
+            label={m.field_reference()}
+            optional={m.optional()}
+            error={form.errorFor('reference')}
+          >
             <input
               value={draft.reference}
-              onChange={(e) => setDraft({ ...draft, reference: e.target.value })}
+              maxLength={textLimits.document.reference}
+              onChange={(e) => change('reference', e.target.value)}
             />
           </Field>
-          <Field label={m.field_issued()} optional={m.optional()}>
+          <Field label={m.field_issued()} optional={m.optional()} error={form.errorFor('issuedOn')}>
             <input
               type="date"
               value={draft.issuedOn}
-              onChange={(e) => setDraft({ ...draft, issuedOn: e.target.value })}
+              onChange={(e) => change('issuedOn', e.target.value)}
             />
           </Field>
-          <Field label={m.field_expires()}>
+          <Field label={m.field_expires()} error={form.errorFor('expiresOn')}>
             <input
               type="date"
               required
               value={draft.expiresOn}
-              onChange={(e) => setDraft({ ...draft, expiresOn: e.target.value })}
+              onChange={(e) => change('expiresOn', e.target.value)}
             />
           </Field>
           <div className="t-form-actions">
-            <Button
-              type="submit"
-              variant="primary"
-              disabled={!draft.documentTypeId || !draft.expiresOn || write.isPending}
-            >
+            <Button type="submit" variant="primary" busy={write.isPending}>
               {editing ? m.action_update() : m.action_add()}
             </Button>
             {editing ? (
@@ -796,6 +901,7 @@ function Documents({ resource, lists }: { resource: ResourceJson; lists: Referen
                 onClick={() => {
                   setEditing(undefined);
                   setDraft(emptyDraft);
+                  form.clear();
                 }}
               >
                 {m.action_cancel()}
@@ -812,14 +918,14 @@ function Documents({ resource, lists }: { resource: ResourceJson; lists: Referen
             })}
           </p>
         ) : null}
-        {write.error ? (
+        {writeError ? (
           <p className="t-field-error" role="alert">
-            {failureText(write.error, lists)}
+            {failureText(writeError, lists)}
           </p>
         ) : null}
-        {remove.error ? (
+        {form.unplaced.length > 0 ? (
           <p className="t-field-error" role="alert">
-            {failureText(remove.error, lists)}
+            {form.unplaced.map((issue) => issueSentence(issue, lists)).join(' ')}
           </p>
         ) : null}
       </form>

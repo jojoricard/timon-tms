@@ -778,6 +778,12 @@
   color: var(--color-ink-muted);
 }
 
+/* The next expiry of a resource: the document, then its date on a line of its own. */
+.next-expiry-type,
+.next-expiry-date {
+  display: block;
+}
+
 .change-dialog {
   width: min(720px, calc(100vw - 2 * var(--space-6)));
   border: 1px solid var(--color-line);
@@ -785,8 +791,21 @@
   color: var(--color-ink);
 }
 
-.change-dialog::backdrop {
+.change-dialog::backdrop,
+.leave-dialog::backdrop {
   background: rgba(27, 31, 34, 0.4);
+}
+
+.leave-dialog {
+  width: min(480px, calc(100vw - 2 * var(--space-6)));
+  border: 1px solid var(--color-line);
+  box-shadow: var(--shadow-overlay);
+  color: var(--color-ink);
+}
+
+.leave-dialog h2,
+.leave-dialog p {
+  margin: 0 0 var(--space-4);
 }
 
 .change-form {

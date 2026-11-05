@@ -60,6 +60,7 @@ export {
   requiredLicence,
   sortCategories,
 } from './licence.ts';
+export { type TextLimits, textLimits } from './limits.ts';
 export {
   checkOpeningRanges,
   endOfDay,

@@ -1,4 +1,3 @@
-import { useMutation } from '@tanstack/react-query';
 import { Link } from '@tanstack/react-router';
 import type { ResourceKind, VehicleKind } from '@timon/domain';
 import type { DocumentJson, ReferenceListsJson, ResourceJson } from '@timon/http';
@@ -13,7 +12,7 @@ import {
   StatusBadge,
   TableFrame,
 } from '@timon/ui';
-import { type ReactNode, useState } from 'react';
+import type { ReactNode } from 'react';
 import { api, ok } from '../api.ts';
 import { EquipmentTags } from '../customers/section.tsx';
 import {
@@ -37,19 +36,29 @@ import {
   textTone,
   vehicleKindLabel,
 } from '../labels.ts';
+import type { ResourceListSearch, SetSearch } from '../list-search.ts';
 import { m } from '../paraglide/messages.js';
+import { useSubmit } from '../submit.ts';
 import { PageHeader, SectionTabs } from './section.tsx';
 
 export function ListPage({
   kind,
   imported,
+  search,
+  setSearch,
 }: {
   kind: ResourceKind;
   imported?: number | undefined;
+  search: ResourceListSearch;
+  setSearch: SetSearch<ResourceListSearch>;
 }) {
-  const [query, setQuery] = useState('');
-  const [status, setStatus] = useState<StatusFilter>('all');
-  const [archived, setArchived] = useState(false);
+  const query = search.q ?? '';
+  const status: StatusFilter = search.status ?? 'all';
+  const archived = search.archived === true;
+  const setQuery = (q: string) => setSearch({ q: q || undefined }, { replace: true });
+  const setStatus = (value: StatusFilter) =>
+    setSearch({ status: value === 'all' ? undefined : value });
+  const setArchived = (on: boolean) => setSearch({ archived: on || undefined });
   const list = useResourceList(kind, query.trim(), status, archived);
   const lists = useReferenceLists().data;
   const summary = useSummary().data;
@@ -68,7 +77,7 @@ export function ListPage({
       <PageHeader
         breadcrumb={<li>{m.resources_title()}</li>}
         title={m.resources_title()}
-        subtitle={total === null ? null : m.resources_active({ count: total })}
+        subtitle={total === null ? '' : m.resources_active({ count: total })}
         actions={
           <>
             <Link
@@ -247,16 +256,20 @@ function ResourceTable({
                 <td>{entryLabel(lists.bodyTypes.find((b) => b.id === r.bodyTypeId)) || '—'}</td>
               </>
             )}
-            <td>
+            <td className="next-expiry">
               {r.nextExpiry ? (
                 <>
-                  {entryLabel(
-                    lists.documentTypes.find((t) => t.id === r.nextExpiry?.documentTypeId),
-                  )}{' '}
-                  <span className="t-mono">{formatDate(r.nextExpiry.expiresOn)}</span>
-                  {r.nextExpiry.status !== 'valid' ? (
-                    <span className="t-secondary">{formatDays(r.nextExpiry.daysUntil)}</span>
-                  ) : null}
+                  <span className="next-expiry-type">
+                    {entryLabel(
+                      lists.documentTypes.find((t) => t.id === r.nextExpiry?.documentTypeId),
+                    )}
+                  </span>
+                  <span className="next-expiry-date t-secondary">
+                    <span className="t-mono">{formatDate(r.nextExpiry.expiresOn)}</span>
+                    {r.nextExpiry.status !== 'valid'
+                      ? ` · ${formatDays(r.nextExpiry.daysUntil)}`
+                      : null}
+                  </span>
                 </>
               ) : (
                 '—'
@@ -306,7 +319,7 @@ function MonthCell({ document }: { document: DocumentJson | undefined }) {
 
 function RestoreButton({ resource }: { resource: ResourceJson }) {
   const refresh = useRefreshResources();
-  const restore = useMutation({
+  const restore = useSubmit({
     mutationFn: async () =>
       ok(await api.resources[':id'].restore.$post({ param: { id: resource.id } })),
     onSuccess: refresh,
@@ -317,7 +330,7 @@ function RestoreButton({ resource }: { resource: ResourceJson }) {
       <Button
         variant="link"
         onClick={() => restore.mutate()}
-        disabled={restore.isPending}
+        busy={restore.isPending}
         aria-label={m.action_restore_named({ name: resource.name })}
       >
         {m.action_restore()}

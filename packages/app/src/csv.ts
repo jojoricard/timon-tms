@@ -10,7 +10,11 @@ export type FileProblem =
   | { readonly code: 'too-large'; readonly params: { maxBytes: number } }
   | { readonly code: 'too-many-lines'; readonly params: { maxLines: number } }
   | { readonly code: 'empty' }
-  | { readonly code: 'missing-columns'; readonly params: { fields: readonly string[] } };
+  | {
+      readonly code: 'missing-columns';
+      /** `columns`: how many columns the header was read as; one points to the separator. */
+      readonly params: { fields: readonly string[]; columns: number };
+    };
 
 export type CsvColumn = {
   /** The field of the record the column fills. */
@@ -72,7 +76,9 @@ export function readCsv(
   });
   const missing = columns.filter((c) => c.required && !positions.has(c.field)).map((c) => c.field);
   if (missing.length > 0)
-    return { problem: { code: 'missing-columns', params: { fields: missing } } };
+    return {
+      problem: { code: 'missing-columns', params: { fields: missing, columns: header.length } },
+    };
 
   return {
     lines: filled.map(({ cells, line }) => ({

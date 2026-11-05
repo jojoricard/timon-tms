@@ -1,4 +1,4 @@
-import { Link, useNavigate } from '@tanstack/react-router';
+import { Link } from '@tanstack/react-router';
 import type { UnitJson, UnitMemberJson, UnitsAtJson } from '@timon/http';
 import {
   Banner,
@@ -14,6 +14,7 @@ import {
 import { useState } from 'react';
 import { errorText, useReferenceLists } from '../data.ts';
 import { entryLabel, vehicleKindLabel } from '../labels.ts';
+import type { SetSearch, UnitsSearch } from '../list-search.ts';
 import { m } from '../paraglide/messages.js';
 import { PageHeader, SectionTabs } from '../resources/section.tsx';
 import { ChangeDialog } from './change-dialog.tsx';
@@ -27,6 +28,7 @@ import {
   useUnitsAt,
 } from './unit-data.ts';
 import { documentsText, memberStatusTone } from './unit-labels.ts';
+import { matchesUnit } from './unit-search.ts';
 
 type Filter = 'all' | 'documents' | 'no-driver';
 
@@ -36,44 +38,32 @@ const groups = [
   { kind: 'light-van', label: m.group_light_vans },
 ] as const;
 
-/** Lower case and without accents, for a search that forgives both. */
-const searchable = (text: string) =>
-  text
-    .normalize('NFD')
-    .replace(/\p{Diacritic}/gu, '')
-    .toLowerCase();
-
 const hasDocumentProblem = (u: UnitJson) =>
   u.documents.status === 'expired' || u.documents.status === 'missing';
 
-function matches(unit: UnitJson, query: string): boolean {
-  const words = [
-    unit.name,
-    unit.powerUnit.name,
-    unit.powerUnit.makeModel ?? '',
-    unit.trailer?.name ?? '',
-    unit.driver?.fullName ?? '',
-    unit.driver?.name ?? '',
-  ];
-  const haystack = searchable(words.join(' '));
-  return searchable(query)
-    .split(/\s+/)
-    .every((word) => haystack.includes(word));
-}
-
 /** The units valid at a date and time, now by default, and the resources left free. */
-export function UnitsPage({ at }: { at?: LocalTime | undefined }) {
-  const navigate = useNavigate();
+export function UnitsPage({
+  search,
+  setSearch,
+}: {
+  search: UnitsSearch;
+  setSearch: SetSearch<UnitsSearch>;
+}) {
+  const at: LocalTime | undefined = search.at;
   const data = useUnitsAt(at);
-  const [query, setQuery] = useState('');
-  const [filter, setFilter] = useState<Filter>('all');
+  const query = search.q ?? '';
+  const filter: Filter = search.filter ?? 'all';
+  const setQuery = (q: string) => setSearch({ q: q || undefined }, { replace: true });
+  const setFilter = (value: Filter) => setSearch({ filter: value === 'all' ? undefined : value });
   const [changing, setChanging] = useState<UnitJson | undefined>();
   const shown = at ?? (data.data ? toLocal(data.data.at) : nowLocal());
-  const go = (next: LocalTime | undefined) =>
-    navigate({ to: '/resources/units', search: next ? { at: next } : {} });
+  const go = (next: LocalTime | undefined) => setSearch({ at: next });
+  // From the date in the address when the click runs: quick clicks each move a day.
+  const step = (days: number) =>
+    setSearch((current) => ({ at: addDays(current.at ?? shown, days) }));
 
   const units = data.data?.units ?? [];
-  const searched = units.filter((u) => query.trim() === '' || matches(u, query.trim()));
+  const searched = units.filter((u) => query.trim() === '' || matchesUnit(u, query.trim()));
   const counts: Record<Filter, number> = {
     all: searched.length,
     documents: searched.filter(hasDocumentProblem).length,
@@ -97,7 +87,7 @@ export function UnitsPage({ at }: { at?: LocalTime | undefined }) {
           </>
         }
         title={m.units_title()}
-        subtitle={data.data ? m.units_subtitle({ count: units.length }) : null}
+        subtitle={data.data ? m.units_subtitle({ count: units.length }) : ''}
         actions={
           <Link
             className="t-button"
@@ -115,7 +105,7 @@ export function UnitsPage({ at }: { at?: LocalTime | undefined }) {
       <div className="toolbar">
         <div className="toolbar-start">
           <div className="moment-picker">
-            <Button aria-label={m.units_previous_day()} onClick={() => go(addDays(shown, -1))}>
+            <Button aria-label={m.units_previous_day()} onClick={() => step(-1)}>
               ‹
             </Button>
             <label>
@@ -129,7 +119,7 @@ export function UnitsPage({ at }: { at?: LocalTime | undefined }) {
                 }}
               />
             </label>
-            <Button aria-label={m.units_next_day()} onClick={() => go(addDays(shown, 1))}>
+            <Button aria-label={m.units_next_day()} onClick={() => step(1)}>
               ›
             </Button>
             <Button onClick={() => go(undefined)}>{m.units_now()}</Button>
@@ -145,13 +135,17 @@ export function UnitsPage({ at }: { at?: LocalTime | undefined }) {
           </label>
         </div>
         <ChipGroup label={m.filters_label()}>
-          <Chip pressed={filter === 'all'} onClick={() => setFilter('all')} count={counts.all}>
+          <Chip
+            pressed={filter === 'all'}
+            onClick={() => setFilter('all')}
+            {...(data.data ? { count: counts.all } : {})}
+          >
             {m.filter_all()}
           </Chip>
           <Chip
             pressed={filter === 'documents'}
             onClick={() => setFilter('documents')}
-            count={counts.documents}
+            {...(data.data ? { count: counts.documents } : {})}
             tone="conflict"
           >
             {m.filter_document_problem()}
@@ -159,7 +153,7 @@ export function UnitsPage({ at }: { at?: LocalTime | undefined }) {
           <Chip
             pressed={filter === 'no-driver'}
             onClick={() => setFilter('no-driver')}
-            count={counts['no-driver']}
+            {...(data.data ? { count: counts['no-driver'] } : {})}
           >
             {m.no_driver()}
           </Chip>
@@ -267,7 +261,9 @@ function UnitTable({
                   )}
                 </td>
                 <td className="t-mono">{formatTime(u.start)}</td>
-                <td className="t-mono">{u.end ? formatTime(u.end) : m.open_ended()}</td>
+                <td className={u.end ? 't-mono' : undefined}>
+                  {u.end ? formatTime(u.end) : m.open_ended()}
+                </td>
                 <td className="t-end">
                   <StatusBadge tone={memberStatusTone[u.documents.status]}>
                     {documentsText(u.documents)}

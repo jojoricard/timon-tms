@@ -86,8 +86,17 @@ const contactFields: Record<string, () => string> = {
   email: m.field_contact_email,
 };
 
+/** Labels of one form that differ from the shared ones: `name` is a customer's legal name. */
+export type FieldLabels = Readonly<Record<string, () => string>>;
+
 /** The label of a field, or of a document type for a `document:<code>` import column. */
-export function fieldLabel(field: string, lists?: ReferenceListsJson): string {
+export function fieldLabel(
+  field: string,
+  lists?: ReferenceListsJson,
+  labels?: FieldLabels,
+): string {
+  const own = labels?.[field];
+  if (own) return own();
   if (field.startsWith('document:')) {
     const code = field.slice('document:'.length);
     return entryLabel(lists?.documentTypes.find((t) => t.code === code) ?? { code, name: code });
@@ -116,8 +125,12 @@ const text = (value: unknown) =>
   typeof value === 'string' || typeof value === 'number' ? String(value) : '';
 
 /** One issue as a sentence fragment, starting lower case: "last name is required". */
-export function issueText(issue: IssueJson, lists?: ReferenceListsJson): string {
-  const field = inSentence(fieldLabel(issue.field, lists));
+export function issueText(
+  issue: IssueJson,
+  lists?: ReferenceListsJson,
+  labels?: FieldLabels,
+): string {
+  const field = inSentence(fieldLabel(issue.field, lists, labels));
   const params = issue.params ?? {};
   switch (issue.code) {
     case 'required':
@@ -182,6 +195,16 @@ export function issueText(issue: IssueJson, lists?: ReferenceListsJson): string 
         start: text(params.start),
         end: text(params.end),
       });
+    case 'opening-unreadable':
+      return m.issue_opening_unreadable({
+        day: capitalise(weekdayName(Number(params.weekday))),
+        value: text(params.value),
+      });
+    case 'time-invalid':
+      return m.issue_time_invalid({
+        day: capitalise(weekdayName(Number(params.weekday))),
+        value: text(params.value),
+      });
     case 'opening-overlap':
       return params.weekday === undefined
         ? m.issue_openings_overlap()
@@ -228,14 +251,22 @@ export function issueText(issue: IssueJson, lists?: ReferenceListsJson): string 
       return m.issue_outside_unit();
     case 'unchanged':
       return m.issue_unchanged({ field });
+    case 'too-long':
+      return m.issue_too_long({ field, max: Number(params.max) });
+    case 'invalid-value':
+      return m.issue_invalid_value({ field });
     default:
       return `${field}: ${issue.code}`;
   }
 }
 
 /** The same issue as a sentence on its own, for a form field. */
-export function issueSentence(issue: IssueJson, lists?: ReferenceListsJson): string {
-  return capitalise(issueText(issue, lists));
+export function issueSentence(
+  issue: IssueJson,
+  lists?: ReferenceListsJson,
+  labels?: FieldLabels,
+): string {
+  return capitalise(issueText(issue, lists, labels));
 }
 
 /** Why a write was refused, in one sentence; the issues of a form are shown by field instead. */

@@ -2,9 +2,9 @@ import { Link } from '@tanstack/react-router';
 import type { LocatedBy } from '@timon/domain';
 import type { ListItemJson, SiteJson } from '@timon/http';
 import { Banner, Checkbox, Chip, ChipGroup, Columns, StatusBadge, TableFrame } from '@timon/ui';
-import { useState } from 'react';
 import { errorText, useReferenceLists } from '../data.ts';
 import { formatLongDate } from '../labels.ts';
+import type { SetSearch, SitesSearch } from '../list-search.ts';
 import { m } from '../paraglide/messages.js';
 import { PageHeader } from '../resources/section.tsx';
 import { type SiteFilter, useCustomerSummary, useSites } from './customer-data.ts';
@@ -13,12 +13,20 @@ import { CustomerTabs, DayRanges, EquipmentTags, LocatedBadge } from './section.
 
 export function SitesPage({
   imported,
+  search,
+  setSearch,
 }: {
   imported?: { count: number; notLocated: number } | undefined;
+  search: SitesSearch;
+  setSearch: SetSearch<SitesSearch>;
 }) {
-  const [query, setQuery] = useState('');
-  const [filter, setFilter] = useState<SiteFilter>('all');
-  const [archived, setArchived] = useState(false);
+  const query = search.q ?? '';
+  const filter: SiteFilter = search.filter ?? 'all';
+  const archived = search.archived === true;
+  const setQuery = (q: string) => setSearch({ q: q || undefined }, { replace: true });
+  const setFilter = (value: SiteFilter) =>
+    setSearch({ filter: value === 'all' ? undefined : value });
+  const setArchived = (on: boolean) => setSearch({ archived: on || undefined });
   const list = useSites(query.trim(), filter, archived);
   const summary = useCustomerSummary().data;
   const equipment = useReferenceLists().data?.protectiveEquipment ?? [];
@@ -42,7 +50,7 @@ export function SitesPage({
           </>
         }
         title={m.sites_title()}
-        subtitle={summary ? m.sites_subtitle({ count: summary.sites }) : null}
+        subtitle={summary ? m.sites_subtitle({ count: summary.sites }) : ''}
         actions={
           <>
             <Link className="t-button" to="/customers/sites/import">
@@ -137,7 +145,7 @@ function SiteTable({
       <tbody>
         {sites.length === 0 ? (
           <tr>
-            <td colSpan={8}>{m.list_empty()}</td>
+            <td colSpan={8}>{m.sites_empty()}</td>
           </tr>
         ) : null}
         {sites.map((s) => (

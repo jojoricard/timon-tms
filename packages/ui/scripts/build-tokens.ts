@@ -25,11 +25,22 @@ const tokens = JSON.parse(
   readFileSync(new URL('../../../docs/design/tokens.json', import.meta.url), 'utf8'),
 ) as Tokens;
 
+// A colour may name another one, as `{petrol}`: it takes that colour's value in the same theme.
+const colours = new Map(tokens.color.tokens.map(({ name, value }) => [name, value]));
+const resolve = (value: string, theme: 'light' | 'dark', seen: readonly string[] = []): string =>
+  value.replace(/\{([\w-]+)\}/g, (_, name: string) => {
+    const target = colours.get(name);
+    if (target === undefined) throw new Error(`Unknown token {${name}}`);
+    if (seen.includes(name)) throw new Error(`Circular token {${[...seen, name].join('} → {')}}`);
+    const raw = typeof target === 'string' ? target : target[theme];
+    return resolve(raw, theme, [...seen, name]);
+  });
+
 const light: string[] = [];
 const dark: string[] = [];
 const themed = (name: string, value: Themed) => {
-  light.push(`  ${name}: ${typeof value === 'string' ? value : value.light};`);
-  if (typeof value !== 'string') dark.push(`  ${name}: ${value.dark};`);
+  light.push(`  ${name}: ${resolve(typeof value === 'string' ? value : value.light, 'light')};`);
+  if (typeof value !== 'string') dark.push(`  ${name}: ${resolve(value.dark, 'dark')};`);
 };
 
 for (const { name, value } of tokens.color.tokens) themed(`--color-${name}`, value);

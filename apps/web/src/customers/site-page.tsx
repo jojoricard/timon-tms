@@ -1,4 +1,4 @@
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Link, useNavigate } from '@tanstack/react-router';
 import {
   type BookingMethod,
@@ -7,6 +7,7 @@ import {
   countries,
   type LocatedBy,
   type SiteDetails,
+  textLimits,
   timeZoneOf,
 } from '@timon/domain';
 import type {
@@ -27,11 +28,14 @@ import {
   StatusBadge,
 } from '@timon/ui';
 import { type FormEvent, lazy, Suspense, useId, useState } from 'react';
-import { ApiError, api, ok } from '../api.ts';
+import { api, ok } from '../api.ts';
 import { errorText, useReferenceLists } from '../data.ts';
-import { failureText, issueSentence } from '../issues.ts';
+import { bannerError, IssueBanner, useFormIssues } from '../form.tsx';
+import { type FieldLabels, failureText } from '../issues.ts';
+import { changed, useLeaveGuard } from '../leave-guard.tsx';
 import { m } from '../paraglide/messages.js';
 import { PageHeader } from '../resources/section.tsx';
+import { useSubmit } from '../submit.ts';
 import {
   customerKeys,
   useAddressSuggestions,
@@ -45,6 +49,7 @@ import {
   OpeningHoursEditor,
   toWeekDraft,
   type WeekDraft,
+  weekIssues,
 } from './opening-hours.tsx';
 import { LocatedBadge } from './section.tsx';
 
@@ -53,6 +58,8 @@ const SiteMap = lazy(() => import('./site-map.tsx'));
 
 export function SitePage({ id, customerId }: { id?: string; customerId?: string | undefined }) {
   const site = useSite(id);
+  // Kept here: the form is built again from the saved site, and "Saved." must stay.
+  const [notice, setNotice] = useState<string>();
   if (site.error) {
     return (
       <div className="page">
@@ -73,6 +80,8 @@ export function SitePage({ id, customerId }: { id?: string; customerId?: string 
       site={site.data?.site}
       initialNearby={site.data?.nearby ?? []}
       customerId={customerId}
+      notice={notice}
+      onNotice={setNotice}
     />
   );
 }
@@ -161,7 +170,31 @@ function toInput(s: FormState): SiteInputJson {
   };
 }
 
+/** On this form, `name` is the name of the site. */
+const siteLabels: FieldLabels = { name: m.field_site_name };
+
+/** The inputs that show their own error; any other issue of the API goes to the banner. */
+const siteFields = [
+  'name',
+  'street1',
+  'street2',
+  'postcode',
+  'city',
+  'country',
+  'location',
+  'openings',
+  'bookingMethod',
+  'bookingDetail',
+  'maxLengthCm',
+  'maxWeightKg',
+  'gatePhone',
+  'instructions',
+];
+
 function clientIssues(s: FormState): IssueJson[] {
+  // A time that cannot be read is said as typed (06:00, 25:00); the ranges of its day are not
+  // checked until it can be.
+  const unreadable = weekIssues(s.week);
   const input = toInput(s);
   const details: SiteDetails = {
     ...input,
@@ -177,13 +210,20 @@ function clientIssues(s: FormState): IssueJson[] {
     gatePhone: input.gatePhone ?? null,
     instructions: input.instructions ?? null,
   };
-  return checkSite(details).map((i) => ({ ...i }));
+  return [
+    ...unreadable,
+    ...checkSite(details)
+      .filter((i) => !unreadable.some((u) => u.field === i.field))
+      .map((i) => ({ ...i })),
+  ];
 }
 
 function SiteForm({
   site,
   initialNearby,
   customerId,
+  notice,
+  onNotice: setNotice,
 }: {
   site: SiteJson | undefined;
   initialNearby: readonly {
@@ -193,36 +233,38 @@ function SiteForm({
     sameStreet: boolean;
   }[];
   customerId: string | undefined;
+  notice: string | undefined;
+  onNotice: (notice: string | undefined) => void;
 }) {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const refresh = useRefreshCustomers();
   const lists = useReferenceLists().data;
-  const [state, setState] = useState(() => initialState(site));
-  const [touched, setTouched] = useState<ReadonlySet<string>>(new Set());
-  const [submitted, setSubmitted] = useState(false);
-  const [serverIssues, setServerIssues] = useState<IssueJson[]>([]);
-  const [notice, setNotice] = useState<string>();
+  const [initial] = useState(() => initialState(site));
+  const [state, setState] = useState(initial);
+  const guard = useLeaveGuard(changed(initial, state));
   const [suggestionsOpen, setSuggestionsOpen] = useState(false);
   const [active, setActive] = useState(0);
   const listboxId = useId();
 
-  const issues = clientIssues(state);
-  const shown = [
-    ...issues.filter((i) => submitted || touched.has(i.field.split('.')[0] ?? i.field)),
-    ...serverIssues.filter((s) => !issues.some((i) => i.field === s.field)),
-  ];
-  const errorFor = (field: string) => {
-    const issue = shown.find((i) => i.field === field);
-    return issue ? issueSentence(issue, lists) : undefined;
-  };
+  const form = useFormIssues({
+    issues: clientIssues(state),
+    placed: siteFields,
+    lists,
+    labels: siteLabels,
+  });
+  const { errorFor } = form;
+  const limit = textLimits.site;
 
+  const inputOf: Partial<Record<keyof FormState, string>> = {
+    week: 'openings',
+    maxLength: 'maxLengthCm',
+    maxWeight: 'maxWeightKg',
+  };
   const set = <K extends keyof FormState>(field: K, value: FormState[K]) => {
     setState((s) => ({ ...s, [field]: value }));
-    setTouched((t) => new Set(t).add(field === 'week' ? 'openings' : field));
-    setServerIssues((list) =>
-      list.filter((i) => !i.field.startsWith(field === 'week' ? 'openings' : field)),
-    );
+    form.touch(inputOf[field] ?? field);
+    setNotice(undefined);
   };
 
   // Typing the address again forgets a location found from the old one; a pin placed by hand stays.
@@ -232,7 +274,7 @@ function SiteForm({
       [field]: value,
       ...(s.locatedBy === 'by-hand' ? {} : { location: null, locatedBy: 'not-located' as const }),
     }));
-    setTouched((t) => new Set(t).add(field));
+    form.touch(field);
   };
 
   const suggestions = useAddressSuggestions(state.street1, state.country);
@@ -251,6 +293,7 @@ function SiteForm({
 
   const place = (point: Point) => {
     setState((s) => ({ ...s, location: point, locatedBy: 'by-hand' }));
+    form.touch('location');
   };
 
   // Rule 5: active sites near this one, as a warning while typing; never a refusal.
@@ -269,12 +312,13 @@ function SiteForm({
     placeholderData: (previous) => previous ?? [...initialNearby],
   });
 
-  const save = useMutation({
+  const save = useSubmit({
     mutationFn: async (body: SiteInputJson) =>
       site
         ? ok(await api.sites[':id'].$put({ param: { id: site.id }, json: body }))
         : ok(await api.sites.$post({ json: body })),
     onSuccess: async (saved) => {
+      guard.release();
       queryClient.setQueryData(customerKeys.site(saved.site.id), saved);
       if (!site && customerId) {
         // Created from a customer's form: the new site becomes one of its usual sites.
@@ -306,14 +350,10 @@ function SiteForm({
       if (site) setNotice(lost ? m.site_saved_not_located() : m.saved());
       else await navigate({ to: '/customers/sites/$id', params: { id: saved.site.id } });
     },
-    onError: (error) => {
-      if (error instanceof ApiError && error.code === 'invalid') {
-        setServerIssues((error.body as { issues?: IssueJson[] }).issues ?? []);
-      }
-    },
+    onError: form.refused,
   });
 
-  const archive = useMutation({
+  const archive = useSubmit({
     mutationFn: async (archived: boolean) => {
       const param = { param: { id: site?.id ?? '' } };
       return ok(
@@ -330,17 +370,13 @@ function SiteForm({
 
   const submit = (event: FormEvent) => {
     event.preventDefault();
-    setSubmitted(true);
     setNotice(undefined);
-    if (issues.length === 0) save.mutate(toInput(state));
+    if (form.submit()) save.mutate(toInput(state));
   };
 
   const openingError = (weekday: number) =>
     errorFor(`openings.${weekday}`) ?? (weekday === 1 ? errorFor('openings') : undefined);
-  const writeError =
-    save.error && !(save.error instanceof ApiError && save.error.code === 'invalid')
-      ? save.error
-      : archive.error;
+  const writeError = bannerError(save.error) ?? archive.error;
   const warnings = nearby.data ?? [];
   const equipment = lists?.protectiveEquipment ?? [];
   const countryOptions = [...countries].sort((a, b) =>
@@ -380,13 +416,13 @@ function SiteForm({
               <Button
                 variant="danger"
                 onClick={() => archive.mutate(!site.archived)}
-                disabled={archive.isPending}
+                busy={archive.isPending}
               >
                 {site.archived ? m.action_restore() : m.action_archive()}
               </Button>
             ) : null}
             {backTo}
-            <Button type="submit" form="site-form" variant="primary" disabled={save.isPending}>
+            <Button type="submit" form="site-form" variant="primary" busy={save.isPending}>
               {site ? m.action_save() : m.action_create()}
             </Button>
           </>
@@ -404,10 +440,12 @@ function SiteForm({
           </Link>
         </Banner>
       ))}
+      {guard.dialog}
       {notice ? <Banner tone={notice === m.saved() ? 'ok' : 'warning'}>{notice}</Banner> : null}
       {writeError ? <Banner tone="conflict">{failureText(writeError, lists)}</Banner> : null}
+      <IssueBanner issues={form.unplaced} lists={lists} labels={siteLabels} />
 
-      <form id="site-form" onSubmit={submit} noValidate>
+      <form id="site-form" ref={form.formRef} onSubmit={submit} noValidate>
         <CardRow columns={['1fr', '1fr']}>
           <section className="t-panel" aria-labelledby="address-title">
             <div className="panel-title-row">
@@ -416,7 +454,11 @@ function SiteForm({
             </div>
             <FormGrid>
               <Field label={m.field_site_name()} error={errorFor('name')}>
-                <input value={state.name} onChange={(e) => set('name', e.target.value)} />
+                <input
+                  value={state.name}
+                  maxLength={limit.name}
+                  onChange={(e) => set('name', e.target.value)}
+                />
               </Field>
               <Field label={m.field_country()} error={errorFor('country')}>
                 <select
@@ -452,6 +494,7 @@ function SiteForm({
                     }
                     autoComplete="off"
                     value={state.street1}
+                    maxLength={limit.street1}
                     onChange={(e) => {
                       setAddress('street1', e.target.value);
                       setSuggestionsOpen(true);
@@ -509,19 +552,32 @@ function SiteForm({
                 ) : null}
               </div>
               <div className="t-span-all">
-                <Field label={m.field_street2()} optional={m.optional()}>
-                  <input value={state.street2} onChange={(e) => set('street2', e.target.value)} />
+                <Field
+                  label={m.field_street2()}
+                  optional={m.optional()}
+                  error={errorFor('street2')}
+                >
+                  <input
+                    value={state.street2}
+                    maxLength={limit.street2}
+                    onChange={(e) => set('street2', e.target.value)}
+                  />
                 </Field>
               </div>
               <Field label={m.field_postcode()} error={errorFor('postcode')}>
                 <input
                   className="t-mono"
                   value={state.postcode}
+                  maxLength={limit.postcode}
                   onChange={(e) => setAddress('postcode', e.target.value)}
                 />
               </Field>
               <Field label={m.field_city()} error={errorFor('city')}>
-                <input value={state.city} onChange={(e) => setAddress('city', e.target.value)} />
+                <input
+                  value={state.city}
+                  maxLength={limit.city}
+                  onChange={(e) => setAddress('city', e.target.value)}
+                />
               </Field>
             </FormGrid>
           </section>
@@ -558,6 +614,7 @@ function SiteForm({
               <SiteMap location={state.location} onPlace={place} />
             </Suspense>
             <p className="t-field-hint">{m.map_hint()}</p>
+            {errorFor('location') ? <p className="t-field-error">{errorFor('location')}</p> : null}
             {state.location ? (
               <Button
                 variant="link"
@@ -603,9 +660,14 @@ function SiteForm({
               )}
               {state.bookingRequired ? (
                 <div className="t-span-all">
-                  <Field label={m.field_booking_detail()} optional={m.optional()}>
+                  <Field
+                    label={m.field_booking_detail()}
+                    optional={m.optional()}
+                    error={errorFor('bookingDetail')}
+                  >
                     <input
                       value={state.bookingDetail}
+                      maxLength={limit.bookingDetail}
                       onChange={(e) => set('bookingDetail', e.target.value)}
                     />
                   </Field>
@@ -670,19 +732,29 @@ function SiteForm({
                   />
                 </div>
               </fieldset>
-              <Field label={m.field_gate_phone()} optional={m.optional()}>
+              <Field
+                label={m.field_gate_phone()}
+                optional={m.optional()}
+                error={errorFor('gatePhone')}
+              >
                 <input
                   type="tel"
                   className="t-mono"
                   value={state.gatePhone}
+                  maxLength={limit.gatePhone}
                   onChange={(e) => set('gatePhone', e.target.value)}
                 />
               </Field>
               <span />
               <div className="t-span-all">
-                <Field label={m.field_instructions()} optional={m.optional()}>
+                <Field
+                  label={m.field_instructions()}
+                  optional={m.optional()}
+                  error={errorFor('instructions')}
+                >
                   <textarea
                     value={state.instructions}
+                    maxLength={limit.instructions}
                     onChange={(e) => set('instructions', e.target.value)}
                   />
                 </Field>
