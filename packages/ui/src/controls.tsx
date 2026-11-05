@@ -24,7 +24,11 @@ export function SegmentedControl<T extends string>({
   const name = useId();
   const describedBy = `${name}-text`;
   return (
-    <fieldset className="t-segmented" aria-describedby={error || hint ? describedBy : undefined}>
+    <fieldset
+      className="t-segmented"
+      aria-describedby={error || hint ? describedBy : undefined}
+      data-invalid={error ? 'true' : undefined}
+    >
       <legend>{legend}</legend>
       <div className="t-segmented-options">
         {options.map((option) => (
@@ -34,6 +38,7 @@ export function SegmentedControl<T extends string>({
               name={name}
               value={option.value}
               checked={value === option.value}
+              aria-invalid={error ? true : undefined}
               onChange={() => onChange(option.value)}
             />
             <span>{option.label}</span>

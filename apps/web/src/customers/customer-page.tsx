@@ -9,13 +9,13 @@ import {
   normaliseSiret,
   sirenOf,
   Temporal,
+  textLimits,
   vatFromSiren,
 } from '@timon/domain';
 import type {
   CustomerInputJson,
   CustomerOwnerJson,
   CustomerWithSitesJson,
-  IssueJson,
   OpeningJson,
   SiteJson,
 } from '@timon/http';
@@ -23,8 +23,10 @@ import { Banner, Button, CardRow, CardStack, Field, FormGrid, Plate, TableFrame 
 import { type FormEvent, useId, useState } from 'react';
 import { ApiError, api, ok } from '../api.ts';
 import { errorText, useReferenceLists } from '../data.ts';
-import { failureText, issueSentence } from '../issues.ts';
+import { bannerError, IssueBanner, useFormIssues } from '../form.tsx';
+import { type FieldLabels, failureText } from '../issues.ts';
 import { capitalise } from '../labels.ts';
+import { changed, useLeaveGuard } from '../leave-guard.tsx';
 import { m } from '../paraglide/messages.js';
 import { PageHeader } from '../resources/section.tsx';
 import { useSubmit } from '../submit.ts';
@@ -81,6 +83,9 @@ type FormState = {
   contacts: ContactRow[];
   sites: SiteJson[];
 };
+
+/** On this form, `name` is the legal name of the customer. */
+const customerLabels: FieldLabels = { name: m.field_legal_name };
 
 let nextKey = 0;
 const newKey = () => `contact-${++nextKey}`;
@@ -161,32 +166,26 @@ function CustomerForm({ customer }: { customer: CustomerWithSitesJson | undefine
   const queryClient = useQueryClient();
   const refresh = useRefreshCustomers();
   const lists = useReferenceLists().data;
-  const [state, setState] = useState(() => initialState(customer));
-  const [touched, setTouched] = useState<ReadonlySet<string>>(new Set());
-  const [submitted, setSubmitted] = useState(false);
-  const [serverIssues, setServerIssues] = useState<IssueJson[]>([]);
+  const [initial] = useState(() => initialState(customer));
+  const [state, setState] = useState(initial);
+  const guard = useLeaveGuard(changed(initial, state));
   const [taken, setTaken] = useState<{ field: 'code' | 'siret'; owner: CustomerOwnerJson }>();
   const [notice, setNotice] = useState<string>();
 
-  const issues = clientIssues(state);
-  const shown: IssueJson[] = [
-    ...issues.filter(
-      (i) =>
-        submitted || touched.has(i.field) || touched.has(i.field.split('.').slice(0, 2).join('.')),
-    ),
-    ...serverIssues.filter((s) => !issues.some((i) => i.field === s.field)),
-  ];
-  const errorFor = (field: string) => {
-    const issue = shown.find((i) => i.field === field);
-    return issue ? issueSentence(issue, lists) : undefined;
-  };
+  const form = useFormIssues({
+    issues: clientIssues(state).map((i) => ({ ...i })),
+    placed: [...Object.keys(state), 'siteIds'],
+    lists,
+    labels: customerLabels,
+  });
+  const { errorFor } = form;
 
   const set = <K extends keyof FormState>(field: K, value: FormState[K]) => {
     setState((s) => ({ ...s, [field]: value }));
-    setTouched((t) => new Set(t).add(field));
-    setServerIssues((list) => list.filter((i) => i.field !== field));
+    form.touch(field);
     if (field === 'code' || field === 'siret') setTaken(undefined);
   };
+  const limit = textLimits.customer;
 
   // Rule 2: a valid French SIRET proposes the VAT number, which stays editable.
   const siret = normaliseSiret(state.siret);
@@ -207,7 +206,7 @@ function CustomerForm({ customer }: { customer: CustomerWithSitesJson | undefine
       ...s,
       contacts: s.contacts.map((c) => (c.key === key ? { ...c, [field]: value } : c)),
     }));
-    setTouched((t) => new Set(t).add(`contacts.${index}`));
+    form.touch(`contacts.${index}`);
   };
 
   const save = useSubmit({
@@ -216,15 +215,16 @@ function CustomerForm({ customer }: { customer: CustomerWithSitesJson | undefine
         ? ok(await api.customers[':id'].$put({ param: { id: customer.id }, json: body }))
         : ok(await api.customers.$post({ json: body })),
     onSuccess: async (saved) => {
+      guard.release();
       queryClient.setQueryData(customerKeys.customer(saved.id), saved);
       await refresh();
       if (customer) setNotice(m.saved());
       else await navigate({ to: '/customers/$id', params: { id: saved.id } });
     },
     onError: (error) => {
+      form.refused(error);
       if (!(error instanceof ApiError)) return;
-      const body = error.body as { issues?: IssueJson[]; owner?: CustomerOwnerJson };
-      if (error.code === 'invalid') setServerIssues(body.issues ?? []);
+      const body = error.body as { owner?: CustomerOwnerJson };
       if ((error.code === 'code-taken' || error.code === 'siret-taken') && body.owner) {
         setTaken({ field: error.code === 'code-taken' ? 'code' : 'siret', owner: body.owner });
       }
@@ -248,9 +248,8 @@ function CustomerForm({ customer }: { customer: CustomerWithSitesJson | undefine
 
   const submit = (event: FormEvent) => {
     event.preventDefault();
-    setSubmitted(true);
     setNotice(undefined);
-    if (issues.length === 0) save.mutate(toInput(state));
+    if (form.submit()) save.mutate(toInput(state));
   };
 
   const takenMessage = (field: 'code' | 'siret') => {
@@ -270,14 +269,7 @@ function CustomerForm({ customer }: { customer: CustomerWithSitesJson | undefine
     );
   };
 
-  const writeError =
-    save.error &&
-    !(
-      save.error instanceof ApiError &&
-      ['invalid', 'code-taken', 'siret-taken'].includes(save.error.code ?? '')
-    )
-      ? save.error
-      : archive.error;
+  const writeError = bannerError(save.error, ['code-taken', 'siret-taken']) ?? archive.error;
   const today = companyDay(Temporal.Now.instant()).dayOfWeek;
   const countryOptions = [...countries].sort((a, b) =>
     a === 'FR' ? -1 : b === 'FR' ? 1 : countryName(a).localeCompare(countryName(b)),
@@ -322,11 +314,13 @@ function CustomerForm({ customer }: { customer: CustomerWithSitesJson | undefine
         }
       />
 
+      {guard.dialog}
       {customer?.archived ? <Banner tone="warning">{m.customer_archived_banner()}</Banner> : null}
       {notice ? <Banner tone="ok">{notice}</Banner> : null}
       {writeError ? <Banner tone="conflict">{failureText(writeError, lists)}</Banner> : null}
+      <IssueBanner issues={form.unplaced} lists={lists} labels={customerLabels} />
 
-      <form id="customer-form" onSubmit={submit} noValidate>
+      <form id="customer-form" ref={form.formRef} onSubmit={submit} noValidate>
         <CardRow columns={['2fr', '3fr']}>
           <CardStack>
             <section className="t-panel" aria-labelledby="identity-title">
@@ -334,13 +328,18 @@ function CustomerForm({ customer }: { customer: CustomerWithSitesJson | undefine
               <FormGrid>
                 <div className="t-span-all">
                   <Field label={m.field_legal_name()} error={errorFor('name')}>
-                    <input value={state.name} onChange={(e) => set('name', e.target.value)} />
+                    <input
+                      value={state.name}
+                      maxLength={limit.name}
+                      onChange={(e) => set('name', e.target.value)}
+                    />
                   </Field>
                 </div>
                 <Field label={m.field_code()} hint={m.code_hint()} error={takenMessage('code')}>
                   <input
                     className="t-mono"
                     value={state.code}
+                    maxLength={limit.code}
                     onChange={(e) => set('code', e.target.value.toUpperCase())}
                   />
                 </Field>
@@ -364,6 +363,7 @@ function CustomerForm({ customer }: { customer: CustomerWithSitesJson | undefine
                       className="t-mono"
                       inputMode="numeric"
                       value={state.siret}
+                      maxLength={limit.siret}
                       onChange={(e) => setSiret(e.target.value)}
                     />
                   </Field>
@@ -377,6 +377,7 @@ function CustomerForm({ customer }: { customer: CustomerWithSitesJson | undefine
                   <input
                     className="t-mono"
                     value={state.vatNumber}
+                    maxLength={limit.vatNumber}
                     onChange={(e) => set('vatNumber', e.target.value.toUpperCase())}
                   />
                 </Field>
@@ -387,17 +388,27 @@ function CustomerForm({ customer }: { customer: CustomerWithSitesJson | undefine
               <h2 id="billing-title">{m.section_billing()}</h2>
               <FormGrid>
                 <div className="t-span-all">
-                  <Field label={m.field_street()} optional={m.optional()}>
+                  <Field
+                    label={m.field_street()}
+                    optional={m.optional()}
+                    error={errorFor('billingStreet1')}
+                  >
                     <input
                       value={state.billingStreet1}
+                      maxLength={limit.billingStreet1}
                       onChange={(e) => set('billingStreet1', e.target.value)}
                     />
                   </Field>
                 </div>
                 <div className="t-span-all">
-                  <Field label={m.field_street2()} optional={m.optional()}>
+                  <Field
+                    label={m.field_street2()}
+                    optional={m.optional()}
+                    error={errorFor('billingStreet2')}
+                  >
                     <input
                       value={state.billingStreet2}
+                      maxLength={limit.billingStreet2}
                       onChange={(e) => set('billingStreet2', e.target.value)}
                     />
                   </Field>
@@ -410,12 +421,18 @@ function CustomerForm({ customer }: { customer: CustomerWithSitesJson | undefine
                   <input
                     className="t-mono"
                     value={state.billingPostcode}
+                    maxLength={limit.billingPostcode}
                     onChange={(e) => set('billingPostcode', e.target.value)}
                   />
                 </Field>
-                <Field label={m.field_city()} optional={m.optional()}>
+                <Field
+                  label={m.field_city()}
+                  optional={m.optional()}
+                  error={errorFor('billingCity')}
+                >
                   <input
                     value={state.billingCity}
+                    maxLength={limit.billingCity}
                     onChange={(e) => set('billingCity', e.target.value)}
                   />
                 </Field>
@@ -424,8 +441,12 @@ function CustomerForm({ customer }: { customer: CustomerWithSitesJson | undefine
 
             <section className="t-panel" aria-labelledby="notes-title">
               <h2 id="notes-title">{m.section_notes()}</h2>
-              <Field label={m.section_notes()}>
-                <textarea value={state.notes} onChange={(e) => set('notes', e.target.value)} />
+              <Field label={m.section_notes()} error={errorFor('notes')}>
+                <textarea
+                  value={state.notes}
+                  maxLength={limit.notes}
+                  onChange={(e) => set('notes', e.target.value)}
+                />
               </Field>
             </section>
           </CardStack>
@@ -446,7 +467,7 @@ function CustomerForm({ customer }: { customer: CustomerWithSitesJson | undefine
               }
               onRemove={(key) => {
                 setState((s) => ({ ...s, contacts: s.contacts.filter((c) => c.key !== key) }));
-                setServerIssues([]);
+                form.forgetServer();
               }}
             />
             <UsualSites
@@ -481,6 +502,7 @@ function Contacts({
   onAdd: () => void;
   onRemove: (key: string) => void;
 }) {
+  const limit = textLimits.contact;
   return (
     <section className="t-panel" aria-labelledby="contacts-title">
       <div className="panel-title-row">
@@ -491,6 +513,7 @@ function Contacts({
       <div className="contact-list t-container">
         {contacts.map((contact, index) => {
           const rowError = errorFor(`contacts.${index}`);
+          const rowErrorId = `${contact.key}-error`;
           const label = m.contact_label({ n: index + 1 });
           return (
             <fieldset
@@ -503,27 +526,45 @@ function Contacts({
                 <Field label={m.field_contact_name()} error={errorFor(`contacts.${index}.name`)}>
                   <input
                     value={contact.name}
+                    maxLength={limit.name}
                     onChange={(e) => onChange(contact.key, 'name', e.target.value)}
                   />
                 </Field>
-                <Field label={m.field_contact_role()} optional={m.optional()}>
+                <Field
+                  label={m.field_contact_role()}
+                  optional={m.optional()}
+                  error={errorFor(`contacts.${index}.role`)}
+                >
                   <input
                     value={contact.role}
+                    maxLength={limit.role}
                     onChange={(e) => onChange(contact.key, 'role', e.target.value)}
                   />
                 </Field>
-                <Field label={m.field_contact_phone()}>
+                <Field
+                  label={m.field_contact_phone()}
+                  error={errorFor(`contacts.${index}.phone`)}
+                  invalid={Boolean(rowError)}
+                  describedBy={rowErrorId}
+                >
                   <input
                     type="tel"
                     className="t-mono"
                     value={contact.phone}
+                    maxLength={limit.phone}
                     onChange={(e) => onChange(contact.key, 'phone', e.target.value)}
                   />
                 </Field>
-                <Field label={m.field_contact_email()} error={errorFor(`contacts.${index}.email`)}>
+                <Field
+                  label={m.field_contact_email()}
+                  error={errorFor(`contacts.${index}.email`)}
+                  invalid={Boolean(rowError)}
+                  describedBy={rowErrorId}
+                >
                   <input
                     type="email"
                     value={contact.email}
+                    maxLength={limit.email}
                     onChange={(e) => onChange(contact.key, 'email', e.target.value)}
                   />
                 </Field>
@@ -538,7 +579,7 @@ function Contacts({
                 </div>
               </FormGrid>
               {rowError ? (
-                <p className="t-field-error contact-error" role="alert">
+                <p className="t-field-error contact-error" id={rowErrorId}>
                   {rowError}
                 </p>
               ) : null}

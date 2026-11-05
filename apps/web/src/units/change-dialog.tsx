@@ -2,6 +2,7 @@ import type { UnitJson } from '@timon/http';
 import { Banner, Button, Field, SegmentedControl } from '@timon/ui';
 import { type FormEvent, useEffect, useRef, useState } from 'react';
 import { api, ok } from '../api.ts';
+import { bannerError, IssueBanner, useFormIssues } from '../form.tsx';
 import { failureText } from '../issues.ts';
 import { m } from '../paraglide/messages.js';
 import { useSubmit } from '../submit.ts';
@@ -36,6 +37,11 @@ export function ChangeDialog({
   const [from, setFrom] = useState<LocalTime>(nextHourLocal());
   const [chosen, setChosen] = useState<string>(none);
   const fromInstant = fromLocal(from);
+  const resourceField = role === 'driver' ? 'driverId' : 'trailerId';
+  const form = useFormIssues({
+    issues: fromInstant ? [] : [{ field: 'from', code: 'required' }],
+    placed: ['from', 'driverId', 'trailerId', 'resourceId'],
+  });
 
   useEffect(() => {
     const element = dialog.current;
@@ -73,12 +79,14 @@ export function ChangeDialog({
       onChanged?.(result.unit);
       onClose();
     },
+    onError: form.refused,
   });
 
   const submit = (event: FormEvent) => {
     event.preventDefault();
-    if (fromInstant) change.mutate();
+    if (form.submit()) change.mutate();
   };
+  const changeError = bannerError(change.error);
 
   /** The vehicles of a unit, without repeating its name when it is named after its plate. */
   const members = (name: string | null, trailer: string | null) =>
@@ -99,7 +107,7 @@ export function ChangeDialog({
       aria-labelledby="change-title"
       onClose={onClose}
     >
-      <form onSubmit={submit} className="change-form">
+      <form ref={form.formRef} onSubmit={submit} className="change-form" noValidate>
         <div className="panel-title-row">
           <h2 id="change-title">{m.change_title({ name: unit.name })}</h2>
           <Button variant="link" onClick={onClose} aria-label={m.action_close()}>
@@ -121,18 +129,32 @@ export function ChangeDialog({
             onChange={(value) => {
               setRole(value);
               setChosen(none);
+              form.forgetServer();
             }}
           />
-          <Field label={m.field_from()}>
+          <Field label={m.field_from()} error={form.errorFor('from')}>
             <input
               type="datetime-local"
               className="datetime-input"
               value={from}
-              onChange={(e) => setFrom(e.target.value)}
+              onChange={(e) => {
+                setFrom(e.target.value);
+                form.touch('from');
+              }}
             />
           </Field>
-          <Field label={role === 'driver' ? m.field_new_driver() : m.field_new_trailer()}>
-            <select value={chosen} onChange={(e) => setChosen(e.target.value)}>
+          <Field
+            label={role === 'driver' ? m.field_new_driver() : m.field_new_trailer()}
+            error={form.errorFor(resourceField) ?? form.errorFor('resourceId')}
+          >
+            <select
+              value={chosen}
+              onChange={(e) => {
+                setChosen(e.target.value);
+                form.touch(resourceField);
+                form.touch('resourceId');
+              }}
+            >
               <option value={none}>{role === 'driver' ? m.no_driver() : m.no_trailer()}</option>
               {candidates.map((c) => (
                 <option key={c.resource.id} value={c.resource.id}>
@@ -182,11 +204,12 @@ export function ChangeDialog({
               : m.change_trailer_ok({ name: picked.name, from: fromText })}
           </Banner>
         ) : null}
-        {change.error ? <Banner tone="conflict">{failureText(change.error)}</Banner> : null}
+        {changeError ? <Banner tone="conflict">{failureText(changeError)}</Banner> : null}
+        <IssueBanner issues={form.unplaced} />
 
         <div className="t-actions dialog-actions">
           <Button onClick={onClose}>{m.action_cancel()}</Button>
-          <Button type="submit" variant="primary" disabled={!fromInstant} busy={change.isPending}>
+          <Button type="submit" variant="primary" busy={change.isPending}>
             {changeLabel}
           </Button>
         </div>

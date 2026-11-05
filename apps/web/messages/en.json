@@ -161,7 +161,7 @@
   "col_reference": "Reference",
   "col_issued": "Issued",
   "adding_document": "Adding a document",
-  "editing_document": "Renewing: {type}",
+  "editing_document": "Editing: {type}",
   "document_rule": "{type}: {rule}, warns {days} days ahead.",
   "saved": "Saved.",
   "archived_banner": "This resource is archived: it is hidden from the lists and the planning.",
@@ -342,6 +342,7 @@
   "issue_booking_method_required": "Say how to book",
   "issue_location_invalid": "The location is not valid",
   "issue_opening_invalid": "{day}: {start}–{end} is not a valid range",
+  "issue_time_invalid": "{day}: {value} is not a valid time",
   "issue_opening_overlap": "{day}: {first} and {second} overlap",
   "issue_openings_overlap": "Two opening ranges of one day overlap",
   "issue_code_taken": "{code} already exists ({name})",
@@ -533,5 +534,11 @@
   "issue_end_not_after_start": "the end must be after the start",
   "issue_outside_unit": "the change must fall after the start of the unit and before its end",
   "issue_unchanged": "{field} is already in this unit",
-  "action_change_short": "Change"
+  "issue_too_long": "{field}: {max} characters at most",
+  "issue_invalid_value": "{field} is not valid",
+  "action_change_short": "Change",
+  "leave_title": "Leave without saving?",
+  "leave_text": "The changes on this page are not saved. Leaving loses them.",
+  "action_stay": "Stay on the page",
+  "action_leave": "Leave without saving"
 }

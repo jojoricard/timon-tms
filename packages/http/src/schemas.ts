@@ -4,6 +4,7 @@ import {
   powerUnitKinds,
   resourceKinds,
   severityOrder,
+  textLimits,
   trailerKinds,
   vehicleCategories,
   vehicleKinds,
@@ -158,25 +159,26 @@ export const ResourceSummary = z
   })
   .openapi('ResourceSummary');
 
-const optionalText = z.string().max(200).nullable().optional();
+const optionalText = (max: number) => z.string().max(max).nullable().optional();
 const weight = z.number().int();
+const limit = textLimits.resource;
 
 export const DriverInput = z.object({
   kind: z.literal('driver'),
-  lastName: z.string().max(200),
-  firstName: z.string().max(200),
-  displayName: optionalText,
-  employeeNumber: optionalText,
-  phone: optionalText,
+  lastName: z.string().max(limit.lastName),
+  firstName: z.string().max(limit.firstName),
+  displayName: optionalText(limit.displayName),
+  employeeNumber: optionalText(limit.employeeNumber),
+  phone: optionalText(limit.phone),
   protectiveEquipmentIds: z.array(z.uuid()).max(20).optional(),
 });
 
 const vehicleInput = {
-  plate: z.string().max(20),
+  plate: z.string().max(limit.plate),
   category: z.enum(vehicleCategories),
   gvwKg: weight,
   gcwKg: weight.nullable().optional(),
-  makeModel: optionalText,
+  makeModel: optionalText(limit.makeModel),
   bodyTypeId: z.uuid().nullable().optional(),
   tradeLabelId: z.uuid().nullable().optional(),
   capabilityIds: z.array(z.uuid()).max(20).optional(),
@@ -197,7 +199,7 @@ export const ResourceInput = z
 export const DocumentInput = z
   .object({
     documentTypeId: z.uuid(),
-    reference: optionalText,
+    reference: optionalText(textLimits.document.reference),
     issuedOn: day.nullable().optional(),
     expiresOn: day,
   })

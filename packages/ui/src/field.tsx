@@ -15,6 +15,8 @@ export function Field({
   optional,
   hint,
   error,
+  invalid,
+  describedBy: shared,
   children,
 }: {
   label: string;
@@ -22,14 +24,20 @@ export function Field({
   optional?: string | undefined;
   hint?: ReactNode;
   error?: ReactNode;
+  /** Invalid by an error shown elsewhere, for several fields at once: its id is `describedBy`. */
+  invalid?: boolean;
+  describedBy?: string | undefined;
   children: ReactElement<ControlProps>;
 }) {
   const id = useId();
   const hintId = `${id}-hint`;
   const errorId = `${id}-error`;
-  const describedBy = [error ? errorId : null, hint ? hintId : null].filter(Boolean).join(' ');
+  const isInvalid = Boolean(error) || invalid === true;
+  const describedBy = [error ? errorId : null, invalid ? shared : null, hint ? hintId : null]
+    .filter(Boolean)
+    .join(' ');
   return (
-    <div className="t-field" data-invalid={error ? 'true' : undefined}>
+    <div className="t-field" data-invalid={isInvalid ? 'true' : undefined}>
       <label className="t-field-label" htmlFor={id}>
         {label}
         {optional ? <span className="t-field-optional"> {optional}</span> : null}
@@ -37,7 +45,7 @@ export function Field({
       {cloneElement(children, {
         id,
         ...(describedBy ? { 'aria-describedby': describedBy } : {}),
-        ...(error ? { 'aria-invalid': true } : {}),
+        ...(isInvalid ? { 'aria-invalid': true } : {}),
       })}
       {error ? (
         <span className="t-field-error" id={errorId}>

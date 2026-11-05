@@ -161,7 +161,7 @@
   "col_reference": "Référence",
   "col_issued": "Délivré le",
   "adding_document": "Nouveau document",
-  "editing_document": "Renouvellement : {type}",
+  "editing_document": "Modifier : {type}",
   "document_rule": "{type} : {rule}, alerte {days} jours avant.",
   "saved": "Enregistré.",
   "archived_banner": "Ce moyen est archivé : il n'apparaît plus dans les listes ni au planning.",
@@ -342,6 +342,7 @@
   "issue_booking_method_required": "Indiquez comment prendre rendez-vous",
   "issue_location_invalid": "La localisation n'est pas valide",
   "issue_opening_invalid": "{day} : {start}–{end} n'est pas une plage valide",
+  "issue_time_invalid": "{day} : {value} n'est pas une heure valide",
   "issue_opening_overlap": "{day} : {first} et {second} se chevauchent",
   "issue_openings_overlap": "Deux plages d'un même jour se chevauchent",
   "issue_code_taken": "{code} existe déjà ({name})",
@@ -533,5 +534,11 @@
   "issue_end_not_after_start": "la fin doit être après le début",
   "issue_outside_unit": "le changement doit tomber après le début de l'ensemble et avant sa fin",
   "issue_unchanged": "{field} est déjà dans cet ensemble",
-  "action_change_short": "Changer"
+  "issue_too_long": "{field} : {max} caractères au plus",
+  "issue_invalid_value": "{field} n'est pas valide",
+  "action_change_short": "Changer",
+  "leave_title": "Quitter sans enregistrer ?",
+  "leave_text": "Les modifications de cette page ne sont pas enregistrées. En quittant, elles sont perdues.",
+  "action_stay": "Rester sur la page",
+  "action_leave": "Quitter sans enregistrer"
 }

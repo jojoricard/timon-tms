@@ -146,7 +146,7 @@ test('criterion 9: overlapping hours are refused; a night over two days is saved
   await from.nth(1).fill('11:00');
   await to.nth(1).fill('18:00');
   await page.getByRole('button', { name: 'Create' }).click();
-  await expect(monday.getByRole('alert')).toHaveText('Monday: 06:00–12:00 and 11:00–18:00 overlap');
+  await expect(monday.getByText('Monday: 06:00–12:00 and 11:00–18:00 overlap')).toBeVisible();
 
   await from.nth(0).fill('22:00');
   await to.nth(0).fill('24:00');
