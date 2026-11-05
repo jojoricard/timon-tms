@@ -663,7 +663,7 @@ function UsualSites({
       {sites.length === 0 ? (
         <p className="t-field-hint">{m.usual_sites_empty()}</p>
       ) : (
-        <TableFrame>
+        <TableFrame actions>
           <table className="t-table">
             <caption className="t-visually-hidden">{m.section_usual_sites()}</caption>
             <thead>

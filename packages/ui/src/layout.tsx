@@ -146,11 +146,19 @@ function useScrollEdges<T extends HTMLElement>() {
  * stays in place; once scrolled, its edge casts a shadow over the columns passing under it. While
  * more columns lie past the trailing edge, that edge is shaded too.
  */
-export function TableFrame({ children }: { children: ReactNode }) {
+export function TableFrame({
+  actions = false,
+  children,
+}: {
+  /** The last column holds the actions of the row: it stays in place while the row scrolls. */
+  actions?: boolean;
+  children: ReactNode;
+}) {
   const { ref, edges, update } = useScrollEdges<HTMLDivElement>();
   return (
     <div
       className="t-table-frame"
+      data-actions={actions || undefined}
       data-scrolled={edges.before || undefined}
       data-more={edges.after || undefined}
     >

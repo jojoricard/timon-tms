@@ -247,16 +247,20 @@ function ResourceTable({
                 <td>{entryLabel(lists.bodyTypes.find((b) => b.id === r.bodyTypeId)) || '—'}</td>
               </>
             )}
-            <td>
+            <td className="next-expiry">
               {r.nextExpiry ? (
                 <>
-                  {entryLabel(
-                    lists.documentTypes.find((t) => t.id === r.nextExpiry?.documentTypeId),
-                  )}{' '}
-                  <span className="t-mono">{formatDate(r.nextExpiry.expiresOn)}</span>
-                  {r.nextExpiry.status !== 'valid' ? (
-                    <span className="t-secondary">{formatDays(r.nextExpiry.daysUntil)}</span>
-                  ) : null}
+                  <span className="next-expiry-type">
+                    {entryLabel(
+                      lists.documentTypes.find((t) => t.id === r.nextExpiry?.documentTypeId),
+                    )}
+                  </span>
+                  <span className="next-expiry-date t-secondary">
+                    <span className="t-mono">{formatDate(r.nextExpiry.expiresOn)}</span>
+                    {r.nextExpiry.status !== 'valid'
+                      ? ` · ${formatDays(r.nextExpiry.daysUntil)}`
+                      : null}
+                  </span>
                 </>
               ) : (
                 '—'

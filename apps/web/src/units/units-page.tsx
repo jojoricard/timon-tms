@@ -267,7 +267,9 @@ function UnitTable({
                   )}
                 </td>
                 <td className="t-mono">{formatTime(u.start)}</td>
-                <td className="t-mono">{u.end ? formatTime(u.end) : m.open_ended()}</td>
+                <td className={u.end ? 't-mono' : undefined}>
+                  {u.end ? formatTime(u.end) : m.open_ended()}
+                </td>
                 <td className="t-end">
                   <StatusBadge tone={memberStatusTone[u.documents.status]}>
                     {documentsText(u.documents)}

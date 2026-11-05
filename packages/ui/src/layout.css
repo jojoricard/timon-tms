@@ -15,6 +15,14 @@ body {
   overflow-wrap: normal;
 }
 
+/*
+ * A word longer than its column, a name typed without spaces, breaks inside its cell: the column
+ * keeps its share of the table. Codes, plates, dates and times stay on one line (.t-mono).
+ */
+.t-table :is(td, tbody th) {
+  overflow-wrap: anywhere;
+}
+
 /* A card sizes the grids inside it: its width, not the window's, sets their columns. */
 .t-panel,
 .t-container {
@@ -171,7 +179,10 @@ body {
   }
 }
 
-/* A status badge in a cell takes a second line rather than push past its column. */
+/*
+ * A status badge in a cell takes a second line rather than push past its column, between words
+ * only: its longest word sets the least width of the column.
+ */
 .t-table .t-badge {
   max-width: 100%;
   height: auto;
@@ -179,6 +190,7 @@ body {
   padding-block: 3px;
   line-height: 16px;
   white-space: normal;
+  overflow-wrap: normal;
 }
 
 /* Tables: the frame holds the border and the edge shades, the area inside it scrolls */
@@ -217,6 +229,32 @@ body {
   background: var(--color-conflict-tint);
 }
 
+/* A table in a form keeps its actions in place at the end of the row, as the first column. */
+.t-table-frame[data-actions]
+  .t-table-scroll
+  > .t-table
+  > :is(thead, tbody)
+  > tr
+  > :last-child:not([colspan]) {
+  position: sticky;
+  right: 0;
+  z-index: 1;
+  background: var(--color-surface-raised);
+}
+
+.t-table-frame[data-actions] .t-table-scroll > .t-table > thead > tr > :last-child:not([colspan]) {
+  background: var(--color-surface-sunken);
+}
+
+.t-table-frame[data-actions]
+  .t-table-scroll
+  > .t-table
+  > tbody
+  > tr:hover
+  > :last-child:not([colspan]) {
+  background: var(--color-surface);
+}
+
 /*
  * Leading edge: the rows passing under the first column slide under its edge, a line and a shadow
  * in a strip beside it, since collapsed table cells paint no outer box-shadow.
@@ -244,6 +282,40 @@ body {
   width: 12px;
   box-shadow: var(--shadow-edge);
   pointer-events: none;
+}
+
+/*
+ * Trailing edge, the same way: while the row has more under the actions, they show the line and
+ * the shade on their side. The shade of the frame would fall on them, so it gives way.
+ */
+.t-table-frame[data-actions][data-more]
+  .t-table-scroll
+  > .t-table
+  > :is(thead, tbody)
+  > tr
+  > :last-child:not([colspan]) {
+  box-shadow: inset 1px 0 0 var(--color-line);
+}
+
+.t-table-frame[data-actions][data-more]
+  .t-table-scroll
+  > .t-table
+  > :is(thead, tbody)
+  > tr
+  > :last-child:not([colspan])::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: -12px;
+  width: 12px;
+  box-shadow: var(--shadow-edge);
+  transform: scaleX(-1);
+  pointer-events: none;
+}
+
+.t-table-frame[data-actions]::after {
+  display: none;
 }
 
 /*
@@ -294,7 +366,12 @@ body {
 .t-tabs {
   position: relative;
   overflow-x: auto;
-  scrollbar-width: thin;
+  scrollbar-width: none;
+}
+
+/* The edge shades say there are more tabs: no scrollbar under them. */
+.t-tabs::-webkit-scrollbar {
+  display: none;
 }
 
 .t-tabs > li {

@@ -640,8 +640,11 @@ input:is([type="date"], [type="time"], [type="datetime-local"]):focus-within {
   font-weight: 600;
 }
 
+/* A text area grows down, never wider than its card. */
 textarea {
+  max-width: 100%;
   font: var(--type-body);
+  resize: vertical;
 }
 
 .t-field textarea {

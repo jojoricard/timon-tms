@@ -778,6 +778,12 @@
   color: var(--color-ink-muted);
 }
 
+/* The next expiry of a resource: the document, then its date on a line of its own. */
+.next-expiry-type,
+.next-expiry-date {
+  display: block;
+}
+
 .change-dialog {
   width: min(720px, calc(100vw - 2 * var(--space-6)));
   border: 1px solid var(--color-line);

@@ -743,7 +743,7 @@ function Documents({
 
   return (
     <>
-      <TableFrame>
+      <TableFrame actions>
         <table className="t-table">
           <caption className="t-visually-hidden">{m.section_documents()}</caption>
           <thead>
