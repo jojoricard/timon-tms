@@ -101,14 +101,20 @@ export function formatMonth(isoDate: string): string {
   }).format(utc(isoDate));
 }
 
+/**
+ * "jeudi 5 novembre 2026", "Thursday 5 November 2026": in full, since an abbreviated day reads
+ * as a word ("au jeu."). The day is set apart, without the comma British English puts after it.
+ */
 export function formatLongDate(isoDate: string): string {
-  return new Intl.DateTimeFormat(getLocale(), {
-    weekday: 'short',
+  const date = utc(isoDate);
+  const weekday = new Intl.DateTimeFormat(dateLocale(), { weekday: 'long', timeZone: 'UTC' });
+  const day = new Intl.DateTimeFormat(dateLocale(), {
     day: 'numeric',
-    month: 'short',
+    month: 'long',
     year: 'numeric',
     timeZone: 'UTC',
-  }).format(utc(isoDate));
+  });
+  return `${weekday.format(date)} ${day.format(date)}`;
 }
 
 /** "in 12 days", "4 days ago", "tomorrow": plurals come from the browser. */

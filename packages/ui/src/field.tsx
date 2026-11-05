@@ -17,9 +17,12 @@ export function Field({
   error,
   invalid,
   describedBy: shared,
+  hideLabel = false,
   children,
 }: {
   label: string;
+  /** The label is said, not shown, when a heading above already names the field. */
+  hideLabel?: boolean;
   /** Text appended to the label, e.g. "(optional)". */
   optional?: string | undefined;
   hint?: ReactNode;
@@ -38,7 +41,7 @@ export function Field({
     .join(' ');
   return (
     <div className="t-field" data-invalid={isInvalid ? 'true' : undefined}>
-      <label className="t-field-label" htmlFor={id}>
+      <label className={hideLabel ? 't-visually-hidden' : 't-field-label'} htmlFor={id}>
         {label}
         {optional ? <span className="t-field-optional"> {optional}</span> : null}
       </label>

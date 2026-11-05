@@ -77,7 +77,11 @@ export function ImportPage({ kind }: { kind: ResourceKind }) {
         { label: m.summary_already(), value: check.summary.alreadyInTimon },
         { label: m.summary_documents(), value: check.summary.documents },
       ]}
-      rules={[m.rule_all_or_nothing(), m.rule_plates(), m.rule_kinds(), m.rule_formats()]}
+      rules={
+        kind === 'driver'
+          ? [m.rule_all_or_nothing(), m.rule_formats_driver()]
+          : [m.rule_all_or_nothing(), m.rule_plates(), m.rule_kinds(), m.rule_formats()]
+      }
       templates={[
         {
           href: `/api/imports/${kind}/template?lang=${getLocale()}`,

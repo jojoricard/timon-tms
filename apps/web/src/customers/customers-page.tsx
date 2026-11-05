@@ -128,7 +128,7 @@ function CustomerTable({ customers }: { customers: readonly CustomerJson[] }) {
       <tbody>
         {customers.length === 0 ? (
           <tr>
-            <td colSpan={7}>{m.list_empty()}</td>
+            <td colSpan={7}>{m.customers_empty()}</td>
           </tr>
         ) : null}
         {customers.map((c) => (
@@ -144,7 +144,7 @@ function CustomerTable({ customers }: { customers: readonly CustomerJson[] }) {
               ) : null}
             </th>
             <td>
-              {c.billingCity}
+              {c.billingCity ?? '—'}
               {c.country !== 'FR' ? ` · ${countryName(c.country)}` : ''}
             </td>
             <td className="t-mono">{c.siret ? formatSiret(c.siret) : '—'}</td>

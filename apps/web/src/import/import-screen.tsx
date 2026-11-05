@@ -13,8 +13,7 @@ import {
 import { type ReactNode, useState } from 'react';
 import { ApiError } from '../api.ts';
 import { errorText } from '../data.ts';
-import { fieldLabel, issueSentence, issueText } from '../issues.ts';
-import { inSentence } from '../labels.ts';
+import { fieldLabel, issueText } from '../issues.ts';
 import { m } from '../paraglide/messages.js';
 import { PageHeader } from '../resources/section.tsx';
 import { useSubmit } from '../submit.ts';
@@ -63,10 +62,14 @@ function problemText(problem: Problem, lists: ReferenceListsJson | undefined): s
       return m.problem_too_large({ max: Number(params.maxBytes ?? maxBytes) / 1_000_000 });
     case 'too-many-lines':
       return m.problem_too_many_lines({ max: Number(params.maxLines ?? 2000) });
-    case 'missing-columns':
-      return m.problem_missing_columns({
-        columns: ((params.fields as string[]) ?? []).map((f) => fieldLabel(f, lists)).join(', '),
-      });
+    case 'missing-columns': {
+      const columns = ((params.fields as string[]) ?? [])
+        .map((f) => fieldLabel(f, lists))
+        .join(', ');
+      return Number(params.columns) === 1
+        ? m.problem_one_column({ columns })
+        : m.problem_missing_columns({ columns });
+    }
     default:
       return m.problem_empty();
   }
@@ -217,10 +220,7 @@ export function ImportScreen<Row extends ImportRowLike, Check extends ImportChec
                   {errorLines.flatMap((row) =>
                     row.issues.map((issue) => (
                       <li key={`${row.line}-${issue.field}-${issue.code}`}>
-                        {m.line_issue({
-                          line: row.line,
-                          issue: inSentence(issueText(issue, lists)),
-                        })}
+                        {m.line_issue({ line: row.line, issue: issueText(issue, lists) })}
                       </li>
                     )),
                   )}
@@ -295,7 +295,7 @@ export function ImportScreen<Row extends ImportRowLike, Check extends ImportChec
                                   key={`${issue.field}-${issue.code}`}
                                   className="t-field-error check-issue"
                                 >
-                                  ✕ {issueSentence(issue, lists)}
+                                  ✕ {issueText(issue, lists)}
                                 </span>
                               ))}
                         </td>

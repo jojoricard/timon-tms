@@ -92,8 +92,14 @@ const rootRoute = createRootRoute({
     </div>
   ),
   notFoundComponent: () => (
-    <div className="page">
-      <Banner tone="warning">{m.not_found()}</Banner>
+    <div className="page not-found">
+      <h1>{m.page_not_found_title()}</h1>
+      <p>{m.page_not_found_text()}</p>
+      <p>
+        <Link to="/resources/$kind" params={{ kind: 'drivers' }}>
+          {m.action_back_home()}
+        </Link>
+      </p>
     </div>
   ),
 });

@@ -778,12 +778,15 @@ function Documents({
                   </th>
                   <td className="t-mono">{d.reference}</td>
                   <td className="t-mono">{formatDate(d.issuedOn)}</td>
-                  <td className="t-mono">{formatDate(d.expiresOn)}</td>
+                  <td>
+                    <span className="t-mono">{formatDate(d.expiresOn)}</span>
+                    {d.status !== 'valid' ? (
+                      <span className="t-secondary">{formatDays(d.daysUntil)}</span>
+                    ) : null}
+                  </td>
                   <td>
                     <StatusBadge tone={severityTone[d.severity]}>
-                      {d.status === 'expiring'
-                        ? formatDays(d.daysUntil)
-                        : severityLabel[d.severity]()}
+                      {severityLabel[d.severity]()}
                     </StatusBadge>
                   </td>
                   <td className="t-end">

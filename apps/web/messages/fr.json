@@ -8,7 +8,7 @@
   "demo_unavailable": "La base de données de la démo n'a pas pu démarrer dans ce navigateur. Rechargez la page ; si le problème persiste, essayez un autre navigateur.",
   "server_unreachable": "Le serveur est injoignable. Vérifiez votre connexion et réessayez.",
   "demo_service_worker_unavailable": "La démo fonctionne entièrement dans votre navigateur et a besoin d'un service worker, que cette fenêtre n'autorise pas (navigation privée, par exemple). Ouvrez la démo dans une fenêtre normale ou dans un autre navigateur.",
-  "not_found": "Ce moyen n'existe pas.",
+  "not_found": "Cette fiche n'existe pas.",
   "optional": "(facultatif)",
   "none": "Aucune",
   "or": "ou",
@@ -56,7 +56,16 @@
   "severity_expired_not_blocking": "Expiré · non bloquant",
   "rule_blocking": "Bloquant",
   "rule_not_blocking": "Non bloquant",
-  "rule_warns": "alerte {days} jours avant",
+  "rule_warns": [
+    {
+      "declarations": ["input days", "local daysPlural = days: plural"],
+      "selectors": ["daysPlural"],
+      "match": {
+        "daysPlural=one": "alerte {days} jour avant",
+        "daysPlural=*": "alerte {days} jours avant"
+      }
+    }
+  ],
   "archived": "Archivé",
   "resources_title": "Moyens",
   "resources_active": "{count} en service",
@@ -86,7 +95,21 @@
   "col_body_type": "Carrosserie",
   "col_actions": "Actions",
   "list_caption": "{kind}, statut au {date}",
-  "list_footer": "{shown} sur {total} affichés · statut au {date} · un document bloquant expiré rend le moyen indisponible pour le travail qui l'exige",
+  "list_footer": [
+    {
+      "declarations": [
+        "input shown",
+        "input total",
+        "input date",
+        "local shownPlural = shown: plural"
+      ],
+      "selectors": ["shownPlural"],
+      "match": {
+        "shownPlural=one": "{shown} sur {total} affiché · statut au {date} · un document bloquant expiré rend le moyen indisponible pour le travail qui l'exige",
+        "shownPlural=*": "{shown} sur {total} affichés · statut au {date} · un document bloquant expiré rend le moyen indisponible pour le travail qui l'exige"
+      }
+    }
+  ],
   "list_empty": "Aucun moyen ne correspond.",
   "action_restore": "Restaurer",
   "action_restore_named": "Restaurer {name}",
@@ -112,7 +135,16 @@
   "col_note": "Remarque",
   "note_blocked": "Indisponible pour le travail qui l'exige",
   "note_warning_only": "Avertissement seulement",
-  "note_warns": "Alerte {days} jours avant",
+  "note_warns": [
+    {
+      "declarations": ["input days", "local daysPlural = days: plural"],
+      "selectors": ["daysPlural"],
+      "match": {
+        "daysPlural=one": "Alerte {days} jour avant",
+        "daysPlural=*": "Alerte {days} jours avant"
+      }
+    }
+  ],
   "expiries_caption": "Documents expirés ou dans leur délai d'alerte, statut au {date}",
   "expiries_footer": "Tri par date, expirés d'abord · statut au {date}, Europe/Paris · un document expire à la fin de son jour d'échéance · chaque type alerte selon son propre délai",
   "expiries_empty": "Rien n'est expiré ni à renouveler.",
@@ -162,7 +194,16 @@
   "col_issued": "Délivré le",
   "adding_document": "Nouveau document",
   "editing_document": "Modifier : {type}",
-  "document_rule": "{type} : {rule}, alerte {days} jours avant.",
+  "document_rule": [
+    {
+      "declarations": ["input type", "input rule", "input days", "local daysPlural = days: plural"],
+      "selectors": ["daysPlural"],
+      "match": {
+        "daysPlural=one": "{type} : {rule}, alerte {days} jour avant.",
+        "daysPlural=*": "{type} : {rule}, alerte {days} jours avant."
+      }
+    }
+  ],
   "saved": "Enregistré.",
   "archived_banner": "Ce moyen est archivé : il n'apparaît plus dans les listes ni au planning.",
   "archived_done": "{name} est archivé. Il n'est jamais supprimé et peut être restauré.",
@@ -220,7 +261,16 @@
   "rule_kinds": "Le type et la catégorie doivent concorder",
   "rule_formats": "Dates au format jj/mm/aaaa, poids en kilogrammes",
   "action_import_all": "Tout importer ({count})",
-  "imported": "Importés : {count}. Ils figurent maintenant dans la liste.",
+  "imported": [
+    {
+      "declarations": ["input count", "local countPlural = count: plural"],
+      "selectors": ["countPlural"],
+      "match": {
+        "countPlural=one": "Importé : {count}. Il figure maintenant dans la liste.",
+        "countPlural=*": "Importés : {count}. Ils figurent maintenant dans la liste."
+      }
+    }
+  ],
   "problem_too_large": "Le fichier dépasse {max} Mo.",
   "problem_too_many_lines": "Le fichier compte plus de {max} lignes.",
   "problem_empty": "Le fichier ne contient aucune ligne à importer.",
@@ -250,7 +300,16 @@
   "col_usual_sites": "Sites habituels",
   "no_siret_yet": "Pas encore de SIRET",
   "customers_caption": "Clients, triés par code",
-  "customers_footer": "{shown} sur {total} affichés · triés par code · un SIRET est unique parmi les clients en service · les clients sont archivés, jamais supprimés",
+  "customers_footer": [
+    {
+      "declarations": ["input shown", "input total", "local shownPlural = shown: plural"],
+      "selectors": ["shownPlural"],
+      "match": {
+        "shownPlural=one": "{shown} sur {total} affiché · triés par code · un SIRET est unique parmi les clients en service · les clients sont archivés, jamais supprimés",
+        "shownPlural=*": "{shown} sur {total} affichés · triés par code · un SIRET est unique parmi les clients en service · les clients sont archivés, jamais supprimés"
+      }
+    }
+  ],
   "filter_not_located": "Non localisés",
   "filter_booking": "Rendez-vous requis",
   "filter_protective_equipment": "EPI exigés",
@@ -280,7 +339,16 @@
   "located_by_hand": "À la main",
   "located_not": "Non localisé",
   "sites_caption": "Sites, triés par nom ; horaires dans le fuseau de chaque site",
-  "sites_footer": "{shown} sur {total} affichés · triés par nom · horaires dans le fuseau de chaque site · un ordre n'accepte pas un site non localisé",
+  "sites_footer": [
+    {
+      "declarations": ["input shown", "input total", "local shownPlural = shown: plural"],
+      "selectors": ["shownPlural"],
+      "match": {
+        "shownPlural=one": "{shown} sur {total} affiché · triés par nom · horaires dans le fuseau de chaque site · un ordre n'accepte pas un site non localisé",
+        "shownPlural=*": "{shown} sur {total} affichés · triés par nom · horaires dans le fuseau de chaque site · un ordre n'accepte pas un site non localisé"
+      }
+    }
+  ],
   "pe_safety_shoes": "Chaussures de sécurité",
   "pe_high_visibility_vest": "Gilet haute visibilité",
   "pe_hard_hat": "Casque",
@@ -393,7 +461,16 @@
   "action_open_site": "Ouvrir {name}",
   "site_saved_not_located": "Enregistré non localisé : l'adresse n'a pas été trouvée. Placez l'épingle à la main.",
   "section_driver_protective_equipment": "Équipements de protection",
-  "pe_held": "{held} sur {total} détenus",
+  "pe_held": [
+    {
+      "declarations": ["input held", "input total", "local heldPlural = held: plural"],
+      "selectors": ["heldPlural"],
+      "match": {
+        "heldPlural=one": "{held} sur {total} détenu",
+        "heldPlural=*": "{held} sur {total} détenus"
+      }
+    }
+  ],
   "pe_hint": "Détenu ou non, sans date. Comparé à ce qu'exige chaque site d'un trajet quand le trajet est planifié.",
   "import_title_customers": "Importer des clients",
   "import_title_sites": "Importer des sites",
@@ -420,7 +497,16 @@
   "imported_sites": "Importés : {count}, non localisés : {notLocated}. Placez ces derniers sur la carte depuis leur fiche.",
   "tab_units": "Ensembles",
   "units_title": "Ensembles",
-  "units_subtitle": "{count} valides à ce moment · une ressource appartient à un seul ensemble à la fois",
+  "units_subtitle": [
+    {
+      "declarations": ["input count", "local countPlural = count: plural"],
+      "selectors": ["countPlural"],
+      "match": {
+        "countPlural=one": "{count} valide à ce moment · une ressource appartient à un seul ensemble à la fois",
+        "countPlural=*": "{count} valides à ce moment · une ressource appartient à un seul ensemble à la fois"
+      }
+    }
+  ],
   "action_new_unit": "Nouvel ensemble",
   "new_unit": "Nouvel ensemble",
   "units_previous_day": "Jour précédent",
@@ -540,5 +626,13 @@
   "leave_title": "Quitter sans enregistrer ?",
   "leave_text": "Les modifications de cette page ne sont pas enregistrées. En quittant, elles sont perdues.",
   "action_stay": "Rester sur la page",
-  "action_leave": "Quitter sans enregistrer"
+  "action_leave": "Quitter sans enregistrer",
+  "page_not_found_title": "Page introuvable",
+  "page_not_found_text": "Aucune page à cette adresse. Elle a peut-être changé, ou le lien est erroné.",
+  "action_back_home": "Retour aux moyens",
+  "customers_empty": "Aucun client ne correspond.",
+  "sites_empty": "Aucun site ne correspond.",
+  "rule_formats_driver": "Dates au format jj/mm/aaaa",
+  "problem_one_column": "Colonnes manquantes : {columns}. Le fichier se lit comme une seule colonne : ses colonnes sont-elles séparées par ; ou , ?",
+  "issue_opening_unreadable": "{day} : « {value} » ne se lit pas ; écrivez les horaires ainsi : 06:00-12:00/14:00-18:00, ou laissez la case vide si fermé"
 }

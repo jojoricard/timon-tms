@@ -195,6 +195,11 @@ export function issueText(
         start: text(params.start),
         end: text(params.end),
       });
+    case 'opening-unreadable':
+      return m.issue_opening_unreadable({
+        day: capitalise(weekdayName(Number(params.weekday))),
+        value: text(params.value),
+      });
     case 'time-invalid':
       return m.issue_time_invalid({
         day: capitalise(weekdayName(Number(params.weekday))),

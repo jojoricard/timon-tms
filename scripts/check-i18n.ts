@@ -16,22 +16,36 @@ const messages = new Map<string, Record<string, unknown>>(
 const keys = new Set([...messages.values()].flatMap((m) => Object.keys(m)));
 keys.delete('$schema');
 
+/**
+ * The texts of a message: itself, or each variant of a message with variants, such as a plural:
+ * `[{ declarations, selectors, match: { "countPlural=one": "...", ... } }]`.
+ */
+type Variants = { declarations?: string[]; match?: Record<string, unknown> };
+const texts = (value: unknown): unknown[] =>
+  Array.isArray(value)
+    ? (value as Variants[]).flatMap((v) => Object.values(v.match ?? {}))
+    : [value];
+const filled = (value: unknown) =>
+  texts(value).length > 0 && texts(value).every((t) => typeof t === 'string' && t.trim() !== '');
+
 const errors: string[] = [];
 for (const [locale, entries] of messages) {
   for (const key of keys) {
-    const value = entries[key];
-    if (typeof value !== 'string' || value.trim() === '') {
-      errors.push(`${locale}: missing or empty message "${key}"`);
-    }
+    if (!filled(entries[key])) errors.push(`${locale}: missing or empty message "${key}"`);
   }
 }
 
-// Same variables on both sides: a translation must not drop or rename one.
-const variables = (text: unknown) =>
-  [...String(text).matchAll(/\{(\w+)\}/g)]
-    .map((m) => m[1])
-    .sort()
-    .join(',');
+// Same variables on both sides: a translation must not drop or rename one. A message with
+// variants counts those of all its variants and the inputs it declares.
+const variables = (value: unknown) => {
+  const used = texts(value).flatMap((t) => [...String(t).matchAll(/\{(\w+)\}/g)].map((m) => m[1]));
+  const declared = Array.isArray(value)
+    ? (value as Variants[]).flatMap((v) =>
+        (v.declarations ?? []).flatMap((d) => /^input (\w+)$/.exec(d)?.[1] ?? []),
+      )
+    : [];
+  return [...new Set([...used, ...declared])].sort().join(',');
+};
 for (const key of keys) {
   const [first, ...others] = locales;
   for (const locale of others) {

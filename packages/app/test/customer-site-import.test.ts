@@ -99,7 +99,7 @@ describe('site import', () => {
     expect(check.rows.map((r) => r.issues.map((i) => `${i.field}:${i.code}`))).toEqual([
       [],
       [
-        'openings.1:unknown-value',
+        'openings.1:opening-unreadable',
         'bookingMethod:unknown-value',
         'protectiveEquipmentIds:unknown-value',
         'maxLengthCm:invalid-number',

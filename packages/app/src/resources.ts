@@ -22,6 +22,7 @@ export type FieldIssue =
       readonly field: string;
       readonly code:
         | 'unknown-value'
+        | 'opening-unreadable'
         | 'invalid-date'
         | 'invalid-number'
         | 'issued-after-expiry'

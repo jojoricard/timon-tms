@@ -440,8 +440,15 @@ function CustomerForm({ customer }: { customer: CustomerWithSitesJson | undefine
             </section>
 
             <section className="t-panel" aria-labelledby="notes-title">
-              <h2 id="notes-title">{m.section_notes()}</h2>
-              <Field label={m.section_notes()} error={errorFor('notes')}>
+              <h2 id="notes-title">
+                {m.section_notes()} <span className="t-field-optional">{m.optional()}</span>
+              </h2>
+              <Field
+                label={m.section_notes()}
+                optional={m.optional()}
+                hideLabel
+                error={errorFor('notes')}
+              >
                 <textarea
                   value={state.notes}
                   maxLength={limit.notes}

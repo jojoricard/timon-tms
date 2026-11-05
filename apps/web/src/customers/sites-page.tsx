@@ -145,7 +145,7 @@ function SiteTable({
       <tbody>
         {sites.length === 0 ? (
           <tr>
-            <td colSpan={8}>{m.list_empty()}</td>
+            <td colSpan={8}>{m.sites_empty()}</td>
           </tr>
         ) : null}
         {sites.map((s) => (
