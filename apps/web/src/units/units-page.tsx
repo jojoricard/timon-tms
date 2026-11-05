@@ -28,6 +28,7 @@ import {
   useUnitsAt,
 } from './unit-data.ts';
 import { documentsText, memberStatusTone } from './unit-labels.ts';
+import { matchesUnit } from './unit-search.ts';
 
 type Filter = 'all' | 'documents' | 'no-driver';
 
@@ -37,30 +38,8 @@ const groups = [
   { kind: 'light-van', label: m.group_light_vans },
 ] as const;
 
-/** Lower case and without accents, for a search that forgives both. */
-const searchable = (text: string) =>
-  text
-    .normalize('NFD')
-    .replace(/\p{Diacritic}/gu, '')
-    .toLowerCase();
-
 const hasDocumentProblem = (u: UnitJson) =>
   u.documents.status === 'expired' || u.documents.status === 'missing';
-
-function matches(unit: UnitJson, query: string): boolean {
-  const words = [
-    unit.name,
-    unit.powerUnit.name,
-    unit.powerUnit.makeModel ?? '',
-    unit.trailer?.name ?? '',
-    unit.driver?.fullName ?? '',
-    unit.driver?.name ?? '',
-  ];
-  const haystack = searchable(words.join(' '));
-  return searchable(query)
-    .split(/\s+/)
-    .every((word) => haystack.includes(word));
-}
 
 /** The units valid at a date and time, now by default, and the resources left free. */
 export function UnitsPage({
@@ -84,7 +63,7 @@ export function UnitsPage({
     setSearch((current) => ({ at: addDays(current.at ?? shown, days) }));
 
   const units = data.data?.units ?? [];
-  const searched = units.filter((u) => query.trim() === '' || matches(u, query.trim()));
+  const searched = units.filter((u) => query.trim() === '' || matchesUnit(u, query.trim()));
   const counts: Record<Filter, number> = {
     all: searched.length,
     documents: searched.filter(hasDocumentProblem).length,
