@@ -1,4 +1,3 @@
-import { useMutation } from '@tanstack/react-query';
 import { Link, useNavigate } from '@tanstack/react-router';
 import type {
   IssueJson,
@@ -25,6 +24,7 @@ import { failureText, issueSentence } from '../issues.ts';
 import { formatDate } from '../labels.ts';
 import { m } from '../paraglide/messages.js';
 import { PageHeader } from '../resources/section.tsx';
+import { useSubmit } from '../submit.ts';
 import { ChangeDialog } from './change-dialog.tsx';
 import {
   formatTime,
@@ -132,7 +132,7 @@ function UnitForm({ unit, initial }: { unit: UnitJson | undefined; initial: Unit
     start: startInstant ?? '',
     end: endInstant ?? null,
   };
-  const save = useMutation({
+  const save = useSubmit({
     mutationFn: async () =>
       ok(
         unit
@@ -150,7 +150,7 @@ function UnitForm({ unit, initial }: { unit: UnitJson | undefined; initial: Unit
       }
     },
   });
-  const remove = useMutation({
+  const remove = useSubmit({
     mutationFn: async () => {
       const response = await api.units[':id'].$delete({ param: { id: unit?.id ?? '' } });
       if (!response.ok) throw new ApiError(response.status, await response.json());
@@ -198,14 +198,14 @@ function UnitForm({ unit, initial }: { unit: UnitJson | undefined; initial: Unit
         actions={
           <>
             {unit ? (
-              <Button variant="danger" onClick={() => remove.mutate()} disabled={remove.isPending}>
+              <Button variant="danger" onClick={() => remove.mutate()} busy={remove.isPending}>
                 {m.action_delete_unit()}
               </Button>
             ) : null}
             <Link className="t-button" to="/resources/units">
               {m.action_cancel()}
             </Link>
-            <Button type="submit" form="unit-form" variant="primary" disabled={save.isPending}>
+            <Button type="submit" form="unit-form" variant="primary" busy={save.isPending}>
               {m.action_save_unit()}
             </Button>
           </>
@@ -495,7 +495,7 @@ function StartedUnit({ unit }: { unit: UnitJson }) {
   const [changing, setChanging] = useState(false);
   const [end, setEnd] = useState<LocalTime>(unit.end ? toLocal(unit.end) : nextHourLocal());
   const endInstant = fromLocal(end);
-  const setEndMutation = useMutation({
+  const setEndMutation = useSubmit({
     mutationFn: async () =>
       ok(
         await api.units[':id'].end.$post({
@@ -588,7 +588,8 @@ function StartedUnit({ unit }: { unit: UnitJson }) {
                   <Button
                     type="submit"
                     variant="primary"
-                    disabled={!endInstant || setEndMutation.isPending}
+                    disabled={!endInstant}
+                    busy={setEndMutation.isPending}
                   >
                     {m.action_set_end()}
                   </Button>

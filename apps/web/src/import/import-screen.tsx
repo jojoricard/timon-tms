@@ -17,6 +17,7 @@ import { fieldLabel, issueSentence, issueText } from '../issues.ts';
 import { inSentence } from '../labels.ts';
 import { m } from '../paraglide/messages.js';
 import { PageHeader } from '../resources/section.tsx';
+import { useSubmit } from '../submit.ts';
 
 // The import screen of SPEC-001, shared by resources, customers and sites: template, upload,
 // check, import. Each caller says how to check and import, and what to show.
@@ -118,7 +119,7 @@ export function ImportScreen<Row extends ImportRowLike, Check extends ImportChec
     mutationFn: checkFile,
     onSuccess: (result) => setProblem(result.problem ?? undefined),
   });
-  const run = useMutation({
+  const run = useSubmit({
     mutationFn: ({ csv, check: current }: { csv: string; check: Check }) => runImport(csv, current),
   });
 
@@ -172,7 +173,8 @@ export function ImportScreen<Row extends ImportRowLike, Check extends ImportChec
             {cancel}
             <Button
               variant="primary"
-              disabled={!ready || !file || !result || run.isPending}
+              disabled={!ready || !file || !result}
+              busy={run.isPending}
               onClick={() => file && result && run.mutate({ csv: file.csv, check: result })}
             >
               {m.action_import_all({ count: result?.summary.lines ?? 0 })}

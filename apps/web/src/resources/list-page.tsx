@@ -1,4 +1,3 @@
-import { useMutation } from '@tanstack/react-query';
 import { Link } from '@tanstack/react-router';
 import type { ResourceKind, VehicleKind } from '@timon/domain';
 import type { DocumentJson, ReferenceListsJson, ResourceJson } from '@timon/http';
@@ -38,6 +37,7 @@ import {
   vehicleKindLabel,
 } from '../labels.ts';
 import { m } from '../paraglide/messages.js';
+import { useSubmit } from '../submit.ts';
 import { PageHeader, SectionTabs } from './section.tsx';
 
 export function ListPage({
@@ -306,7 +306,7 @@ function MonthCell({ document }: { document: DocumentJson | undefined }) {
 
 function RestoreButton({ resource }: { resource: ResourceJson }) {
   const refresh = useRefreshResources();
-  const restore = useMutation({
+  const restore = useSubmit({
     mutationFn: async () =>
       ok(await api.resources[':id'].restore.$post({ param: { id: resource.id } })),
     onSuccess: refresh,
@@ -317,7 +317,7 @@ function RestoreButton({ resource }: { resource: ResourceJson }) {
       <Button
         variant="link"
         onClick={() => restore.mutate()}
-        disabled={restore.isPending}
+        busy={restore.isPending}
         aria-label={m.action_restore_named({ name: resource.name })}
       >
         {m.action_restore()}

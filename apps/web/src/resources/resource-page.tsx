@@ -1,4 +1,4 @@
-import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQueryClient } from '@tanstack/react-query';
 import { Link, useNavigate } from '@tanstack/react-router';
 import {
   allowedCategories,
@@ -49,6 +49,7 @@ import {
   vehicleKindLabel,
 } from '../labels.ts';
 import { m } from '../paraglide/messages.js';
+import { useSubmit } from '../submit.ts';
 import { ResourceUnits } from '../units/resource-units.tsx';
 import { PageHeader } from './section.tsx';
 
@@ -215,7 +216,7 @@ function ResourceForm({
     if (field === 'plate') setPlateOwner(undefined);
   };
 
-  const save = useMutation({
+  const save = useSubmit({
     mutationFn: async (body: ResourceInputJson) =>
       resource
         ? ok(await api.resources[':id'].$put({ param: { id: resource.id }, json: body }))
@@ -240,7 +241,7 @@ function ResourceForm({
     },
   });
 
-  const archive = useMutation({
+  const archive = useSubmit({
     mutationFn: async (archived: boolean) => {
       const param = { param: { id: resource?.id ?? '' } };
       return ok(
@@ -329,7 +330,7 @@ function ResourceForm({
               <Button
                 variant="danger"
                 onClick={() => archive.mutate(!resource.archived)}
-                disabled={archive.isPending}
+                busy={archive.isPending}
               >
                 {resource.archived ? m.action_restore() : m.action_archive()}
               </Button>
@@ -337,7 +338,7 @@ function ResourceForm({
             <Link className="t-button" to="/resources/$kind" params={{ kind: kindSlugs[kind] }}>
               {m.action_cancel()}
             </Link>
-            <Button type="submit" form="resource-form" variant="primary" disabled={save.isPending}>
+            <Button type="submit" form="resource-form" variant="primary" busy={save.isPending}>
               {resource ? m.action_save() : m.action_create()}
             </Button>
           </>
@@ -631,7 +632,7 @@ function Documents({ resource, lists }: { resource: ResourceJson; lists: Referen
     await refresh();
   };
 
-  const write = useMutation({
+  const write = useSubmit({
     mutationFn: async () => {
       const json = {
         documentTypeId: draft.documentTypeId,
@@ -646,7 +647,7 @@ function Documents({ resource, lists }: { resource: ResourceJson; lists: Referen
     onSuccess: done,
   });
 
-  const remove = useMutation({
+  const remove = useSubmit({
     mutationFn: async (id: string) => ok(await api.documents[':id'].$delete({ param: { id } })),
     onSuccess: done,
   });
@@ -723,7 +724,7 @@ function Documents({ resource, lists }: { resource: ResourceJson; lists: Referen
                       <Button
                         variant="link"
                         onClick={() => remove.mutate(d.id)}
-                        disabled={remove.isPending}
+                        busy={remove.isPending}
                         aria-label={m.action_remove_named({ name: label })}
                       >
                         {m.action_remove()}
@@ -787,7 +788,8 @@ function Documents({ resource, lists }: { resource: ResourceJson; lists: Referen
             <Button
               type="submit"
               variant="primary"
-              disabled={!draft.documentTypeId || !draft.expiresOn || write.isPending}
+              disabled={!draft.documentTypeId || !draft.expiresOn}
+              busy={write.isPending}
             >
               {editing ? m.action_update() : m.action_add()}
             </Button>

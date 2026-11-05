@@ -1,4 +1,4 @@
-import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQueryClient } from '@tanstack/react-query';
 import { Link, useNavigate } from '@tanstack/react-router';
 import {
   checkCustomer,
@@ -27,6 +27,7 @@ import { failureText, issueSentence } from '../issues.ts';
 import { capitalise } from '../labels.ts';
 import { m } from '../paraglide/messages.js';
 import { PageHeader } from '../resources/section.tsx';
+import { useSubmit } from '../submit.ts';
 import {
   customerKeys,
   useCustomer,
@@ -209,7 +210,7 @@ function CustomerForm({ customer }: { customer: CustomerWithSitesJson | undefine
     setTouched((t) => new Set(t).add(`contacts.${index}`));
   };
 
-  const save = useMutation({
+  const save = useSubmit({
     mutationFn: async (body: CustomerInputJson) =>
       customer
         ? ok(await api.customers[':id'].$put({ param: { id: customer.id }, json: body }))
@@ -230,7 +231,7 @@ function CustomerForm({ customer }: { customer: CustomerWithSitesJson | undefine
     },
   });
 
-  const archive = useMutation({
+  const archive = useSubmit({
     mutationFn: async (archived: boolean) => {
       const param = { param: { id: customer?.id ?? '' } };
       return ok(
@@ -306,7 +307,7 @@ function CustomerForm({ customer }: { customer: CustomerWithSitesJson | undefine
               <Button
                 variant="danger"
                 onClick={() => archive.mutate(!customer.archived)}
-                disabled={archive.isPending}
+                busy={archive.isPending}
               >
                 {customer.archived ? m.action_restore() : m.action_archive()}
               </Button>
@@ -314,7 +315,7 @@ function CustomerForm({ customer }: { customer: CustomerWithSitesJson | undefine
             <Link className="t-button" to="/customers">
               {m.action_cancel()}
             </Link>
-            <Button type="submit" form="customer-form" variant="primary" disabled={save.isPending}>
+            <Button type="submit" form="customer-form" variant="primary" busy={save.isPending}>
               {customer ? m.action_save() : m.action_create()}
             </Button>
           </>

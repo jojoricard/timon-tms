@@ -1,10 +1,10 @@
-import { useMutation } from '@tanstack/react-query';
 import type { UnitJson } from '@timon/http';
 import { Banner, Button, Field, SegmentedControl } from '@timon/ui';
 import { type FormEvent, useEffect, useRef, useState } from 'react';
 import { api, ok } from '../api.ts';
 import { failureText } from '../issues.ts';
 import { m } from '../paraglide/messages.js';
+import { useSubmit } from '../submit.ts';
 import {
   formatTime,
   fromLocal,
@@ -60,7 +60,7 @@ export function ChangeDialog({
   );
   const picked = candidates.find((c) => c.resource.id === chosen)?.resource ?? null;
 
-  const change = useMutation({
+  const change = useSubmit({
     mutationFn: async () =>
       ok(
         await api.units[':id'].change.$post({
@@ -186,7 +186,7 @@ export function ChangeDialog({
 
         <div className="t-actions dialog-actions">
           <Button onClick={onClose}>{m.action_cancel()}</Button>
-          <Button type="submit" variant="primary" disabled={!fromInstant || change.isPending}>
+          <Button type="submit" variant="primary" disabled={!fromInstant} busy={change.isPending}>
             {changeLabel}
           </Button>
         </div>

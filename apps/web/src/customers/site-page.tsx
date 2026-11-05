@@ -1,4 +1,4 @@
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Link, useNavigate } from '@tanstack/react-router';
 import {
   type BookingMethod,
@@ -32,6 +32,7 @@ import { errorText, useReferenceLists } from '../data.ts';
 import { failureText, issueSentence } from '../issues.ts';
 import { m } from '../paraglide/messages.js';
 import { PageHeader } from '../resources/section.tsx';
+import { useSubmit } from '../submit.ts';
 import {
   customerKeys,
   useAddressSuggestions,
@@ -269,7 +270,7 @@ function SiteForm({
     placeholderData: (previous) => previous ?? [...initialNearby],
   });
 
-  const save = useMutation({
+  const save = useSubmit({
     mutationFn: async (body: SiteInputJson) =>
       site
         ? ok(await api.sites[':id'].$put({ param: { id: site.id }, json: body }))
@@ -313,7 +314,7 @@ function SiteForm({
     },
   });
 
-  const archive = useMutation({
+  const archive = useSubmit({
     mutationFn: async (archived: boolean) => {
       const param = { param: { id: site?.id ?? '' } };
       return ok(
@@ -380,13 +381,13 @@ function SiteForm({
               <Button
                 variant="danger"
                 onClick={() => archive.mutate(!site.archived)}
-                disabled={archive.isPending}
+                busy={archive.isPending}
               >
                 {site.archived ? m.action_restore() : m.action_archive()}
               </Button>
             ) : null}
             {backTo}
-            <Button type="submit" form="site-form" variant="primary" disabled={save.isPending}>
+            <Button type="submit" form="site-form" variant="primary" busy={save.isPending}>
               {site ? m.action_save() : m.action_create()}
             </Button>
           </>
