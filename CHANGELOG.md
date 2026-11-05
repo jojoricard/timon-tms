@@ -16,6 +16,9 @@ All notable changes to this project are documented here. The format follows [Kee
 
 ### Changed
 
+- SPEC-001 1.1: category agrees with the gross vehicle weight; archived resources read only; display name rebuilt from the names; employee number unique; phone format; confirmations before archiving and deleting a document; import rules and British dates in English
+- SPEC-002 1.2: SIRET and computed VAT cleared for a foreign customer; VAT format checked; contact phone format; map and warning for a site abroad; a site created from a new customer; protective equipment shown as labels; confirmation before archiving
+- SPEC-003 1.2: the change dialog shows the resources that cannot be chosen, with the reason; starting a unit from a resource already in an open-ended unit is disabled; confirmation before deleting a unit
 - SPEC-003 1.1: a heavy category also covers B; trailers up to 3,500 kg need no roadworthiness test; a resource in a running or future unit can neither be archived nor change kind
 - Resources: archiving, or changing the kind of, a resource in a running or future unit is refused, naming the unit
 - Documents: new Word template in the author's own style (Literata, Schibsted Grotesk, highlighter and red-pen accents); fonts installed by the docs workflow; brand guidelines PDF printed again with the current credit line

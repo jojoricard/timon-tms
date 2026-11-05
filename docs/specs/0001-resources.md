@@ -2,8 +2,8 @@
 title: "Resources"
 subtitle: "Functional specification"
 reference: TIMON-SPEC-001
-version: "1.0"
-date: "October 6, 2026"
+version: "1.1"
+date: "November 5, 2026"
 status: "Accepted"
 ---
 
@@ -31,7 +31,7 @@ The planning itself, units and orders come in later features. This one provides 
 
 | | Driver | Power unit | Trailer |
 | --- | --- | --- | --- |
-| Identity | Last name, first name, display name (e.g. "K. Benali"), employee number (optional), phone | Registration plate | Registration plate |
+| Identity | Last name, first name, display name (e.g. "K. Benali"), employee number (optional), phone (optional) | Registration plate | Registration plate |
 | Kind | n/a | Tractor, rigid truck or light van | Semi-trailer or drawbar trailer |
 | Regulatory category | n/a | N1, N2 or N3 | O1, O2, O3 or O4 |
 | Weights | n/a | Gross vehicle weight; gross combination weight if it can pull | Gross vehicle weight |
@@ -65,21 +65,25 @@ The type list is a company list: a haulier can add its own non-blocking types (i
 ## Business rules
 
 1. A registration plate is unique among active resources. It is compared without spaces, dashes or case: "ab-123-cd" and "AB 123 CD" are the same plate. Foreign plates are accepted as typed.
-2. The kind and the category must agree: a light van is N1; a rigid truck is N2 or N3; a tractor is N2 or N3; a semi-trailer is O3 or O4.
+2. The kind and the category must agree: a light van is N1; a rigid truck is N2 or N3; a tractor is N2 or N3; a semi-trailer is O3 or O4. The category must also agree with the gross vehicle weight, as the regulation defines it: N1 up to 3,500 kg, N2 over 3,500 and up to 12,000 kg, N3 over 12,000 kg; O1 up to 750 kg, O2 over 750 and up to 3,500 kg, O3 over 3,500 and up to 10,000 kg, O4 over 10,000 kg.
 3. Weights are in kilograms and positive; the gross combination weight, when given, is greater than the gross vehicle weight.
 4. A document expires at the end of its expiry day, in the company's time zone (Europe/Paris).
-5. A resource is never deleted once it exists: it is archived. Archived resources are hidden from lists and the planning by default and can be restored.
+5. A resource is never deleted once it exists: it is archived. Archived resources are hidden from lists and the planning by default and can be restored. An archived resource is read only, its documents included, until it is restored.
 6. A CSV import is all or nothing: if one line is invalid, nothing is imported and every error is listed with its line number.
 7. Every resource belongs to a subsidiary of the company. Until subsidiaries have their own screens (issue #14), it is the company's single subsidiary and the interface does not show it; the data is ready for a group with several.
+8. A display name left empty is built from the names, and built again whenever they change: the initial of the first name, then the last name. A display name the dispatcher typed is kept as typed. Lists of drivers are sorted by last name, then first name.
+9. An employee number, when given, is unique among drivers, archived ones included, and compared without case.
+10. A phone number, when given, has at least eight digits; besides digits it may only hold spaces, dots, dashes, parentheses and a leading "+".
+11. Archiving a resource and deleting a document ask for confirmation first. Deleting a document cannot be undone.
 
 ## Screens
 
 - **Resources**: one tab per kind, a searchable table (name or plate, kind, category, body type, next expiry with its status colour), a filter "expired or expiring", a button to add, a button to import.
 - **Resource form**: identity and characteristics, then the documents as a list of rows (type, reference, expiry date, status). Created and edited in the same form.
-- **Expiries**: every document expired or within its warning period, all resources together, sorted by date; a click opens the resource.
-- **Import**: download a CSV template per kind, upload a file, preview the rows with their errors, confirm.
+- **Expiries**: every document expired or within its warning period, all resources together, sorted by date; a click opens the resource. The counters at the top cover every resource whatever the filters, and say so.
+- **Import**: download a CSV template per kind, upload a file, preview the rows with their errors, confirm. The screen lists the accepted values of each column. Templates are UTF-8 with a byte order mark, so that spreadsheet software opens accents correctly. Dates are dd/mm/yyyy; ISO dates (yyyy-mm-dd) are also accepted. The separator is a semicolon, a comma or a tab.
 
-The screens follow the design system: status colours from the tokens (ok, warning, conflict), monospaced figures for plates and dates, French and English from the first screen. Mockups: [resources](../design/mockups/resources.png), [resource form](../design/mockups/resource-form.png), [expiries](../design/mockups/expiries.png), [import](../design/mockups/resource-import.png).
+The screens follow the design system: status colours from the tokens (ok, warning, conflict), monospaced figures for plates and dates, French and English from the first screen. In English, dates follow the British format (05/11/2026, Thu 5 Nov 2026), never the American one. Mockups: [resources](../design/mockups/resources.png), [resource form](../design/mockups/resource-form.png), [expiries](../design/mockups/expiries.png), [import](../design/mockups/resource-import.png).
 
 ![Expiries: expired documents first, then each document within its own warning period.](../design/mockups/expiries.png){width=100%}
 
@@ -98,6 +102,11 @@ The screens follow the design system: status colours from the tokens (ok, warnin
 11. **Given** an archived driver, **when** I open the driver list, **then** the driver is not shown; **when** I tick "show archived", **then** the driver appears and can be restored.
 12. **Given** a driver whose FCO expires in 75 days, **when** I open Expiries, **then** the FCO is listed as *expiring*, because the CPC warns 90 days ahead.
 13. **Given** the interface in English, **when** I switch to French, **then** every label, status and error message of these screens is in French.
+14. **Given** a tractor in category N3, **when** I enter a gross vehicle weight of 7,500 kg, **then** the form refuses it and says that N3 is over 12,000 kg; **given** a semi-trailer of 34,000 kg, **when** I choose O3, **then** the form refuses it.
+15. **Given** an archived driver, **when** I open the driver, **then** no field and no document can be changed until the driver is restored.
+16. **Given** a driver created as Xavier D'Artagnan with no display name, **when** I rename him Émile Zola, **then** his display name becomes "É. Zola" everywhere, and he is listed between Dupuis and the next last name after Z… in alphabetical order of last names.
+17. **Given** a driver with employee number E-1001, archived, **when** I create a driver with "e-1001", **then** the form refuses it and names the existing driver.
+18. **Given** a driver, **when** I enter the phone "abc", **then** the form refuses it; **"06 12 34 56 78"** and **"+49 30 1234567"** are accepted.
 
 ## Out of scope
 
