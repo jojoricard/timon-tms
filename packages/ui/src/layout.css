@@ -239,9 +239,9 @@ body {
   content: "";
   position: absolute;
   top: 0;
-  right: -8px;
+  right: -12px;
   bottom: 0;
-  width: 8px;
+  width: 12px;
   box-shadow: var(--shadow-edge);
   pointer-events: none;
 }
@@ -258,7 +258,7 @@ body {
   top: 0;
   bottom: 0;
   z-index: 2;
-  width: 8px;
+  width: 12px;
   box-shadow: var(--shadow-edge);
   opacity: 0;
   transition: opacity 0.15s;

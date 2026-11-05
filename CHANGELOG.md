@@ -18,7 +18,6 @@ All notable changes to this project are documented here. The format follows [Kee
 
 - SPEC-003 1.1: a heavy category also covers B; trailers up to 3,500 kg need no roadworthiness test; a resource in a running or future unit can neither be archived nor change kind
 - Resources: archiving, or changing the kind of, a resource in a running or future unit is refused, naming the unit
-
 - Documents: new Word template in the author's own style (Literata, Schibsted Grotesk, highlighter and red-pen accents); fonts installed by the docs workflow; brand guidelines PDF printed again with the current credit line
 - README: how the project is run, with an AI coding assistant under my review
 

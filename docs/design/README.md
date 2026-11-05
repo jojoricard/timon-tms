@@ -59,7 +59,7 @@ Every screen works from 390 to 1,920 px. Layouts change at five widths, the same
 | `form-2` | 480 px | Card | A form grid in a card wider than this has two columns, one below |
 | `form-4` | 880 px | Card | A document or contact row wider than this keeps its fields on one line; opening hours keep the day bar beside the ranges |
 
-A table wider than the window scrolls inside its frame, with its first column held in place; the page itself never scrolls sideways. Tables and tabs that scroll show a shade (`shadow-edge`) on each edge with more to show. The main lists fit their frame from 1,280 px, status badges taking a second line when their column is narrow. Plates, codes, dates and times never wrap.
+A table wider than the window scrolls inside its frame, with its first column held in place; the page itself never scrolls sideways. Columns keep their set widths while the content fits them; a code, a date or a column title that cannot wrap widens its column, and the table grows inside its frame rather than letting the text run into the next cell. Tables and tabs that scroll show a shade (`shadow-edge`) on each edge with more to show. The main lists fit their frame from 1,280 px, status badges taking a second line when their column is narrow. Plates, codes, dates and times never wrap.
 
 ## Components
 

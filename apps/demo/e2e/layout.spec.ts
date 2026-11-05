@@ -2,8 +2,9 @@ import { expect, type Page, test } from '@playwright/test';
 
 // Every screen fits the window: the page never scrolls sideways, at a laptop width and at a phone
 // width. A table wider than the window scrolls inside its frame instead, with a shade on the edge
-// that has more to show; the main lists fit their frame on a laptop. One test per width visits
-// every screen in the same browser context, so the demo haulier is created once.
+// that has more to show; the main lists fit their frame on a laptop. No text in a table runs past
+// its cell. One test per width visits every screen in the same browser context, so the demo
+// haulier is created once.
 
 type Screen = {
   name: string;
@@ -16,6 +17,8 @@ type Screen = {
   table?: boolean;
   /** A main list: its table fits its frame at 1,280 px. */
   main?: boolean;
+  /** A form with a table. */
+  cells?: boolean;
 };
 
 const screens: Screen[] = [
@@ -31,18 +34,25 @@ const screens: Screen[] = [
   { name: 'site import', path: '/customers/sites/import' },
   {
     name: 'driver form',
+    cells: true,
     path: '/resources/drivers',
     open: { url: /\/resources\/drivers\/[^/]+$/ },
   },
   {
     name: 'power unit form',
+    cells: true,
     path: '/resources/power-units',
     open: { url: /\/resources\/power-units\/[^/]+$/ },
   },
-  { name: 'customer form', path: '/customers', open: { url: /\/customers\/[^/]+$/ } },
+  { name: 'customer form', cells: true, path: '/customers', open: { url: /\/customers\/[^/]+$/ } },
   { name: 'site form', path: '/customers/sites', open: { url: /\/customers\/sites\/[^/]+$/ } },
   { name: 'unit form', path: '/resources/units/new' },
-  { name: 'unit page', path: '/resources/units', open: { url: /\/resources\/units\/[^/]+$/ } },
+  {
+    name: 'unit page',
+    cells: true,
+    path: '/resources/units',
+    open: { url: /\/resources\/units\/[^/]+$/ },
+  },
   {
     name: 'change dialog',
     path: '/resources/units',
@@ -69,6 +79,12 @@ async function visit(page: Page, screen: Screen) {
     await page.getByRole('button', { name: 'Change driver or trailer' }).click();
     await expect(page.getByRole('dialog')).toBeVisible();
   }
+  // A list shows its search field before its rows: wait for the rows, and for the fonts that set
+  // their widths, before measuring anything.
+  if (screen.table || screen.cells) {
+    await expect(page.locator('main .t-table tbody tr').first()).toBeVisible();
+  }
+  await page.evaluate(() => document.fonts.ready);
 }
 
 /** The first table of the screen: its frame, and the area inside it that scrolls. */
@@ -80,6 +96,43 @@ const table = (page: Page) => ({
 /** How far the scroller reaches past its frame, in pixels: 0 when the table fits. */
 const overflow = (page: Page) =>
   table(page).scroller.evaluate((el) => el.scrollWidth - el.clientWidth);
+
+/**
+ * The texts of the screen's tables that run past the content box of their cell: each text node is
+ * measured with a range, against the cell's right edge less its padding. Visually hidden text is
+ * left out.
+ */
+const overrunningText = (page: Page) =>
+  page.evaluate(() => {
+    const found: string[] = [];
+    for (const cell of document.querySelectorAll('main .t-table :is(th, td)')) {
+      const style = getComputedStyle(cell);
+      const limit =
+        cell.getBoundingClientRect().right -
+        Number.parseFloat(style.paddingRight) -
+        Number.parseFloat(style.borderRightWidth);
+      const walker = document.createTreeWalker(cell, NodeFilter.SHOW_TEXT);
+      for (let node = walker.nextNode(); node; node = walker.nextNode()) {
+        const text = node.textContent?.trim();
+        if (!text || node.parentElement?.closest('.t-visually-hidden, caption')) continue;
+        const range = document.createRange();
+        range.selectNodeContents(node);
+        const right = Math.max(...[...range.getClientRects()].map((r) => r.right));
+        if (right > limit + 0.5) found.push(`"${text}" by ${Math.ceil(right - limit)} px`);
+      }
+    }
+    return found;
+  });
+
+/** Opens the demo once its in-browser API has answered: its database is created and seeded then. */
+async function start(page: Page) {
+  const ready = page.waitForResponse(
+    (r) => new URL(r.url()).pathname === '/api/resources' && r.status() === 200,
+    { timeout: 45_000 },
+  );
+  await page.goto('/');
+  await ready;
+}
 
 /** How far the page reaches past the window, in pixels: 0 when nothing sticks out. */
 const sideways = (page: Page) =>
@@ -95,13 +148,7 @@ for (const width of [1280, 390]) {
     test('no screen scrolls sideways; wide tables scroll in their frame', async ({ page }) => {
       // Seventeen screens in a row: more than the time one screen is given.
       test.setTimeout(180_000);
-      // The first answer of the in-browser API: its database is created and seeded then.
-      const ready = page.waitForResponse(
-        (r) => new URL(r.url()).pathname === '/api/resources' && r.status() === 200,
-        { timeout: 45_000 },
-      );
-      await page.goto('/');
-      await ready;
+      await start(page);
 
       for (const screen of screens) {
         await test.step(screen.name, async () => {
@@ -141,12 +188,7 @@ test.describe('at 1280 px, in French', () => {
 
   test('the main lists fit their frame', async ({ page }) => {
     test.setTimeout(120_000);
-    const ready = page.waitForResponse(
-      (r) => new URL(r.url()).pathname === '/api/resources' && r.status() === 200,
-      { timeout: 45_000 },
-    );
-    await page.goto('/');
-    await ready;
+    await start(page);
     await expect(page.getByRole('heading', { level: 1, name: 'Moyens' })).toBeVisible();
 
     for (const screen of screens.filter((s) => s.main)) {
@@ -157,3 +199,24 @@ test.describe('at 1280 px, in French', () => {
     }
   });
 });
+
+// Where tables sit at their least width, and the phone, in both languages: a code, a date or a
+// column title that cannot wrap widens its column; it never runs into the next one.
+for (const width of [1024, 390]) {
+  for (const locale of ['en-GB', 'fr-FR']) {
+    test.describe(`at ${width} px, ${locale}`, () => {
+      test.use({ viewport: { width, height: width < 640 ? 844 : 900 }, locale });
+
+      test('no text in a table runs past its cell', async ({ page }) => {
+        test.setTimeout(150_000);
+        await start(page);
+        for (const screen of screens.filter((s) => s.table || s.cells)) {
+          await test.step(screen.name, async () => {
+            await visit(page, screen);
+            expect(await overrunningText(page), `${screen.name}: text past its cell`).toEqual([]);
+          });
+        }
+      });
+    });
+  }
+}

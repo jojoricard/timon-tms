@@ -406,10 +406,13 @@ a {
   border-collapse: collapse;
 }
 
-/* Widths come from the columns, not the content: below this width the frame scrolls instead. */
+/*
+ * Widths come from the columns while the content fits them. A code, a date or a word that cannot
+ * wrap widens its column instead of running into the next one; the table then grows past its frame,
+ * which scrolls. Below this width the frame scrolls too.
+ */
 .t-table:has(> colgroup) {
   min-width: 960px;
-  table-layout: fixed;
 }
 
 .t-table th {
