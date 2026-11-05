@@ -22,7 +22,11 @@ a {
   color: var(--color-petrol);
 }
 
-:focus-visible {
+/* A date or time field has a calendar button of its own, drawn by the browser and reached with
+   Tab: while it has the focus, the field matches neither :focus nor :focus-visible, only
+   :focus-within. The ring goes around the field then. */
+:focus-visible,
+input:is([type="date"], [type="time"], [type="datetime-local"]):focus-within {
   outline: 2px solid var(--color-focus);
   outline-offset: 2px;
 }
