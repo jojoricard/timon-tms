@@ -27,6 +27,7 @@ All notable changes to this project are documented here. The format follows [Kee
 ### Fixed
 
 - Layout: every screen works from 390 to 1,920 px, cards and columns aligned
+- Exploratory test of 5 November (#42): one request per submit or click; a visible focus ring; every form error under its field, with the text limits of the API; no input lost on leaving a changed form; filters kept in the address; plates found in the units search; a page for unknown addresses; long words wrapped in their cell; plurals, long dates and import messages; the language switched without reloading
 
 ## [0.4.0] - 2026-10-10
 

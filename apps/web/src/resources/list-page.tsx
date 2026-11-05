@@ -77,7 +77,7 @@ export function ListPage({
       <PageHeader
         breadcrumb={<li>{m.resources_title()}</li>}
         title={m.resources_title()}
-        subtitle={total === null ? null : m.resources_active({ count: total })}
+        subtitle={total === null ? '' : m.resources_active({ count: total })}
         actions={
           <>
             <Link

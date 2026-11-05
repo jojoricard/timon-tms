@@ -205,8 +205,7 @@
     }
   ],
   "saved": "Enregistré.",
-  "archived_banner": "Ce moyen est archivé : il n'apparaît plus dans les listes ni au planning.",
-  "archived_done": "{name} est archivé. Il n'est jamais supprimé et peut être restauré.",
+  "archived_banner": "Ce moyen est archivé : il n'apparaît plus dans les listes ni au planning. Il n'est jamais supprimé et peut être restauré.",
   "created_footer": "Créé le {created} · modifié le {updated} · jamais supprimé, seulement archivé",
   "issue_required": "{field} obligatoire",
   "issue_category_not_allowed": "Type {kind} : {allowed}, pas {category}",

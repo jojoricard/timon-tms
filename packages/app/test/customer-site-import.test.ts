@@ -162,10 +162,26 @@ describe('customer import', () => {
       ports,
       'code;name;siret\nDUPONT-MAT;Dupont;\nNEW;New;74900893400012\nNEW;Newer;40483304800015',
     );
+    // Line 4 repeats the code of line 3 as well as having a wrong SIRET: both are listed.
     expect(again.rows.map((r) => r.issues.map((i) => i.code))).toEqual([
       ['code-taken'],
       ['siret-taken'],
-      ['siret-invalid'],
+      ['siret-invalid', 'code-duplicated'],
     ]);
+  });
+
+  it('lists every error of a line at once, and counts a SIRET already used as already in Timon', async () => {
+    const { ports } = memoryPorts();
+    await importCustomers(ports, 'code;name;siret\nDUPONT-MAT;Dupont Matériaux;749 008 934 00012');
+    // A SIRET already used and a contact with neither phone nor email, on the same line.
+    const check = await checkCustomerImport(
+      ports,
+      'code;name;siret;contact_name\nIMP-B;Import B;74900893400012;Jean',
+    );
+    expect(check.rows[0]?.issues.map((i) => `${i.field}:${i.code}`).sort()).toEqual([
+      'contacts.0:contact-unreachable',
+      'siret:siret-taken',
+    ]);
+    expect(check.summary.alreadyInTimon).toBe(1);
   });
 });

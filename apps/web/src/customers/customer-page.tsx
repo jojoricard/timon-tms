@@ -43,6 +43,8 @@ import { DayRanges, EquipmentTags, LocatedBadge } from './section.tsx';
 /** Create and edit in the same form. */
 export function CustomerPage({ id }: { id?: string }) {
   const customer = useCustomer(id);
+  // Kept here: the form is built again from the saved customer, and "Saved." must stay.
+  const [notice, setNotice] = useState<string>();
   if (customer.error) {
     return (
       <div className="page">
@@ -57,7 +59,14 @@ export function CustomerPage({ id }: { id?: string }) {
       </div>
     );
   }
-  return <CustomerForm key={customer.data?.updatedAt ?? 'new'} customer={customer.data} />;
+  return (
+    <CustomerForm
+      key={customer.data?.updatedAt ?? 'new'}
+      customer={customer.data}
+      notice={notice}
+      onNotice={setNotice}
+    />
+  );
 }
 
 type ContactRow = {
@@ -161,7 +170,15 @@ function clientIssues(s: FormState): Issue[] {
   });
 }
 
-function CustomerForm({ customer }: { customer: CustomerWithSitesJson | undefined }) {
+function CustomerForm({
+  customer,
+  notice,
+  onNotice: setNotice,
+}: {
+  customer: CustomerWithSitesJson | undefined;
+  notice: string | undefined;
+  onNotice: (notice: string | undefined) => void;
+}) {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const refresh = useRefreshCustomers();
@@ -170,7 +187,6 @@ function CustomerForm({ customer }: { customer: CustomerWithSitesJson | undefine
   const [state, setState] = useState(initial);
   const guard = useLeaveGuard(changed(initial, state));
   const [taken, setTaken] = useState<{ field: 'code' | 'siret'; owner: CustomerOwnerJson }>();
-  const [notice, setNotice] = useState<string>();
 
   const form = useFormIssues({
     issues: clientIssues(state).map((i) => ({ ...i })),
@@ -183,6 +199,7 @@ function CustomerForm({ customer }: { customer: CustomerWithSitesJson | undefine
   const set = <K extends keyof FormState>(field: K, value: FormState[K]) => {
     setState((s) => ({ ...s, [field]: value }));
     form.touch(field);
+    setNotice(undefined);
     if (field === 'code' || field === 'siret') setTaken(undefined);
   };
   const limit = textLimits.customer;

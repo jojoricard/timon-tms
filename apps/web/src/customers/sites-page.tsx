@@ -50,7 +50,7 @@ export function SitesPage({
           </>
         }
         title={m.sites_title()}
-        subtitle={summary ? m.sites_subtitle({ count: summary.sites }) : null}
+        subtitle={summary ? m.sites_subtitle({ count: summary.sites }) : ''}
         actions={
           <>
             <Link className="t-button" to="/customers/sites/import">

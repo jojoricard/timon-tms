@@ -324,7 +324,7 @@ function UnitForm({ unit, initial }: { unit: UnitJson | undefined; initial: Unit
           </section>
           <LicencePanel options={options.data} driverId={members.driver} />
           <section className="t-panel" aria-labelledby="documents-title">
-            <MembersDocuments documents={options.data?.documents ?? null} />
+            <MembersDocuments documents={options.data?.documents ?? null} editable />
           </section>
         </div>
       </form>
@@ -486,7 +486,14 @@ function LicencePanel({
   );
 }
 
-function MembersDocuments({ documents }: { documents: UnitDocumentsJson | null }) {
+function MembersDocuments({
+  documents,
+  editable,
+}: {
+  documents: UnitDocumentsJson | null;
+  /** A unit being created or edited: a warning on a document does not stop saving it. */
+  editable: boolean;
+}) {
   return (
     <>
       <div className="panel-title-row">
@@ -530,7 +537,7 @@ function MembersDocuments({ documents }: { documents: UnitDocumentsJson | null }
               </tbody>
             </table>
           </TableFrame>
-          <p className="t-field-hint">{m.documents_warning_only()}</p>
+          {editable ? <p className="t-field-hint">{m.documents_warning_only()}</p> : null}
         </>
       ) : (
         <p className="t-field-hint">{m.documents_choose_power_unit()}</p>
@@ -655,7 +662,7 @@ function StartedUnit({ unit }: { unit: UnitJson }) {
           ) : null}
         </CardStack>
         <section className="t-panel" aria-labelledby="documents-title">
-          <MembersDocuments documents={unit.documents} />
+          <MembersDocuments documents={unit.documents} editable={false} />
         </section>
       </CardRow>
       {changing ? (

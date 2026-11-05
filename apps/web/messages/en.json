@@ -191,8 +191,7 @@
     }
   ],
   "saved": "Saved.",
-  "archived_banner": "This resource is archived: it is hidden from the lists and the planning.",
-  "archived_done": "{name} is archived. It is never deleted and can be restored.",
+  "archived_banner": "This resource is archived: it is hidden from the lists and the planning. It is never deleted and can be restored.",
   "created_footer": "Created {created} · last changed {updated} · never deleted, only archived",
   "issue_required": "{field} is required",
   "issue_category_not_allowed": "A {kind} is {allowed}, not {category}",

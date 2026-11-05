@@ -5,7 +5,6 @@ import {
   canHaveBodyType,
   canPull,
   checkResource,
-  type Issue,
   type ResourceDetails,
   type ResourceKind,
   textLimits,
@@ -132,11 +131,18 @@ function initialState(kind: ResourceKind, r: ResourceJson | undefined): FormStat
   };
 }
 
-const weight = (value: string) =>
-  value.trim() === '' ? null : Number(value.replace(/[\s  ]/g, ''));
+/** Kilograms as digits, thousands apart or not: "19 000". Undefined when it is not that. */
+const weight = (value: string): number | null | undefined => {
+  const digits = value.replace(/[\s\u00a0\u202f]/g, '');
+  if (digits === '') return null;
+  return /^\d+$/.test(digits) ? Number(digits) : undefined;
+};
 
 /** The form as the API's input, or the issues that stop it from being one. */
-function toInput(kind: ResourceKind, s: FormState): { input?: ResourceInputJson; issues: Issue[] } {
+function toInput(
+  kind: ResourceKind,
+  s: FormState,
+): { input?: ResourceInputJson; issues: IssueJson[] } {
   if (kind === 'driver') {
     const input = {
       kind,
@@ -156,11 +162,17 @@ function toInput(kind: ResourceKind, s: FormState): { input?: ResourceInputJson;
     });
     return { input, issues };
   }
-  const missing: Issue[] = [];
+  // What the domain cannot check yet: a field left empty, a weight that is not digits.
+  const missing: IssueJson[] = [];
   if (s.plate.trim() === '') missing.push({ field: 'plate', code: 'required' });
   if (!s.vehicleKind) missing.push({ field: 'vehicleKind', code: 'required' });
   if (!s.category) missing.push({ field: 'category', code: 'required' });
   if (s.gvwKg.trim() === '') missing.push({ field: 'gvwKg', code: 'required' });
+  for (const field of ['gvwKg', 'gcwKg'] as const) {
+    if (s[field].trim() !== '' && weight(s[field]) === undefined) {
+      missing.push({ field, code: 'invalid-number', params: { value: s[field].trim() } });
+    }
+  }
   if (!s.vehicleKind || !s.category) return { issues: missing };
   const details: ResourceDetails = {
     kind,
@@ -168,7 +180,7 @@ function toInput(kind: ResourceKind, s: FormState): { input?: ResourceInputJson;
     vehicleKind: s.vehicleKind,
     category: s.category,
     gvwKg: weight(s.gvwKg) ?? Number.NaN,
-    gcwKg: canPull(s.vehicleKind) ? weight(s.gcwKg) : null,
+    gcwKg: canPull(s.vehicleKind) ? (weight(s.gcwKg) ?? null) : null,
     makeModel: s.makeModel || null,
     bodyTypeId: canHaveBodyType(s.vehicleKind) ? s.bodyTypeId || null : null,
     tradeLabelId: s.tradeLabelId || null,
@@ -214,6 +226,7 @@ function ResourceForm({
   const set = <K extends keyof FormState>(field: K, value: FormState[K]) => {
     setState((s) => ({ ...s, [field]: value }));
     form.touch(field);
+    onNotice(undefined);
     if (field === 'plate') setPlateOwner(undefined);
   };
   const limit = textLimits.resource;
@@ -255,11 +268,8 @@ function ResourceForm({
     },
     onSuccess: async (saved) => {
       queryClient.setQueryData(keys.resource(saved.id), saved);
-      onNotice(
-        saved.archived
-          ? { tone: 'warning', text: m.archived_done({ name: saved.name }) }
-          : { tone: 'ok', text: m.restored({ name: saved.name }) },
-      );
+      // Archived, the banner of the page says so; restored, a notice says it is back.
+      onNotice(saved.archived ? undefined : { tone: 'ok', text: m.restored({ name: saved.name }) });
       await refresh();
     },
   });
@@ -599,7 +609,12 @@ function ResourceForm({
         <section className="t-panel resource-documents" aria-labelledby="documents-title">
           <h2 id="documents-title">{m.section_documents()}</h2>
           {resource ? (
-            <Documents resource={resource} lists={lists} onChanged={setDocumentChanged} />
+            <Documents
+              resource={resource}
+              lists={lists}
+              onChanged={setDocumentChanged}
+              onAction={() => onNotice(undefined)}
+            />
           ) : (
             <p className="t-field-hint">{m.documents_after_save()}</p>
           )}
@@ -648,11 +663,14 @@ function Documents({
   resource,
   lists,
   onChanged,
+  onAction,
 }: {
   resource: ResourceJson;
   lists: ReferenceListsJson;
   /** Whether the document form holds input not saved yet, for the page to keep it. */
   onChanged: (changed: boolean) => void;
+  /** A document is written or removed: the notice of an earlier action goes. */
+  onAction: () => void;
 }) {
   const queryClient = useQueryClient();
   const refresh = useRefreshResources();
@@ -737,7 +755,10 @@ function Documents({
 
   const submit = (event: FormEvent) => {
     event.preventDefault();
-    if (form.submit()) write.mutate();
+    if (form.submit()) {
+      onAction();
+      write.mutate();
+    }
   };
   const writeError = bannerError(write.error) ?? remove.error;
 
@@ -800,7 +821,10 @@ function Documents({
                       </Button>
                       <Button
                         variant="link"
-                        onClick={() => remove.mutate(d.id)}
+                        onClick={() => {
+                          onAction();
+                          remove.mutate(d.id);
+                        }}
                         busy={remove.isPending}
                         aria-label={m.action_remove_named({ name: label })}
                       >

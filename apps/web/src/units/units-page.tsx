@@ -87,7 +87,7 @@ export function UnitsPage({
           </>
         }
         title={m.units_title()}
-        subtitle={data.data ? m.units_subtitle({ count: units.length }) : null}
+        subtitle={data.data ? m.units_subtitle({ count: units.length }) : ''}
         actions={
           <Link
             className="t-button"
@@ -135,13 +135,17 @@ export function UnitsPage({
           </label>
         </div>
         <ChipGroup label={m.filters_label()}>
-          <Chip pressed={filter === 'all'} onClick={() => setFilter('all')} count={counts.all}>
+          <Chip
+            pressed={filter === 'all'}
+            onClick={() => setFilter('all')}
+            {...(data.data ? { count: counts.all } : {})}
+          >
             {m.filter_all()}
           </Chip>
           <Chip
             pressed={filter === 'documents'}
             onClick={() => setFilter('documents')}
-            count={counts.documents}
+            {...(data.data ? { count: counts.documents } : {})}
             tone="conflict"
           >
             {m.filter_document_problem()}
@@ -149,7 +153,7 @@ export function UnitsPage({
           <Chip
             pressed={filter === 'no-driver'}
             onClick={() => setFilter('no-driver')}
-            count={counts['no-driver']}
+            {...(data.data ? { count: counts['no-driver'] } : {})}
           >
             {m.no_driver()}
           </Chip>

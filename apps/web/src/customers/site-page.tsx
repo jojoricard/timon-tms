@@ -58,6 +58,8 @@ const SiteMap = lazy(() => import('./site-map.tsx'));
 
 export function SitePage({ id, customerId }: { id?: string; customerId?: string | undefined }) {
   const site = useSite(id);
+  // Kept here: the form is built again from the saved site, and "Saved." must stay.
+  const [notice, setNotice] = useState<string>();
   if (site.error) {
     return (
       <div className="page">
@@ -78,6 +80,8 @@ export function SitePage({ id, customerId }: { id?: string; customerId?: string 
       site={site.data?.site}
       initialNearby={site.data?.nearby ?? []}
       customerId={customerId}
+      notice={notice}
+      onNotice={setNotice}
     />
   );
 }
@@ -218,6 +222,8 @@ function SiteForm({
   site,
   initialNearby,
   customerId,
+  notice,
+  onNotice: setNotice,
 }: {
   site: SiteJson | undefined;
   initialNearby: readonly {
@@ -227,6 +233,8 @@ function SiteForm({
     sameStreet: boolean;
   }[];
   customerId: string | undefined;
+  notice: string | undefined;
+  onNotice: (notice: string | undefined) => void;
 }) {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
@@ -235,7 +243,6 @@ function SiteForm({
   const [initial] = useState(() => initialState(site));
   const [state, setState] = useState(initial);
   const guard = useLeaveGuard(changed(initial, state));
-  const [notice, setNotice] = useState<string>();
   const [suggestionsOpen, setSuggestionsOpen] = useState(false);
   const [active, setActive] = useState(0);
   const listboxId = useId();
@@ -257,6 +264,7 @@ function SiteForm({
   const set = <K extends keyof FormState>(field: K, value: FormState[K]) => {
     setState((s) => ({ ...s, [field]: value }));
     form.touch(inputOf[field] ?? field);
+    setNotice(undefined);
   };
 
   // Typing the address again forgets a location found from the old one; a pin placed by hand stays.

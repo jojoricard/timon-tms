@@ -26,6 +26,7 @@ export function PageHeader({
   /** Before the title, such as a plate or a code. */
   lead?: ReactNode;
   title: ReactNode;
+  /** Under the title. An empty string keeps its line while the text loads. */
   subtitle?: ReactNode;
   /** After the title, such as status badges. */
   badges?: ReactNode;
@@ -40,10 +41,14 @@ export function PageHeader({
         <div className="t-page-title">
           {lead}
           <div className="t-page-heading">
-            <h1>{title}</h1>
-            {subtitle ? <span className="t-page-subtitle">{subtitle}</span> : null}
+            <div className="t-page-heading-line">
+              <h1>{title}</h1>
+              {badges}
+            </div>
+            {subtitle || subtitle === '' ? (
+              <span className="t-page-subtitle">{subtitle}</span>
+            ) : null}
           </div>
-          {badges}
         </div>
         {actions ? <div className="t-actions">{actions}</div> : null}
       </div>

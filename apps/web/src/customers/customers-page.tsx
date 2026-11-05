@@ -44,7 +44,7 @@ export function CustomersPage({
       <PageHeader
         breadcrumb={<li>{m.customers_title()}</li>}
         title={m.customers_title()}
-        subtitle={summary ? m.customers_subtitle({ count: summary.customers }) : null}
+        subtitle={summary ? m.customers_subtitle({ count: summary.customers }) : ''}
         actions={
           <>
             <Link className="t-button" to="/customers/import">

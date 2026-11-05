@@ -119,34 +119,38 @@ async function parse(ports: Ports, csv: string) {
     });
     issues.push(...(await checkCustomerInput(ports, customer)));
 
-    if (issues.length === 0) {
+    // Every error of the line at once (rule 7): a code or a SIRET that is valid is also looked up,
+    // whatever else is wrong on the line.
+    const valid = (field: 'code' | 'siret') => !issues.some((i) => i.field === field);
+    let taken = false;
+    if (customer.code && valid('code')) {
       const earlierCode = firstCode.get(customer.code);
-      const taken = await ports.customers.findByCode(customer.code);
+      const takenCode = await ports.customers.findByCode(customer.code);
       if (earlierCode !== undefined) {
         issues.push({ field: 'code', code: 'code-duplicated', params: { line: earlierCode } });
       } else {
         firstCode.set(customer.code, line);
       }
-      if (taken)
-        issues.push({ field: 'code', code: 'code-taken', params: { owner: owner(taken) } });
-      if (customer.siret) {
-        const earlierSiret = firstSiret.get(customer.siret);
-        const takenSiret = await ports.customers.findActiveBySiret(customer.siret);
-        if (earlierSiret !== undefined) {
-          issues.push({ field: 'siret', code: 'siret-duplicated', params: { line: earlierSiret } });
-        } else {
-          firstSiret.set(customer.siret, line);
-        }
-        if (takenSiret) {
-          issues.push({
-            field: 'siret',
-            code: 'siret-taken',
-            params: { owner: owner(takenSiret) },
-          });
-        }
+      if (takenCode) {
+        issues.push({ field: 'code', code: 'code-taken', params: { owner: owner(takenCode) } });
+        taken = true;
       }
-      if (taken) alreadyInTimon += 1;
     }
+    if (customer.siret && valid('siret')) {
+      const earlierSiret = firstSiret.get(customer.siret);
+      const takenSiret = await ports.customers.findActiveBySiret(customer.siret);
+      if (earlierSiret !== undefined) {
+        issues.push({ field: 'siret', code: 'siret-duplicated', params: { line: earlierSiret } });
+      } else {
+        firstSiret.set(customer.siret, line);
+      }
+      if (takenSiret) {
+        issues.push({ field: 'siret', code: 'siret-taken', params: { owner: owner(takenSiret) } });
+        taken = true;
+      }
+    }
+    // A customer is already in Timon by its code or by its SIRET.
+    if (taken) alreadyInTimon += 1;
     rows.push({ line, cells, issues, customer: issues.length === 0 ? customer : null });
   }
 
