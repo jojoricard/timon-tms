@@ -18,6 +18,7 @@ type Tokens = {
   radius: { tokens: { name: string; value: string }[] };
   size: { tokens: { name: string; value: string }[] };
   shadow: { tokens: { name: string; value: Themed }[] };
+  breakpoint: { tokens: { name: string; value: string; query: 'viewport' | 'container' }[] };
 };
 
 const tokens = JSON.parse(
@@ -51,12 +52,19 @@ for (const list of [tokens.spacing, tokens.radius, tokens.size]) {
   for (const { name, value } of list.tokens) plain.push(`  --${name}: ${value};`);
 }
 
+// Media and container queries cannot read custom properties, so breakpoints are not emitted as
+// variables: the stylesheets write their values, and test/breakpoints.test.ts checks them.
+const breakpoints = tokens.breakpoint.tokens
+  .map(({ name, value, query }) => ` *   ${name}: ${value} (${query})`)
+  .join('\n');
+
 const block = (selector: string, lines: string[]) => `${selector} {\n${lines.join('\n')}\n}\n`;
 
 writeFileSync(
   new URL('../src/tokens.css', import.meta.url),
   [
     '/* Generated from docs/design/tokens.json by scripts/build-tokens.ts. Do not edit. */\n',
+    `/*\n * Breakpoints, written as values in media and container queries:\n${breakpoints}\n */\n`,
     block(':root', [...plain, ...light, '  color-scheme: light;']),
     `@media (prefers-color-scheme: dark) {\n${block(':root:not([data-theme="light"])', [...dark, '  color-scheme: dark;'])}}\n`,
     block(':root[data-theme="dark"]', [...dark, '  color-scheme: dark;']),

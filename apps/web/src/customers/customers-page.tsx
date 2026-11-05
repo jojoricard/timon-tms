@@ -1,6 +1,6 @@
 import { Link } from '@tanstack/react-router';
 import type { CustomerJson } from '@timon/http';
-import { Banner, Checkbox, Chip, ChipGroup, Columns } from '@timon/ui';
+import { Banner, Checkbox, Chip, ChipGroup, Columns, TableFrame } from '@timon/ui';
 import { useState } from 'react';
 import { errorText } from '../data.ts';
 import { m } from '../paraglide/messages.js';
@@ -79,9 +79,9 @@ export function CustomersPage({ imported }: { imported?: number | undefined }) {
       {list.error ? <Banner tone="conflict">{errorText(list.error)}</Banner> : null}
       {list.data ? (
         <>
-          <div className="t-table-frame">
+          <TableFrame>
             <CustomerTable customers={list.data.customers} />
-          </div>
+          </TableFrame>
           <p className="footnote">
             {m.customers_footer({ shown: list.data.customers.length, total: list.data.counts.all })}
           </p>

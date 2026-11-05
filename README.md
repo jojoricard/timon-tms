@@ -81,6 +81,14 @@ TypeScript across the interface, the API and a shared `domain` package, and Post
 
 ## How the project is run
 
+Timon is also a way for me to learn how to build software well with AI assistants.
+I own the product: I scope it, make the decisions, write and accept the specs and ADRs,
+and design the screens with the mockups in `docs/design/`. The code is written with an
+AI coding assistant, from those specs: it proposes a plan, I review and correct it, then
+I review every pull request, run the demo and send back what does not hold. Every rule
+the product enforces, from the licence a unit needs to the sites' protective equipment,
+is written down first in a spec that I accepted.
+
 One scoping phase, then a Kanban flow: each feature gets a short spec, a mockup, an ADR when needed, tests derived from its acceptance criteria and a demo. Work is tracked on the project's public GitHub Projects board.
 
 ## License

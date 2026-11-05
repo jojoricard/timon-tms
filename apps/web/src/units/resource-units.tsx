@@ -1,6 +1,6 @@
 import { Link } from '@tanstack/react-router';
 import type { ResourceJson, UnitJson } from '@timon/http';
-import { Banner, Count, Plate, StatusBadge } from '@timon/ui';
+import { Banner, Count, Plate, StatusBadge, TableFrame } from '@timon/ui';
 import { useState } from 'react';
 import { errorText } from '../data.ts';
 import { m } from '../paraglide/messages.js';
@@ -35,7 +35,7 @@ export function ResourceUnits({ resource }: { resource: ResourceJson }) {
         <h2 id="units-title">
           {m.section_units()} {units.data ? <Count>{units.data.length}</Count> : null}
         </h2>
-        <div className="page-actions">
+        <div className="t-actions">
           {running ? (
             <button type="button" className="t-button" onClick={() => setChanging(running)}>
               {m.action_change_from_date()}
@@ -57,7 +57,7 @@ export function ResourceUnits({ resource }: { resource: ResourceJson }) {
         <p className="t-field-hint">{m.resource_units_empty()}</p>
       ) : null}
       {units.data && units.data.length > 0 ? (
-        <div className="t-table-frame">
+        <TableFrame>
           <table className="t-table">
             <caption className="t-visually-hidden">{m.section_units()}</caption>
             <thead>
@@ -107,7 +107,7 @@ export function ResourceUnits({ resource }: { resource: ResourceJson }) {
               ))}
             </tbody>
           </table>
-        </div>
+        </TableFrame>
       ) : null}
       {current && !resource.archived ? (
         <p className="unit-note">

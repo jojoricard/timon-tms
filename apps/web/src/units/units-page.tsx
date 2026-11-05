@@ -1,6 +1,16 @@
 import { Link, useNavigate } from '@tanstack/react-router';
 import type { UnitJson, UnitMemberJson, UnitsAtJson } from '@timon/http';
-import { Banner, Button, Chip, ChipGroup, Columns, Plate, StatusBadge } from '@timon/ui';
+import {
+  Banner,
+  Button,
+  CardRow,
+  Chip,
+  ChipGroup,
+  Columns,
+  Plate,
+  StatusBadge,
+  TableFrame,
+} from '@timon/ui';
 import { useState } from 'react';
 import { errorText, useReferenceLists } from '../data.ts';
 import { entryLabel, vehicleKindLabel } from '../labels.ts';
@@ -158,15 +168,15 @@ export function UnitsPage({ at }: { at?: LocalTime | undefined }) {
 
       {data.error ? <Banner tone="conflict">{errorText(data.error)}</Banner> : null}
       {data.data ? (
-        <div className="units-layout">
-          <div>
-            <div className="t-table-frame">
+        <CardRow columns={['1fr', 'var(--well-width)']} stackBelow="wide">
+          <div className="units-main">
+            <TableFrame>
               <UnitTable units={visible} onChange={setChanging} />
-            </div>
+            </TableFrame>
             <p className="footnote">{m.units_footer()}</p>
           </div>
           <FreePanel free={data.data.free} at={data.data.at} />
-        </div>
+        </CardRow>
       ) : (
         <p>{m.loading()}</p>
       )}
@@ -298,15 +308,17 @@ function FreePanel({ free, at }: { free: UnitsAtJson['free']; at: string }) {
         <span className="t-mono muted">{formatTime(at)}</span>
       </div>
       <p className="t-field-hint">{m.free_hint()}</p>
-      {sections.map((section) => (
-        <FreeList
-          key={section.role}
-          title={section.title({ count: free[section.role].length })}
-          members={free[section.role]}
-          start={toLocal(at)}
-          param={section.param}
-        />
-      ))}
+      <div className="free-lists">
+        {sections.map((section) => (
+          <FreeList
+            key={section.role}
+            title={section.title({ count: free[section.role].length })}
+            members={free[section.role]}
+            start={toLocal(at)}
+            param={section.param}
+          />
+        ))}
+      </div>
     </aside>
   );
 }

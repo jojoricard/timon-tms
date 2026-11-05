@@ -1,7 +1,7 @@
 import { Link } from '@tanstack/react-router';
 import type { LocatedBy } from '@timon/domain';
 import type { ListItemJson, OpeningJson } from '@timon/http';
-import { Count, StatusBadge } from '@timon/ui';
+import { Count, StatusBadge, Tabs } from '@timon/ui';
 import { m } from '../paraglide/messages.js';
 import { useCustomerSummary } from './customer-data.ts';
 import { equipmentLabel, formatRange, locatedByLabel, locatedByTone } from './customer-labels.ts';
@@ -10,26 +10,24 @@ import { equipmentLabel, formatRange, locatedByLabel, locatedByTone } from './cu
 export function CustomerTabs({ current }: { current: 'customers' | 'sites' }) {
   const summary = useCustomerSummary().data;
   return (
-    <nav aria-label={m.customer_tabs_label()}>
-      <ul className="t-tabs">
-        <li>
-          <Link
-            to="/customers"
-            activeOptions={{ exact: true }}
-            aria-current={current === 'customers' ? 'page' : undefined}
-          >
-            {m.tab_customers()}
-            {summary ? <Count>{summary.customers}</Count> : null}
-          </Link>
-        </li>
-        <li>
-          <Link to="/customers/sites" aria-current={current === 'sites' ? 'page' : undefined}>
-            {m.tab_sites()}
-            {summary ? <Count>{summary.sites}</Count> : null}
-          </Link>
-        </li>
-      </ul>
-    </nav>
+    <Tabs label={m.customer_tabs_label()}>
+      <li>
+        <Link
+          to="/customers"
+          activeOptions={{ exact: true }}
+          aria-current={current === 'customers' ? 'page' : undefined}
+        >
+          {m.tab_customers()}
+          {summary ? <Count>{summary.customers}</Count> : null}
+        </Link>
+      </li>
+      <li>
+        <Link to="/customers/sites" aria-current={current === 'sites' ? 'page' : undefined}>
+          {m.tab_sites()}
+          {summary ? <Count>{summary.sites}</Count> : null}
+        </Link>
+      </li>
+    </Tabs>
   );
 }
 

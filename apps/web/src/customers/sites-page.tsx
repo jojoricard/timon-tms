@@ -1,7 +1,7 @@
 import { Link } from '@tanstack/react-router';
 import type { LocatedBy } from '@timon/domain';
 import type { ListItemJson, SiteJson } from '@timon/http';
-import { Banner, Checkbox, Chip, ChipGroup, Columns, StatusBadge } from '@timon/ui';
+import { Banner, Checkbox, Chip, ChipGroup, Columns, StatusBadge, TableFrame } from '@timon/ui';
 import { useState } from 'react';
 import { errorText, useReferenceLists } from '../data.ts';
 import { formatLongDate } from '../labels.ts';
@@ -94,9 +94,9 @@ export function SitesPage({
       {list.error ? <Banner tone="conflict">{errorText(list.error)}</Banner> : null}
       {list.data ? (
         <>
-          <div className="t-table-frame">
+          <TableFrame>
             <SiteTable sites={list.data.sites} equipment={equipment} />
-          </div>
+          </TableFrame>
           <p className="footnote">
             {m.sites_footer({ shown: list.data.sites.length, total: list.data.counts.all })} ·{' '}
             {formatLongDate(list.data.day)}

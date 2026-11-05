@@ -41,11 +41,25 @@ Light theme first, dark theme supported; every token has both values. Text contr
 | `chartered` | `#6A4C9C` | `#B49AE6` | Subcontracted |
 | `chrome` | `#15181A` | `#0F1213` | Application bar, in both themes |
 
-The complete set (33 colours, type, spacing, radii, sizes, shadows) is in [`tokens.json`](tokens.json), the exported source the code will read.
+The complete set (33 colours, type, spacing, radii, sizes, shadows, breakpoints) is in [`tokens.json`](tokens.json), the exported source the code will read.
 
 ## Typography
 
 IBM Plex Sans for the interface, IBM Plex Sans Condensed inside planning bars, IBM Plex Mono for plates, references, times and quantities. All three are open source (SIL Open Font License).
+
+## Breakpoints
+
+Every screen works from 390 to 1,920 px. Layouts change at five widths, the same everywhere. Media and container queries cannot read CSS variables, so these values are written in the stylesheets and a test checks that no query uses any other.
+
+| Token | Width | Measured on | Use |
+| --- | --- | --- | --- |
+| `narrow` | 640 px | Window | Below it, a phone: tighter page margins, the application bar scrolls sideways |
+| `medium` | 1,024 px | Window | Below it, cards side by side stack in one column |
+| `wide` | 1,600 px | Window | From it, the unit form keeps period and documents beside the candidate lists, and the units screen keeps the free resources beside the table |
+| `form-2` | 480 px | Card | A form grid in a card wider than this has two columns, one below |
+| `form-4` | 880 px | Card | A document or contact row wider than this keeps its fields on one line; opening hours keep the day bar beside the ranges |
+
+A table wider than the window scrolls inside its frame, with its first column held in place; the page itself never scrolls sideways. Columns keep their set widths while the content fits them; a code, a date or a column title that cannot wrap widens its column, and the table grows inside its frame rather than letting the text run into the next cell. Tables and tabs that scroll show a shade (`shadow-edge`) on each edge with more to show. The main lists fit their frame from 1,280 px, status badges taking a second line when their column is narrow. Plates, codes, dates and times never wrap.
 
 ## Components
 

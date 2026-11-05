@@ -10,6 +10,16 @@
 
 .appbar nav {
   flex: 1;
+  min-width: 0;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+@media (width < 640px) {
+  .appbar {
+    gap: var(--space-4);
+    padding: 0 var(--space-4);
+  }
 }
 
 .wordmark {
@@ -26,6 +36,7 @@
 
 .appbar-link {
   display: inline-flex;
+  white-space: nowrap;
   align-items: center;
   height: var(--appbar-height);
   border-bottom: 2px solid transparent;
@@ -41,17 +52,20 @@
 
 .page {
   display: grid;
+  grid-template-columns: minmax(0, 1fr);
   gap: var(--space-4);
   padding: var(--space-6) var(--space-8);
 }
 
-.page-header {
-  display: grid;
-  gap: var(--space-3);
+@media (width < 640px) {
+  .page {
+    padding: var(--space-4);
+  }
 }
 
 .breadcrumb ol {
   display: flex;
+  flex-wrap: wrap;
   gap: var(--space-2);
   margin: 0;
   padding: 0;
@@ -66,42 +80,6 @@
 
 .breadcrumb a {
   color: inherit;
-}
-
-.page-title-row {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--space-4);
-}
-
-.page-title {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: var(--space-3);
-}
-
-.page-title h1 {
-  margin: 0;
-  font: var(--type-page-title);
-  letter-spacing: var(--type-page-title-tracking);
-}
-
-.page-title .t-plate {
-  font: var(--type-section-title);
-  font-family: var(--font-mono);
-}
-
-.page-subtitle {
-  display: block;
-  color: var(--color-ink-muted);
-}
-
-.page-actions {
-  display: flex;
-  gap: var(--space-2);
 }
 
 .toolbar {
@@ -162,31 +140,6 @@
 
 /* Resource form */
 
-.resource-layout {
-  display: grid;
-  grid-template-columns: minmax(0, 2fr) minmax(0, 3fr);
-  gap: var(--space-4);
-  align-items: start;
-}
-
-@media (max-width: 1100px) {
-  .resource-layout {
-    grid-template-columns: minmax(0, 1fr);
-  }
-}
-
-.form-grid {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  align-content: start;
-  gap: var(--space-4);
-}
-
-.form-grid > h2,
-.form-grid > .span-2 {
-  grid-column: 1 / -1;
-}
-
 .capabilities {
   margin: 0;
   padding: 0;
@@ -207,6 +160,7 @@
 
 .resource-documents {
   display: grid;
+  align-content: start;
   gap: var(--space-4);
 }
 
@@ -231,42 +185,17 @@
   text-transform: uppercase;
 }
 
-.document-fields {
-  display: grid;
-  grid-template-columns: 2fr 1.5fr 1fr 1fr auto;
+.document-editor .t-form-grid {
   align-items: end;
   gap: var(--space-3);
 }
 
-@media (max-width: 800px) {
-  .document-fields {
-    grid-template-columns: minmax(0, 1fr);
-  }
-}
-
-.document-buttons {
-  display: flex;
-  gap: var(--space-2);
-}
-
 /* Import */
-
-.import-layout {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) 360px;
-  gap: var(--space-4);
-  align-items: start;
-}
-
-@media (max-width: 1100px) {
-  .import-layout {
-    grid-template-columns: minmax(0, 1fr);
-  }
-}
 
 .import-main,
 .import-side {
   display: grid;
+  align-content: start;
   gap: var(--space-4);
 }
 
@@ -341,33 +270,6 @@
 
 /* Customer form */
 
-.customer-layout,
-.site-layout {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(0, 2fr);
-  gap: var(--space-4);
-  align-items: start;
-}
-
-/* Address and hours, then location and requirements: panels side by side share their height. */
-.site-layout {
-  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-  align-items: stretch;
-}
-
-@media (max-width: 1100px) {
-  .customer-layout,
-  .site-layout {
-    grid-template-columns: minmax(0, 1fr);
-  }
-}
-
-.customer-column {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr);
-  gap: var(--space-4);
-}
-
 .contact-list {
   display: grid;
   gap: var(--space-2);
@@ -375,13 +277,17 @@
 
 .contact-row {
   display: grid;
-  grid-template-columns: 1.4fr 1.2fr 1fr 1.6fr auto;
-  align-items: end;
   gap: var(--space-2);
+  min-width: 0;
   margin: 0;
   padding: var(--space-3);
   border: 1px solid var(--color-line);
   border-radius: var(--radius-md);
+}
+
+.contact-row .t-form-grid {
+  align-items: end;
+  gap: var(--space-2);
 }
 
 .contact-row[data-invalid="true"] {
@@ -389,19 +295,12 @@
   background: var(--color-conflict-tint);
 }
 
-.contact-row > .t-button {
-  height: var(--control-height);
+.contact-row .t-form-actions {
+  min-height: var(--control-height);
 }
 
 .contact-error {
-  grid-column: 1 / -1;
   margin: 0;
-}
-
-@media (max-width: 800px) {
-  .contact-row {
-    grid-template-columns: minmax(0, 1fr);
-  }
 }
 
 .site-picker {
@@ -434,8 +333,9 @@
 
 .site-matches li {
   display: flex;
+  flex-wrap: wrap;
   align-items: baseline;
-  gap: var(--space-3);
+  gap: 0 var(--space-3);
 }
 
 /* Site form */
@@ -469,8 +369,13 @@
 
 .location-facts {
   display: inline-flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: var(--space-2);
+}
+
+.location-facts .t-mono {
+  white-space: nowrap;
 }
 
 .site-map {
@@ -500,12 +405,13 @@
 
 .week-day {
   display: grid;
-  grid-template-columns: 96px minmax(100px, 1fr) minmax(0, 1.6fr);
+  grid-template-columns: 96px minmax(0, 1fr);
+  grid-template-areas:
+    "day ranges"
+    ". bar"
+    ". error";
   align-items: center;
-  gap: var(--space-3);
-}
-
-.week-day {
+  column-gap: var(--space-3);
   min-height: var(--control-height);
   margin: 0;
   padding: 0;
@@ -523,14 +429,21 @@
   white-space: nowrap;
 }
 
+/* The day faces the first line of its ranges, however many lines they take. */
 .week-day > legend {
+  grid-area: day;
+  align-self: start;
+  margin-top: calc((var(--control-height) - 20px) / 2);
   float: left;
   padding: 0;
   font: var(--type-body-strong);
 }
 
 .week-bar {
+  grid-area: bar;
   position: relative;
+  min-width: 10rem;
+  margin-top: var(--space-1);
   height: 14px;
   border-radius: var(--radius-sm);
   background: var(--color-surface-sunken);
@@ -545,6 +458,7 @@
 }
 
 .week-ranges {
+  grid-area: ranges;
   display: flex;
   flex-wrap: wrap;
   align-items: center;
@@ -555,6 +469,7 @@
   display: inline-flex;
   align-items: center;
   gap: var(--space-1);
+  white-space: nowrap;
 }
 
 .time-input {
@@ -573,8 +488,21 @@
 }
 
 .week-error {
-  grid-column: 2 / -1;
+  grid-area: error;
   margin: 0;
+}
+
+@container (width >= 880px) {
+  .week-day {
+    grid-template-columns: 96px minmax(10rem, 1fr) minmax(0, 1.6fr);
+    grid-template-areas:
+      "day bar ranges"
+      ". error error";
+  }
+
+  .week-bar {
+    margin-top: 0;
+  }
 }
 
 /* Units */
@@ -595,26 +523,15 @@
 
 .moment-picker {
   display: inline-flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: var(--space-2);
 }
 
-.units-layout {
+.units-main {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) var(--well-width);
-  gap: var(--space-4);
-  align-items: start;
-}
-
-.units-layout > div {
-  display: grid;
+  align-content: start;
   gap: var(--space-2);
-}
-
-@media (max-width: 1280px) {
-  .units-layout {
-    grid-template-columns: minmax(0, 1fr);
-  }
 }
 
 .t-table tbody tr.group-row {
@@ -631,7 +548,21 @@
 
 .free-panel {
   display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  align-content: start;
   gap: var(--space-3);
+}
+
+.free-lists {
+  display: grid;
+  gap: var(--space-3) var(--space-6);
+}
+
+/* Under the table, in a wide card: the three lists side by side. */
+@container (width >= 880px) {
+  .free-lists {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
 }
 
 .free-panel .panel-title-row,
@@ -673,23 +604,55 @@
   font: var(--type-body-strong);
 }
 
+/*
+ * Three candidate lists, then period and documents: beside the lists from the wide breakpoint,
+ * under them below it, everything in one column below medium.
+ */
 .unit-form {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr)) minmax(0, 1.2fr);
+  grid-template-columns: minmax(0, 1fr);
   gap: var(--space-4);
-  align-items: start;
 }
 
-@media (max-width: 1280px) {
+@media (width >= 1024px) {
   .unit-form {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .unit-side {
+    grid-column: 1 / -1;
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .unit-side > :first-child,
+  .unit-side > :last-child:nth-child(2) {
+    grid-row: span 2;
   }
 }
 
+@media (width >= 1600px) {
+  .unit-form {
+    grid-template-columns: repeat(3, minmax(0, 1fr)) minmax(0, 1.2fr);
+  }
+
+  .unit-side {
+    grid-column: auto;
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .unit-side > :first-child,
+  .unit-side > :last-child:nth-child(2) {
+    grid-row: auto;
+  }
+}
+
+/* A candidate list scrolls inside its card, under its search field. */
 .candidate-column {
-  display: grid;
+  display: flex;
+  flex-direction: column;
   gap: var(--space-3);
   min-width: 0;
+  max-height: max(24rem, calc(100vh - 16rem));
   margin: 0;
 }
 
@@ -708,15 +671,19 @@
 
 .candidates {
   display: grid;
+  flex: 1 1 auto;
+  align-content: start;
   gap: var(--space-1);
+  min-height: 0;
   margin: 0;
   padding: 0;
+  overflow-y: auto;
   list-style: none;
 }
 
 .candidate {
   display: grid;
-  grid-template-columns: auto minmax(0, 1fr) auto;
+  grid-template-columns: auto minmax(0, 1fr);
   align-items: center;
   gap: var(--space-3);
   padding: var(--space-2) var(--space-3);
@@ -740,14 +707,20 @@
   font: var(--type-body-strong);
 }
 
+.candidate-text {
+  min-width: 0;
+}
+
+/* Why a resource cannot be chosen: a line of its own, under the details. */
 .candidate-reason {
+  display: block;
   color: var(--color-ink-muted);
   font: var(--type-small);
-  text-align: right;
 }
 
 .unit-side {
   display: grid;
+  align-content: start;
   gap: var(--space-4);
 }
 
@@ -829,9 +802,15 @@
 
 .change-fields {
   display: grid;
-  grid-template-columns: auto minmax(0, 1fr) minmax(0, 1fr);
+  grid-template-columns: minmax(0, 1fr);
   gap: var(--space-4);
   align-items: end;
+}
+
+@container (width >= 480px) {
+  .change-fields {
+    grid-template-columns: auto minmax(0, 1fr) minmax(0, 1fr);
+  }
 }
 
 .change-result {
@@ -844,13 +823,26 @@
 
 .change-result li {
   display: grid;
-  grid-template-columns: 96px minmax(0, 1fr) auto;
+  grid-template-columns: minmax(0, 1fr);
+  justify-items: start;
   align-items: center;
-  gap: var(--space-3);
+  gap: var(--space-1) var(--space-3);
   padding: var(--space-3);
   border: 1px solid var(--color-line);
   border-radius: var(--radius-md);
   background: var(--color-surface);
+}
+
+/* In a narrow dialog, the badge, the unit and its period one under the other. */
+.change-result li > .t-mono {
+  white-space: nowrap;
+}
+
+@container (width >= 480px) {
+  .change-result li {
+    grid-template-columns: 96px minmax(0, 1fr) auto;
+    justify-items: stretch;
+  }
 }
 
 .change-result li[data-tone="petrol"] {

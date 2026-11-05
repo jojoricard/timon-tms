@@ -1,0 +1,306 @@
+/*
+ * Layout rules shared by every screen. Queries use the breakpoints of docs/design/tokens.json:
+ * viewport narrow 640px, medium 1024px, wide 1600px; container form-2 480px, form-4 880px.
+ * test/breakpoints.test.ts fails on any other value.
+ */
+
+/* Text: long text wraps instead of overlapping; codes, plates, dates and times never wrap. */
+
+body {
+  overflow-wrap: break-word;
+}
+
+/* A column title breaks between words only. */
+.t-table thead th {
+  overflow-wrap: normal;
+}
+
+/* A card sizes the grids inside it: its width, not the window's, sets their columns. */
+.t-panel,
+.t-container {
+  container-type: inline-size;
+}
+
+/* Page header */
+
+.t-page-header {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--space-3);
+}
+
+.t-page-title-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3) var(--space-4);
+}
+
+/* The title keeps at least this much room; below it, the actions go under the title. */
+.t-page-title {
+  display: flex;
+  flex: 1 1 20rem;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-3);
+  min-width: 0;
+}
+
+.t-page-heading {
+  min-width: 0;
+}
+
+.t-page-title h1 {
+  margin: 0;
+  font: var(--type-page-title);
+  letter-spacing: var(--type-page-title-tracking);
+}
+
+.t-page-title .t-plate {
+  font: var(--type-section-title);
+  font-family: var(--font-mono);
+}
+
+.t-page-subtitle {
+  display: block;
+  color: var(--color-ink-muted);
+}
+
+.t-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+/* Card rows */
+
+.t-card-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  align-items: stretch;
+  gap: var(--space-4);
+}
+
+@media (width >= 1024px) {
+  .t-card-row[data-stack="medium"] {
+    grid-template-columns: var(--card-row-columns);
+  }
+}
+
+@media (width >= 1600px) {
+  .t-card-row[data-stack="wide"] {
+    grid-template-columns: var(--card-row-columns);
+  }
+}
+
+.t-card-row > *,
+.t-card-stack > * {
+  min-width: 0;
+}
+
+.t-card-stack {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.t-card-stack > :last-child {
+  flex: 1 0 auto;
+}
+
+/* Form grid: one column, two from form-2, four from form-4 when asked for */
+
+.t-form-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  align-items: start;
+  gap: var(--space-4);
+}
+
+.t-form-grid > * {
+  min-width: 0;
+}
+
+.t-form-grid > .t-span-all {
+  grid-column: 1 / -1;
+}
+
+/* A placeholder that keeps a field in its column holds no room in one column. */
+@container (width < 480px) {
+  .t-form-grid > span:empty {
+    display: none;
+  }
+}
+
+.t-form-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: end;
+  gap: var(--space-2);
+}
+
+@container (width >= 480px) {
+  .t-form-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .t-form-grid > .t-span-2,
+  .t-form-grid > .t-form-actions {
+    grid-column: 1 / -1;
+  }
+}
+
+@container (width >= 880px) {
+  .t-form-grid[data-columns="4"] {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+
+  .t-form-grid[data-columns="4"]:has(> .t-form-actions) {
+    grid-template-columns: repeat(4, minmax(0, 1fr)) auto;
+  }
+
+  .t-form-grid[data-columns="4"] > .t-span-2 {
+    grid-column: span 2;
+  }
+
+  .t-form-grid[data-columns="4"] > .t-form-actions {
+    grid-column: auto;
+    align-self: end;
+  }
+}
+
+/* A status badge in a cell takes a second line rather than push past its column. */
+.t-table .t-badge {
+  max-width: 100%;
+  height: auto;
+  min-height: 22px;
+  padding-block: 3px;
+  line-height: 16px;
+  white-space: normal;
+}
+
+/* Tables: the frame holds the border and the edge shades, the area inside it scrolls */
+
+.t-table-frame {
+  position: relative;
+  min-width: 0;
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-md);
+  background: var(--color-surface-raised);
+}
+
+/* Positioned, so the visually hidden caption stays inside it instead of widening the page. */
+.t-table-scroll {
+  position: relative;
+  overflow-x: auto;
+  border-radius: inherit;
+}
+
+.t-table-scroll > .t-table > :is(thead, tbody) > tr > :first-child:not([colspan]) {
+  position: sticky;
+  left: 0;
+  z-index: 1;
+  background: var(--color-surface-raised);
+}
+
+.t-table-scroll > .t-table > thead > tr > :first-child:not([colspan]) {
+  background: var(--color-surface-sunken);
+}
+
+.t-table-scroll > .t-table > tbody > tr:hover > :first-child:not([colspan]) {
+  background: var(--color-surface);
+}
+
+.t-table-scroll > .t-table > tbody > tr[data-tone="conflict"] > :first-child:not([colspan]) {
+  background: var(--color-conflict-tint);
+}
+
+/*
+ * Leading edge: the rows passing under the first column slide under its edge, a line and a shadow
+ * in a strip beside it, since collapsed table cells paint no outer box-shadow.
+ */
+.t-table-frame[data-scrolled]
+  .t-table-scroll
+  > .t-table
+  > :is(thead, tbody)
+  > tr
+  > :first-child:not([colspan]) {
+  box-shadow: inset -1px 0 0 var(--color-line);
+}
+
+.t-table-frame[data-scrolled]
+  .t-table-scroll
+  > .t-table
+  > :is(thead, tbody)
+  > tr
+  > :first-child:not([colspan])::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  right: -12px;
+  bottom: 0;
+  width: 12px;
+  box-shadow: var(--shadow-edge);
+  pointer-events: none;
+}
+
+/*
+ * Edge shades of a scroller: a strip with the same shadow, turned to face the content, on each
+ * side that has more to show. They sit on the frame, which does not scroll.
+ */
+.t-table-frame::after,
+.t-tabs-frame::before,
+.t-tabs-frame::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  z-index: 2;
+  width: 12px;
+  box-shadow: var(--shadow-edge);
+  opacity: 0;
+  transition: opacity 0.15s;
+  pointer-events: none;
+}
+
+.t-table-frame::after,
+.t-tabs-frame::after {
+  right: 0;
+  transform: scaleX(-1);
+}
+
+.t-table-frame::after {
+  border-radius: var(--radius-md) 0 0 var(--radius-md);
+}
+
+.t-tabs-frame::before {
+  left: 0;
+}
+
+.t-table-frame[data-more]::after,
+.t-tabs-frame[data-scrolled]::before,
+.t-tabs-frame[data-more]::after {
+  opacity: 1;
+}
+
+/* Tabs scroll sideways rather than overflow the page. */
+
+.t-tabs-frame {
+  position: relative;
+}
+
+.t-tabs {
+  position: relative;
+  overflow-x: auto;
+  scrollbar-width: thin;
+}
+
+.t-tabs > li {
+  flex: none;
+}
+
+.t-tabs a {
+  white-space: nowrap;
+}

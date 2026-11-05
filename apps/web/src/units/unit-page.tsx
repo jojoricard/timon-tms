@@ -7,14 +7,24 @@ import type {
   UnitMemberJson,
   UnitOptionsJson,
 } from '@timon/http';
-import { Banner, Button, Field, Plate, StatusBadge } from '@timon/ui';
+import {
+  Banner,
+  Button,
+  CardRow,
+  CardStack,
+  Field,
+  FormGrid,
+  Plate,
+  StatusBadge,
+  TableFrame,
+} from '@timon/ui';
 import { type FormEvent, useState } from 'react';
 import { ApiError, api, ok } from '../api.ts';
 import { errorText } from '../data.ts';
 import { failureText, issueSentence } from '../issues.ts';
 import { formatDate } from '../labels.ts';
 import { m } from '../paraglide/messages.js';
-import { Breadcrumb } from '../resources/section.tsx';
+import { PageHeader } from '../resources/section.tsx';
 import { ChangeDialog } from './change-dialog.tsx';
 import {
   formatTime,
@@ -68,9 +78,9 @@ export function UnitPage({ id, initial }: { id?: string; initial?: UnitStart }) 
   return <UnitForm key={unit.data?.id ?? 'new'} unit={unit.data} initial={initial ?? {}} />;
 }
 
-function UnitBreadcrumb({ name }: { name: string }) {
+function unitBreadcrumb(name: string) {
   return (
-    <Breadcrumb>
+    <>
       <li>
         <Link to="/resources/$kind" params={{ kind: 'drivers' }}>
           {m.resources_title()}
@@ -80,7 +90,7 @@ function UnitBreadcrumb({ name }: { name: string }) {
         <Link to="/resources/units">{m.units_title()}</Link>
       </li>
       <li aria-current="page">{name}</li>
-    </Breadcrumb>
+    </>
   );
 }
 
@@ -174,21 +184,19 @@ function UnitForm({ unit, initial }: { unit: UnitJson | undefined; initial: Unit
 
   return (
     <div className="page">
-      <header className="page-header">
-        <UnitBreadcrumb name={title} />
-        <div className="page-title-row">
-          <div className="page-title">
-            <div>
-              <h1>{title}</h1>
-              <span className="page-subtitle">{m.unit_form_hint()}</span>
-            </div>
-            {unit ? (
-              <StatusBadge tone={unitStateTone[unit.state]}>
-                {unitStateLabel[unit.state]()}
-              </StatusBadge>
-            ) : null}
-          </div>
-          <div className="page-actions">
+      <PageHeader
+        breadcrumb={unitBreadcrumb(title)}
+        title={title}
+        subtitle={m.unit_form_hint()}
+        badges={
+          unit ? (
+            <StatusBadge tone={unitStateTone[unit.state]}>
+              {unitStateLabel[unit.state]()}
+            </StatusBadge>
+          ) : null
+        }
+        actions={
+          <>
             {unit ? (
               <Button variant="danger" onClick={() => remove.mutate()} disabled={remove.isPending}>
                 {m.action_delete_unit()}
@@ -200,9 +208,9 @@ function UnitForm({ unit, initial }: { unit: UnitJson | undefined; initial: Unit
             <Button type="submit" form="unit-form" variant="primary" disabled={save.isPending}>
               {m.action_save_unit()}
             </Button>
-          </div>
-        </div>
-      </header>
+          </>
+        }
+      />
 
       {issues.length > 0 ? (
         <Banner tone="conflict">
@@ -245,32 +253,36 @@ function UnitForm({ unit, initial }: { unit: UnitJson | undefined; initial: Unit
           onChoose={(id) => choose('driver', id)}
         />
         <div className="unit-side">
-          <section className="t-panel form-grid" aria-labelledby="period-title">
-            <h2 id="period-title" className="span-2">
-              {m.period_title()}
-            </h2>
-            <Field label={m.field_start()}>
-              <input
-                type="datetime-local"
-                className="datetime-input"
-                value={start}
-                onChange={(e) => setStart(e.target.value)}
-              />
-            </Field>
-            <Field label={m.field_end()} optional={m.optional()}>
-              <input
-                type="datetime-local"
-                className="datetime-input"
-                value={end}
-                onChange={(e) => setEnd(e.target.value)}
-              />
-            </Field>
-            <p className="t-field-hint span-2">{m.period_hint()}</p>
-            <div className="span-2">
-              <Field label={m.field_unit_name()} optional={m.optional()} hint={m.unit_name_hint()}>
-                <input value={name} maxLength={100} onChange={(e) => setName(e.target.value)} />
+          <section className="t-panel" aria-labelledby="period-title">
+            <h2 id="period-title">{m.period_title()}</h2>
+            <FormGrid>
+              <Field label={m.field_start()}>
+                <input
+                  type="datetime-local"
+                  className="datetime-input"
+                  value={start}
+                  onChange={(e) => setStart(e.target.value)}
+                />
               </Field>
-            </div>
+              <Field label={m.field_end()} optional={m.optional()}>
+                <input
+                  type="datetime-local"
+                  className="datetime-input"
+                  value={end}
+                  onChange={(e) => setEnd(e.target.value)}
+                />
+              </Field>
+              <p className="t-field-hint t-span-all">{m.period_hint()}</p>
+              <div className="t-span-all">
+                <Field
+                  label={m.field_unit_name()}
+                  optional={m.optional()}
+                  hint={m.unit_name_hint()}
+                >
+                  <input value={name} maxLength={100} onChange={(e) => setName(e.target.value)} />
+                </Field>
+              </div>
+            </FormGrid>
           </section>
           <LicencePanel options={options.data} driverId={members.driver} />
           <section className="t-panel" aria-labelledby="documents-title">
@@ -363,13 +375,17 @@ function CandidateColumn({
                   disabled={reason !== null && !isChosen}
                   onChange={() => onChoose(resource.id)}
                 />
-                <span>
-                  <span className="candidate-name">
+                <span className="candidate-text">
+                  <span
+                    className={
+                      resource.kind === 'driver' ? 'candidate-name' : 'candidate-name t-nowrap'
+                    }
+                  >
                     {resource.kind === 'driver' ? resource.fullName : resource.name}
                   </span>
                   <span className="t-secondary">{candidateDetails(resource)}</span>
+                  {reason ? <span className="candidate-reason">{reasonText(reason)}</span> : null}
                 </span>
-                {reason ? <span className="candidate-reason">{reasonText(reason)}</span> : null}
               </label>
             </li>
           );
@@ -432,35 +448,37 @@ function MembersDocuments({ documents }: { documents: UnitDocumentsJson | null }
       </div>
       {documents ? (
         <>
-          <table className="t-table">
-            <caption className="t-visually-hidden">
-              {m.members_documents_caption({ date: formatDate(documents.day) })}
-            </caption>
-            <thead>
-              <tr>
-                <th scope="col">{m.col_member()}</th>
-                <th scope="col">{m.col_document()}</th>
-                <th scope="col">{m.col_expires()}</th>
-                <th scope="col" className="t-end">
-                  {m.col_status()}
-                </th>
-              </tr>
-            </thead>
-            <tbody>
-              {documents.documents.map((d) => (
-                <tr key={`${d.resourceId}-${d.code}`}>
-                  <td>{d.member}</td>
-                  <td>{documentName(d)}</td>
-                  <td className="t-mono">{d.expiresOn ? formatDate(d.expiresOn) : '—'}</td>
-                  <td className="t-end">
-                    <StatusBadge tone={memberStatusTone[d.status]}>
-                      {memberStatusLabel[d.status]()}
-                    </StatusBadge>
-                  </td>
+          <TableFrame>
+            <table className="t-table">
+              <caption className="t-visually-hidden">
+                {m.members_documents_caption({ date: formatDate(documents.day) })}
+              </caption>
+              <thead>
+                <tr>
+                  <th scope="col">{m.col_member()}</th>
+                  <th scope="col">{m.col_document()}</th>
+                  <th scope="col">{m.col_expires()}</th>
+                  <th scope="col" className="t-end">
+                    {m.col_status()}
+                  </th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {documents.documents.map((d) => (
+                  <tr key={`${d.resourceId}-${d.code}`}>
+                    <td className="t-nowrap">{d.member}</td>
+                    <td>{documentName(d)}</td>
+                    <td className="t-mono">{d.expiresOn ? formatDate(d.expiresOn) : '—'}</td>
+                    <td className="t-end">
+                      <StatusBadge tone={memberStatusTone[d.status]}>
+                        {memberStatusLabel[d.status]()}
+                      </StatusBadge>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </TableFrame>
           <p className="t-field-hint">{m.documents_warning_only()}</p>
         </>
       ) : (
@@ -504,31 +522,31 @@ function StartedUnit({ unit }: { unit: UnitJson }) {
   );
   return (
     <div className="page">
-      <header className="page-header">
-        <UnitBreadcrumb name={unit.name} />
-        <div className="page-title-row">
-          <div className="page-title">
-            <div>
-              <h1>{unit.name}</h1>
-              <span className="page-subtitle t-mono">{periodText(unit.start, unit.end)}</span>
-            </div>
+      <PageHeader
+        breadcrumb={unitBreadcrumb(unit.name)}
+        title={unit.name}
+        subtitle={<span className="t-mono">{periodText(unit.start, unit.end)}</span>}
+        badges={
+          <>
             <StatusBadge tone={unitStateTone[unit.state]}>
               {unitStateLabel[unit.state]()}
             </StatusBadge>
             <StatusBadge tone={memberStatusTone[unit.documents.status]}>
               {documentsText(unit.documents)}
             </StatusBadge>
-          </div>
-          <div className="page-actions">
+          </>
+        }
+        actions={
+          <>
             {unit.state === 'running' ? (
               <Button onClick={() => setChanging(true)}>{m.action_change_unit()}</Button>
             ) : null}
             <Link className="t-button" to="/resources/units">
               {m.action_back_to_units()}
             </Link>
-          </div>
-        </div>
-      </header>
+          </>
+        }
+      />
       <p className="t-field-hint">{m.unit_started_hint()}</p>
       {setEndMutation.error ? (
         <Banner tone="conflict">{failureText(setEndMutation.error)}</Banner>
@@ -538,8 +556,8 @@ function StartedUnit({ unit }: { unit: UnitJson }) {
           {m.end_saved({ date: formatTime(setEndMutation.data.end, { year: true }) })}
         </Banner>
       ) : null}
-      <div className="resource-layout">
-        <div className="unit-side">
+      <CardRow columns={['2fr', '3fr']}>
+        <CardStack>
           <section className="t-panel" aria-labelledby="members-title">
             <h2 id="members-title">{m.section_members()}</h2>
             <dl className="member-list">
@@ -550,37 +568,39 @@ function StartedUnit({ unit }: { unit: UnitJson }) {
           </section>
           {unit.state === 'running' ? (
             <form
-              className="t-panel form-grid"
+              className="t-panel"
               onSubmit={(e) => {
                 e.preventDefault();
                 if (endInstant) setEndMutation.mutate();
               }}
             >
-              <h2 className="span-2">{m.action_set_end()}</h2>
-              <Field label={m.field_end()}>
-                <input
-                  type="datetime-local"
-                  className="datetime-input"
-                  value={end}
-                  onChange={(e) => setEnd(e.target.value)}
-                />
-              </Field>
-              <div className="form-submit">
-                <Button
-                  type="submit"
-                  variant="primary"
-                  disabled={!endInstant || setEndMutation.isPending}
-                >
-                  {m.action_set_end()}
-                </Button>
-              </div>
+              <h2>{m.action_set_end()}</h2>
+              <FormGrid>
+                <Field label={m.field_end()}>
+                  <input
+                    type="datetime-local"
+                    className="datetime-input"
+                    value={end}
+                    onChange={(e) => setEnd(e.target.value)}
+                  />
+                </Field>
+                <div className="form-submit">
+                  <Button
+                    type="submit"
+                    variant="primary"
+                    disabled={!endInstant || setEndMutation.isPending}
+                  >
+                    {m.action_set_end()}
+                  </Button>
+                </div>
+              </FormGrid>
             </form>
           ) : null}
-        </div>
+        </CardStack>
         <section className="t-panel" aria-labelledby="documents-title">
           <MembersDocuments documents={unit.documents} />
         </section>
-      </div>
+      </CardRow>
       {changing ? (
         <ChangeDialog
           unit={unit}

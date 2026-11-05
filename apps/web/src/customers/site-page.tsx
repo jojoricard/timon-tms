@@ -16,13 +16,22 @@ import type {
   SiteInputJson,
   SiteJson,
 } from '@timon/http';
-import { Banner, Button, Checkbox, Field, SegmentedControl, StatusBadge } from '@timon/ui';
+import {
+  Banner,
+  Button,
+  CardRow,
+  Checkbox,
+  Field,
+  FormGrid,
+  SegmentedControl,
+  StatusBadge,
+} from '@timon/ui';
 import { type FormEvent, lazy, Suspense, useId, useState } from 'react';
 import { ApiError, api, ok } from '../api.ts';
 import { errorText, useReferenceLists } from '../data.ts';
 import { failureText, issueSentence } from '../issues.ts';
 import { m } from '../paraglide/messages.js';
-import { Breadcrumb } from '../resources/section.tsx';
+import { PageHeader } from '../resources/section.tsx';
 import {
   customerKeys,
   useAddressSuggestions,
@@ -351,24 +360,22 @@ function SiteForm({
 
   return (
     <div className="page">
-      <header className="page-header">
-        <Breadcrumb>
-          <li>
-            <Link to="/customers">{m.customers_title()}</Link>
-          </li>
-          <li>
-            <Link to="/customers/sites">{m.sites_title()}</Link>
-          </li>
-          <li aria-current="page">{site?.name ?? m.new_site()}</li>
-        </Breadcrumb>
-        <div className="page-title-row">
-          <div className="page-title">
-            <div>
-              <h1>{site?.name ?? m.new_site()}</h1>
-              {subtitle ? <span className="page-subtitle">{subtitle}</span> : null}
-            </div>
-          </div>
-          <div className="page-actions">
+      <PageHeader
+        breadcrumb={
+          <>
+            <li>
+              <Link to="/customers">{m.customers_title()}</Link>
+            </li>
+            <li>
+              <Link to="/customers/sites">{m.sites_title()}</Link>
+            </li>
+            <li aria-current="page">{site?.name ?? m.new_site()}</li>
+          </>
+        }
+        title={site?.name ?? m.new_site()}
+        subtitle={subtitle}
+        actions={
+          <>
             {site ? (
               <Button
                 variant="danger"
@@ -382,9 +389,9 @@ function SiteForm({
             <Button type="submit" form="site-form" variant="primary" disabled={save.isPending}>
               {site ? m.action_save() : m.action_create()}
             </Button>
-          </div>
-        </div>
-      </header>
+          </>
+        }
+      />
 
       {site?.archived ? <Banner tone="warning">{m.site_archived_banner()}</Banner> : null}
       {warnings.map((w) => (
@@ -400,276 +407,289 @@ function SiteForm({
       {notice ? <Banner tone={notice === m.saved() ? 'ok' : 'warning'}>{notice}</Banner> : null}
       {writeError ? <Banner tone="conflict">{failureText(writeError, lists)}</Banner> : null}
 
-      <form id="site-form" className="site-layout" onSubmit={submit} noValidate>
-        <section className="t-panel form-grid" aria-labelledby="address-title">
-          <div className="span-2 panel-title-row">
-            <h2 id="address-title">{m.section_address()}</h2>
-            <LocatedBadge locatedBy={state.location ? state.locatedBy : 'not-located'} />
-          </div>
-          <Field label={m.field_site_name()} error={errorFor('name')}>
-            <input value={state.name} onChange={(e) => set('name', e.target.value)} />
-          </Field>
-          <Field label={m.field_country()} error={errorFor('country')}>
-            <select value={state.country} onChange={(e) => setAddress('country', e.target.value)}>
-              {countryOptions.map((code) => (
-                <option key={code} value={code}>
-                  {countryName(code)}
-                </option>
-              ))}
-            </select>
-          </Field>
-          <div className="span-2 address-field">
-            <Field
-              label={m.field_street()}
-              error={errorFor('street1')}
-              hint={
-                state.country === 'FR'
-                  ? suggestions.data?.available === false
-                    ? m.suggestions_unavailable()
-                    : m.suggestions_hint()
-                  : undefined
-              }
-            >
-              <input
-                role="combobox"
-                aria-autocomplete="list"
-                aria-expanded={candidates.length > 0}
-                aria-controls={listboxId}
-                aria-activedescendant={candidates.length > 0 ? `${listboxId}-${active}` : undefined}
-                autoComplete="off"
-                value={state.street1}
-                onChange={(e) => {
-                  setAddress('street1', e.target.value);
-                  setSuggestionsOpen(true);
-                  setActive(0);
-                }}
-                onBlur={() => setTimeout(() => setSuggestionsOpen(false), 150)}
-                onKeyDown={(e) => {
-                  if (candidates.length === 0) return;
-                  if (e.key === 'ArrowDown') {
-                    e.preventDefault();
-                    setActive((a) => (a + 1) % candidates.length);
-                  } else if (e.key === 'ArrowUp') {
-                    e.preventDefault();
-                    setActive((a) => (a - 1 + candidates.length) % candidates.length);
-                  } else if (e.key === 'Enter') {
-                    e.preventDefault();
-                    const candidate = candidates[active];
-                    if (candidate) choose(candidate);
-                  } else if (e.key === 'Escape') {
-                    setSuggestionsOpen(false);
+      <form id="site-form" onSubmit={submit} noValidate>
+        <CardRow columns={['1fr', '1fr']}>
+          <section className="t-panel" aria-labelledby="address-title">
+            <div className="panel-title-row">
+              <h2 id="address-title">{m.section_address()}</h2>
+              <LocatedBadge locatedBy={state.location ? state.locatedBy : 'not-located'} />
+            </div>
+            <FormGrid>
+              <Field label={m.field_site_name()} error={errorFor('name')}>
+                <input value={state.name} onChange={(e) => set('name', e.target.value)} />
+              </Field>
+              <Field label={m.field_country()} error={errorFor('country')}>
+                <select
+                  value={state.country}
+                  onChange={(e) => setAddress('country', e.target.value)}
+                >
+                  {countryOptions.map((code) => (
+                    <option key={code} value={code}>
+                      {countryName(code)}
+                    </option>
+                  ))}
+                </select>
+              </Field>
+              <div className="t-span-all address-field">
+                <Field
+                  label={m.field_street()}
+                  error={errorFor('street1')}
+                  hint={
+                    state.country === 'FR'
+                      ? suggestions.data?.available === false
+                        ? m.suggestions_unavailable()
+                        : m.suggestions_hint()
+                      : undefined
                   }
-                }}
-              />
-            </Field>
-            {candidates.length > 0 ? (
-              <div
-                id={listboxId}
-                role="listbox"
-                aria-label={m.suggestions_label()}
-                className="suggestions"
-              >
-                {candidates.map((c, index) => (
-                  <div
-                    key={`${c.label}-${c.latitude}`}
-                    id={`${listboxId}-${index}`}
-                    role="option"
-                    tabIndex={-1}
-                    aria-selected={index === active}
-                    onMouseDown={(e) => {
-                      e.preventDefault();
-                      choose(c);
+                >
+                  <input
+                    role="combobox"
+                    aria-autocomplete="list"
+                    aria-expanded={candidates.length > 0}
+                    aria-controls={listboxId}
+                    aria-activedescendant={
+                      candidates.length > 0 ? `${listboxId}-${active}` : undefined
+                    }
+                    autoComplete="off"
+                    value={state.street1}
+                    onChange={(e) => {
+                      setAddress('street1', e.target.value);
+                      setSuggestionsOpen(true);
+                      setActive(0);
                     }}
+                    onBlur={() => setTimeout(() => setSuggestionsOpen(false), 150)}
+                    onKeyDown={(e) => {
+                      if (candidates.length === 0) return;
+                      if (e.key === 'ArrowDown') {
+                        e.preventDefault();
+                        setActive((a) => (a + 1) % candidates.length);
+                      } else if (e.key === 'ArrowUp') {
+                        e.preventDefault();
+                        setActive((a) => (a - 1 + candidates.length) % candidates.length);
+                      } else if (e.key === 'Enter') {
+                        e.preventDefault();
+                        const candidate = candidates[active];
+                        if (candidate) choose(candidate);
+                      } else if (e.key === 'Escape') {
+                        setSuggestionsOpen(false);
+                      }
+                    }}
+                  />
+                </Field>
+                {candidates.length > 0 ? (
+                  <div
+                    id={listboxId}
+                    role="listbox"
+                    aria-label={m.suggestions_label()}
+                    className="suggestions"
                   >
-                    <span>{c.label}</span>
-                    <span className="t-secondary">
-                      {c.precision === 'address'
-                        ? m.precision_address()
-                        : c.precision === 'street'
-                          ? m.precision_street()
-                          : m.precision_city()}
-                    </span>
+                    {candidates.map((c, index) => (
+                      <div
+                        key={`${c.label}-${c.latitude}`}
+                        id={`${listboxId}-${index}`}
+                        role="option"
+                        tabIndex={-1}
+                        aria-selected={index === active}
+                        onMouseDown={(e) => {
+                          e.preventDefault();
+                          choose(c);
+                        }}
+                      >
+                        <span>{c.label}</span>
+                        <span className="t-secondary">
+                          {c.precision === 'address'
+                            ? m.precision_address()
+                            : c.precision === 'street'
+                              ? m.precision_street()
+                              : m.precision_city()}
+                        </span>
+                      </div>
+                    ))}
                   </div>
-                ))}
+                ) : null}
               </div>
-            ) : null}
-          </div>
-          <div className="span-2">
-            <Field label={m.field_street2()} optional={m.optional()}>
-              <input value={state.street2} onChange={(e) => set('street2', e.target.value)} />
-            </Field>
-          </div>
-          <Field label={m.field_postcode()} error={errorFor('postcode')}>
-            <input
-              className="t-mono"
-              value={state.postcode}
-              onChange={(e) => setAddress('postcode', e.target.value)}
-            />
-          </Field>
-          <Field label={m.field_city()} error={errorFor('city')}>
-            <input value={state.city} onChange={(e) => setAddress('city', e.target.value)} />
-          </Field>
-        </section>
-
-        <section className="t-panel" aria-labelledby="hours-title">
-          <div className="panel-title-row">
-            <h2 id="hours-title">{m.section_opening_hours()}</h2>
-            <span className="t-field-hint">{m.opening_hint({ zone })}</span>
-          </div>
-          <OpeningHoursEditor
-            week={state.week}
-            onChange={(week) => set('week', week)}
-            errorFor={openingError}
-          />
-        </section>
-
-        <section className="t-panel" aria-labelledby="location-title">
-          <div className="panel-title-row">
-            <h2 id="location-title">{m.section_location()}</h2>
-            <span className="location-facts">
-              {state.location ? (
-                <span className="t-mono">
-                  {`${state.location.latitude.toFixed(5)}, ${state.location.longitude.toFixed(5)}`}
-                </span>
-              ) : (
-                <span className="muted">{m.location_none()}</span>
-              )}
-              <StatusBadge tone="neutral">
-                {m.time_zone_label()} · {zone}
-              </StatusBadge>
-            </span>
-          </div>
-          <Suspense fallback={<div className="site-map">{m.loading()}</div>}>
-            <SiteMap location={state.location} onPlace={place} />
-          </Suspense>
-          <p className="t-field-hint">{m.map_hint()}</p>
-          {state.location ? (
-            <Button
-              variant="link"
-              onClick={() => setState((s) => ({ ...s, location: null, locatedBy: 'not-located' }))}
-            >
-              {m.action_clear_location()}
-            </Button>
-          ) : null}
-        </section>
-
-        <section className="t-panel form-grid" aria-labelledby="requirements-title">
-          <h2 id="requirements-title">{m.section_requirements()}</h2>
-          <SegmentedControl
-            legend={m.field_booking()}
-            value={state.bookingRequired ? 'required' : 'not-required'}
-            options={[
-              { value: 'not-required', label: m.booking_not_required_option() },
-              { value: 'required', label: m.booking_required_option() },
-            ]}
-            onChange={(value) => set('bookingRequired', value === 'required')}
-          />
-          {state.bookingRequired ? (
-            <Field label={m.field_booking_method()} error={errorFor('bookingMethod')}>
-              <select
-                value={state.bookingMethod ?? ''}
-                onChange={(e) =>
-                  set('bookingMethod', (e.target.value || null) as BookingMethod | null)
-                }
-              >
-                <option value="" />
-                {bookingMethods.map((method) => (
-                  <option key={method} value={method}>
-                    {bookingMethodLabel[method]?.()}
-                  </option>
-                ))}
-              </select>
-            </Field>
-          ) : (
-            <span />
-          )}
-          {state.bookingRequired ? (
-            <div className="span-2">
-              <Field label={m.field_booking_detail()} optional={m.optional()}>
+              <div className="t-span-all">
+                <Field label={m.field_street2()} optional={m.optional()}>
+                  <input value={state.street2} onChange={(e) => set('street2', e.target.value)} />
+                </Field>
+              </div>
+              <Field label={m.field_postcode()} error={errorFor('postcode')}>
                 <input
-                  value={state.bookingDetail}
-                  onChange={(e) => set('bookingDetail', e.target.value)}
+                  className="t-mono"
+                  value={state.postcode}
+                  onChange={(e) => setAddress('postcode', e.target.value)}
                 />
               </Field>
+              <Field label={m.field_city()} error={errorFor('city')}>
+                <input value={state.city} onChange={(e) => setAddress('city', e.target.value)} />
+              </Field>
+            </FormGrid>
+          </section>
+
+          <section className="t-panel" aria-labelledby="hours-title">
+            <div className="panel-title-row">
+              <h2 id="hours-title">{m.section_opening_hours()}</h2>
+              <span className="t-field-hint">{m.opening_hint({ zone })}</span>
             </div>
-          ) : null}
-          <fieldset className="span-2 capabilities">
-            <legend>{m.field_protective_equipment()}</legend>
-            <div className="capability-list">
-              {equipment.map((item) => (
-                <Checkbox
-                  key={item.id}
-                  label={equipmentLabel(item)}
-                  checked={state.protectiveEquipmentIds.includes(item.id)}
-                  onChange={(checked) =>
-                    set(
-                      'protectiveEquipmentIds',
-                      checked
-                        ? [...state.protectiveEquipmentIds, item.id]
-                        : state.protectiveEquipmentIds.filter((x) => x !== item.id),
-                    )
-                  }
+            <OpeningHoursEditor
+              week={state.week}
+              onChange={(week) => set('week', week)}
+              errorFor={openingError}
+            />
+          </section>
+
+          <section className="t-panel" aria-labelledby="location-title">
+            <div className="panel-title-row">
+              <h2 id="location-title">{m.section_location()}</h2>
+              <span className="location-facts">
+                {state.location ? (
+                  <span className="t-mono">
+                    {`${state.location.latitude.toFixed(5)}, ${state.location.longitude.toFixed(5)}`}
+                  </span>
+                ) : (
+                  <span className="muted">{m.location_none()}</span>
+                )}
+                <StatusBadge tone="neutral">
+                  {m.time_zone_label()} · {zone}
+                </StatusBadge>
+              </span>
+            </div>
+            <Suspense fallback={<div className="site-map">{m.loading()}</div>}>
+              <SiteMap location={state.location} onPlace={place} />
+            </Suspense>
+            <p className="t-field-hint">{m.map_hint()}</p>
+            {state.location ? (
+              <Button
+                variant="link"
+                onClick={() =>
+                  setState((s) => ({ ...s, location: null, locatedBy: 'not-located' }))
+                }
+              >
+                {m.action_clear_location()}
+              </Button>
+            ) : null}
+          </section>
+
+          <section className="t-panel" aria-labelledby="requirements-title">
+            <h2 id="requirements-title">{m.section_requirements()}</h2>
+            <FormGrid>
+              <SegmentedControl
+                legend={m.field_booking()}
+                value={state.bookingRequired ? 'required' : 'not-required'}
+                options={[
+                  { value: 'not-required', label: m.booking_not_required_option() },
+                  { value: 'required', label: m.booking_required_option() },
+                ]}
+                onChange={(value) => set('bookingRequired', value === 'required')}
+              />
+              {state.bookingRequired ? (
+                <Field label={m.field_booking_method()} error={errorFor('bookingMethod')}>
+                  <select
+                    value={state.bookingMethod ?? ''}
+                    onChange={(e) =>
+                      set('bookingMethod', (e.target.value || null) as BookingMethod | null)
+                    }
+                  >
+                    <option value="" />
+                    {bookingMethods.map((method) => (
+                      <option key={method} value={method}>
+                        {bookingMethodLabel[method]?.()}
+                      </option>
+                    ))}
+                  </select>
+                </Field>
+              ) : (
+                <span />
+              )}
+              {state.bookingRequired ? (
+                <div className="t-span-all">
+                  <Field label={m.field_booking_detail()} optional={m.optional()}>
+                    <input
+                      value={state.bookingDetail}
+                      onChange={(e) => set('bookingDetail', e.target.value)}
+                    />
+                  </Field>
+                </div>
+              ) : null}
+              <fieldset className="t-span-all capabilities">
+                <legend>{m.field_protective_equipment()}</legend>
+                <div className="capability-list">
+                  {equipment.map((item) => (
+                    <Checkbox
+                      key={item.id}
+                      label={equipmentLabel(item)}
+                      checked={state.protectiveEquipmentIds.includes(item.id)}
+                      onChange={(checked) =>
+                        set(
+                          'protectiveEquipmentIds',
+                          checked
+                            ? [...state.protectiveEquipmentIds, item.id]
+                            : state.protectiveEquipmentIds.filter((x) => x !== item.id),
+                        )
+                      }
+                    />
+                  ))}
+                </div>
+              </fieldset>
+              <Field
+                label={m.field_max_length()}
+                optional={m.optional()}
+                error={errorFor('maxLengthCm')}
+              >
+                <input
+                  className="t-mono"
+                  inputMode="decimal"
+                  value={state.maxLength}
+                  onChange={(e) => set('maxLength', e.target.value)}
                 />
-              ))}
-            </div>
-          </fieldset>
-          <Field
-            label={m.field_max_length()}
-            optional={m.optional()}
-            error={errorFor('maxLengthCm')}
-          >
-            <input
-              className="t-mono"
-              inputMode="decimal"
-              value={state.maxLength}
-              onChange={(e) => set('maxLength', e.target.value)}
-            />
-          </Field>
-          <Field
-            label={m.field_max_weight()}
-            optional={m.optional()}
-            error={errorFor('maxWeightKg')}
-          >
-            <input
-              className="t-mono"
-              inputMode="numeric"
-              value={state.maxWeight}
-              onChange={(e) => set('maxWeight', e.target.value)}
-            />
-          </Field>
-          <fieldset className="span-2 capabilities">
-            <legend>{m.field_access()}</legend>
-            <div className="capability-list">
-              <Checkbox
-                label={m.field_loading_dock()}
-                checked={state.loadingDock}
-                onChange={(v) => set('loadingDock', v)}
-              />
-              <Checkbox
-                label={m.field_semi_trailers()}
-                checked={state.semiTrailersAccepted}
-                onChange={(v) => set('semiTrailersAccepted', v)}
-              />
-            </div>
-          </fieldset>
-          <Field label={m.field_gate_phone()} optional={m.optional()}>
-            <input
-              type="tel"
-              className="t-mono"
-              value={state.gatePhone}
-              onChange={(e) => set('gatePhone', e.target.value)}
-            />
-          </Field>
-          <span />
-          <div className="span-2">
-            <Field label={m.field_instructions()} optional={m.optional()}>
-              <textarea
-                value={state.instructions}
-                onChange={(e) => set('instructions', e.target.value)}
-              />
-            </Field>
-          </div>
-        </section>
+              </Field>
+              <Field
+                label={m.field_max_weight()}
+                optional={m.optional()}
+                error={errorFor('maxWeightKg')}
+              >
+                <input
+                  className="t-mono"
+                  inputMode="numeric"
+                  value={state.maxWeight}
+                  onChange={(e) => set('maxWeight', e.target.value)}
+                />
+              </Field>
+              <fieldset className="t-span-all capabilities">
+                <legend>{m.field_access()}</legend>
+                <div className="capability-list">
+                  <Checkbox
+                    label={m.field_loading_dock()}
+                    checked={state.loadingDock}
+                    onChange={(v) => set('loadingDock', v)}
+                  />
+                  <Checkbox
+                    label={m.field_semi_trailers()}
+                    checked={state.semiTrailersAccepted}
+                    onChange={(v) => set('semiTrailersAccepted', v)}
+                  />
+                </div>
+              </fieldset>
+              <Field label={m.field_gate_phone()} optional={m.optional()}>
+                <input
+                  type="tel"
+                  className="t-mono"
+                  value={state.gatePhone}
+                  onChange={(e) => set('gatePhone', e.target.value)}
+                />
+              </Field>
+              <span />
+              <div className="t-span-all">
+                <Field label={m.field_instructions()} optional={m.optional()}>
+                  <textarea
+                    value={state.instructions}
+                    onChange={(e) => set('instructions', e.target.value)}
+                  />
+                </Field>
+              </div>
+            </FormGrid>
+          </section>
+        </CardRow>
       </form>
     </div>
   );
