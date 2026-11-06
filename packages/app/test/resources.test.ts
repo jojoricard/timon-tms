@@ -1,4 +1,4 @@
-import { type Driver, Temporal, type Vehicle } from '@timon/domain';
+import { type Driver, resourceName, Temporal, type Vehicle } from '@timon/domain';
 import { describe, expect, it } from 'vitest';
 import {
   addDocument,
@@ -18,7 +18,7 @@ const driver = (lastName: string, firstName = 'Test'): Driver => ({
   kind: 'driver',
   lastName,
   firstName,
-  displayName: '',
+  displayName: null,
   employeeNumber: null,
   phone: null,
   protectiveEquipmentIds: [],
@@ -53,10 +53,13 @@ async function created(result: Promise<{ ok: boolean }>) {
 }
 
 describe('createResource', () => {
-  it('fills the display name of a driver', async () => {
+  it('stores no display name left empty, and names the driver from the names', async () => {
     const { ports } = memoryPorts();
-    const resource = await created(createResource(ports, driver('Benali', 'Karim')));
-    expect(resource).toMatchObject({ displayName: 'K. Benali' });
+    const resource = await created(
+      createResource(ports, { ...driver('Benali', 'Karim'), displayName: '  ' }),
+    );
+    expect(resource).toMatchObject({ displayName: null });
+    expect(resourceName(resource)).toBe('K. Benali');
   });
 
   it('criterion 5: refuses a plate already active, written differently, and names its owner', async () => {
@@ -93,6 +96,64 @@ describe('createResource', () => {
       makeModel: 'Renault T 480',
     });
     expect(result).toMatchObject({ ok: true, resource: { makeModel: 'Renault T 480' } });
+  });
+});
+
+describe('drivers (rules 8 and 9)', () => {
+  it('criterion 16: a renamed driver is named and sorted after the new names', async () => {
+    const { ports } = memoryPorts();
+    for (const [last, first] of [
+      ['Dupuis', 'Anne'],
+      ['Girard', 'Thomas'],
+      ['Morel', 'Yanis'],
+    ] as const) {
+      await created(createResource(ports, driver(last, first)));
+    }
+    const xavier = await created(createResource(ports, driver("D'Artagnan", 'Xavier')));
+    const order = async () =>
+      (await listResources(ports, { kind: 'driver' })).resources.map(resourceName);
+    expect(await order()).toEqual(["X. D'Artagnan", 'A. Dupuis', 'T. Girard', 'Y. Morel']);
+
+    const renamed = await created(updateResource(ports, xavier.id, driver('Zola', 'Émile')));
+    expect(renamed).toMatchObject({ displayName: null });
+    expect(resourceName(renamed)).toBe('É. Zola');
+    expect(await order()).toEqual(['A. Dupuis', 'T. Girard', 'Y. Morel', 'É. Zola']);
+  });
+
+  it('keeps a display name the dispatcher typed when the names change', async () => {
+    const { ports } = memoryPorts();
+    const kader = await created(
+      createResource(ports, { ...driver('Benali', 'Karim'), displayName: 'Kader' }),
+    );
+    const renamed = await created(
+      updateResource(ports, kader.id, { ...driver('Benali', 'Kamel'), displayName: 'Kader' }),
+    );
+    expect(resourceName(renamed)).toBe('Kader');
+  });
+
+  it('criterion 17: an employee number is unique among drivers, archived included, without case', async () => {
+    const { ports } = memoryPorts();
+    const first = await created(
+      createResource(ports, { ...driver('Benali', 'Karim'), employeeNumber: 'E-1001' }),
+    );
+    await setArchived(ports, first.id, true);
+    expect(
+      await createResource(ports, { ...driver('Morel', 'Yanis'), employeeNumber: ' e-1001 ' }),
+    ).toEqual({
+      ok: false,
+      reason: 'employee-number-taken',
+      owner: { id: first.id, name: 'K. Benali', archived: true },
+    });
+    // A driver keeps his own number, written differently.
+    const morel = await created(
+      createResource(ports, { ...driver('Morel', 'Yanis'), employeeNumber: 'E-2002' }),
+    );
+    expect(
+      await updateResource(ports, morel.id, {
+        ...driver('Morel', 'Yanis'),
+        employeeNumber: 'e-2002',
+      }),
+    ).toMatchObject({ ok: true });
   });
 });
 

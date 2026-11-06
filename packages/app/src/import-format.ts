@@ -1,4 +1,4 @@
-import type { ResourceKind } from '@timon/domain';
+import type { BookingMethod, ResourceKind } from '@timon/domain';
 
 // The CSV format of an import: one line per resource, one column per document expiry.
 // Column names are accepted in English or French, with or without accents, case or spaces.
@@ -11,6 +11,7 @@ export type ColumnKind =
   | 'body-type'
   | 'trade-label'
   | 'capabilities'
+  | 'protective-equipment'
   | 'document';
 
 export type ImportColumn = {
@@ -83,6 +84,13 @@ export const importColumns: Record<ResourceKind, readonly ImportColumn[]> = {
     expiry('driver-card', 'driver_card', 'carte_conducteur'),
     expiry('adr-certificate', 'adr_certificate', 'certificat_adr'),
     expiry('health-check', 'health_check', 'visite_medicale'),
+    {
+      field: 'protectiveEquipmentIds',
+      en: 'protective_equipment',
+      fr: 'epi',
+      required: false,
+      kind: 'protective-equipment',
+    },
   ],
   'power-unit': vehicleColumns(true),
   trailer: vehicleColumns(false),
@@ -107,4 +115,26 @@ export const valueAliases: Record<string, readonly string[]> = {
   crane: ['crane', 'grue'],
   'side-loading': ['side loading', 'chargement lateral'],
   'temperature-control': ['temperature control', 'temperature dirigee', 'temperature controlee'],
+  ...equipmentAliases(),
 };
+
+/** Protective equipment, for drivers and sites alike (SPEC-002). */
+function equipmentAliases(): Record<string, readonly string[]> {
+  return {
+    'safety-shoes': ['safety shoes', 'shoes', 'chaussures de securite', 'chaussures'],
+    'high-visibility-vest': ['high visibility vest', 'vest', 'gilet haute visibilite', 'gilet'],
+    'hard-hat': ['hard hat', 'helmet', 'casque'],
+    'safety-glasses': ['safety glasses', 'glasses', 'lunettes de securite', 'lunettes'],
+    gloves: ['gloves', 'gants'],
+  };
+}
+
+/** How a site books its slots, in a file. */
+export const bookingAliases: Record<BookingMethod, readonly string[]> = {
+  phone: ['phone', 'telephone', 'tel'],
+  email: ['email', 'e mail', 'mail', 'courriel'],
+  portal: ['portal', 'web portal', 'portail', 'web', 'site web'],
+};
+
+/** "No booking", in a file. */
+export const noBookingAliases: readonly string[] = ['no', 'non', 'none', 'aucun'];

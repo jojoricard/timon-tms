@@ -8,9 +8,10 @@ import {
   vehicleCategories,
   vehicleKinds,
 } from '@timon/domain';
-import { type FileProblem, importLimits, readCsv, simplify } from './csv.ts';
+import { csvTemplate, type FileProblem, importLimits, readCsv, simplify } from './csv.ts';
 import { type ImportColumn, importColumns, valueAliases } from './import-format.ts';
 import {
+  EmployeeNumberTakenError,
   type ListItem,
   type NewDocument,
   type NewResource,
@@ -20,6 +21,8 @@ import {
 } from './ports.ts';
 import {
   checkDetails,
+  type EmployeeNumberOwner,
+  employeeNumberOwner,
   type FieldIssue,
   normalise,
   type PlateOwner,
@@ -38,6 +41,16 @@ export type ImportIssue =
   | {
       readonly field: 'plate';
       readonly code: 'plate-duplicated';
+      readonly params: { line: number };
+    }
+  | {
+      readonly field: 'employeeNumber';
+      readonly code: 'employee-number-taken';
+      readonly params: { readonly owner: EmployeeNumberOwner };
+    }
+  | {
+      readonly field: 'employeeNumber';
+      readonly code: 'employee-number-duplicated';
       readonly params: { line: number };
     };
 
@@ -67,9 +80,9 @@ export type ImportCheck = {
 
 type ParsedRow = ImportRow & { readonly resource: NewResource | null };
 
-/** A header line in English or French, separated by semicolons as French spreadsheets expect. */
+/** The template of an import: its header line, as `csvTemplate` writes it. */
 export function importTemplate(kind: ResourceKind, language: 'en' | 'fr'): string {
-  return `${importColumns[kind].map((c) => c[language]).join(';')}\r\n`;
+  return csvTemplate(importColumns[kind], language);
 }
 
 function findItem(items: readonly ListItem[], value: string): ListItem | undefined {
@@ -163,6 +176,17 @@ function parseRow(
       case 'trade-label':
         values[column.field] = pick(column, (raw) => findItem(lists.tradeLabels, raw)?.id);
         break;
+      case 'protective-equipment':
+        values[column.field] =
+          pick(column, (raw) => {
+            const ids = raw
+              .split(/[|,]/)
+              .map((part) => part.trim())
+              .filter((part) => part !== '')
+              .map((part) => findItem(lists.protectiveEquipment, part)?.id);
+            return ids.every((id) => id !== undefined) ? (ids as string[]) : undefined;
+          }) ?? [];
+        break;
       case 'capabilities':
         values[column.field] =
           pick(column, (raw) => {
@@ -194,10 +218,10 @@ function parseRow(
             kind,
             lastName: (values.lastName as string | null) ?? '',
             firstName: (values.firstName as string | null) ?? '',
-            displayName: (values.displayName as string | null) ?? '',
+            displayName: values.displayName as string | null,
             employeeNumber: values.employeeNumber as string | null,
             phone: values.phone as string | null,
-            protectiveEquipmentIds: [],
+            protectiveEquipmentIds: values.protectiveEquipmentIds as string[],
           }
         : {
             kind,
@@ -238,28 +262,47 @@ async function parse(
   const lists = await ports.referenceLists.get();
   const rows = read.lines.map(({ cells, line }) => parseRow(kind, line, { ...cells }, lists));
 
-  // Rule 1, within the file and against the resources already in Timon.
+  // Rules 1 and 9, within the file and against the resources already in Timon.
   let alreadyInTimon = 0;
   const firstLine = new Map<string, number>();
   const checked: ParsedRow[] = [];
   for (const row of rows) {
     const details = row.resource?.details;
-    if (!details || details.kind === 'driver') {
-      checked.push(row);
-      continue;
-    }
-    const key = plateKey(details.plate);
-    const earlier = firstLine.get(key);
-    const owner = await ports.resources.findActiveByPlate(key);
     const issues: ImportIssue[] = [];
-    if (earlier !== undefined) {
-      issues.push({ field: 'plate', code: 'plate-duplicated', params: { line: earlier } });
-    } else {
-      firstLine.set(key, row.line);
-    }
-    if (owner) {
-      alreadyInTimon += 1;
-      issues.push({ field: 'plate', code: 'plate-taken', params: { owner: plateOwner(owner) } });
+    if (details?.kind === 'driver' && details.employeeNumber !== null) {
+      const key = `employee:${details.employeeNumber.toLowerCase()}`;
+      const earlier = firstLine.get(key);
+      const owner = await ports.resources.findDriverByEmployeeNumber(details.employeeNumber);
+      if (earlier !== undefined) {
+        issues.push({
+          field: 'employeeNumber',
+          code: 'employee-number-duplicated',
+          params: { line: earlier },
+        });
+      } else {
+        firstLine.set(key, row.line);
+      }
+      if (owner) {
+        alreadyInTimon += 1;
+        issues.push({
+          field: 'employeeNumber',
+          code: 'employee-number-taken',
+          params: { owner: employeeNumberOwner(owner) },
+        });
+      }
+    } else if (details && details.kind !== 'driver') {
+      const key = `plate:${plateKey(details.plate)}`;
+      const earlier = firstLine.get(key);
+      const owner = await ports.resources.findActiveByPlate(plateKey(details.plate));
+      if (earlier !== undefined) {
+        issues.push({ field: 'plate', code: 'plate-duplicated', params: { line: earlier } });
+      } else {
+        firstLine.set(key, row.line);
+      }
+      if (owner) {
+        alreadyInTimon += 1;
+        issues.push({ field: 'plate', code: 'plate-taken', params: { owner: plateOwner(owner) } });
+      }
     }
     checked.push(issues.length > 0 ? { ...row, issues, resource: null } : row);
   }
@@ -301,8 +344,8 @@ export async function importResources(
   try {
     return { ok: true, imported: await ports.resources.createMany(resources) };
   } catch (error) {
-    // A plate was taken since the check: check again to say which.
-    if (error instanceof PlateTakenError)
+    // A plate or a number was taken since the check: check again to say which.
+    if (error instanceof PlateTakenError || error instanceof EmployeeNumberTakenError)
       return { ok: false, check: await checkImport(ports, kind, csv) };
     throw error;
   }

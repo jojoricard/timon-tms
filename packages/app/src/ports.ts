@@ -29,6 +29,11 @@ export class PlateTakenError extends Error {
   override readonly name = 'PlateTakenError';
 }
 
+/** Raised by a repository when another driver, archived or not, has the employee number. */
+export class EmployeeNumberTakenError extends Error {
+  override readonly name = 'EmployeeNumberTakenError';
+}
+
 /** Raised by a repository when another customer, archived or not, has the code (rule 1). */
 export class CustomerCodeTakenError extends Error {
   override readonly name = 'CustomerCodeTakenError';
@@ -103,11 +108,19 @@ export interface ResourceRepository {
   get(id: string): Promise<StoredResource | undefined>;
   /** The active resource with this plate key, other than `exceptId`. */
   findActiveByPlate(plateKey: string, exceptId?: string): Promise<StoredResource | undefined>;
-  /** @throws PlateTakenError */
+  /**
+   * The driver, archived or not, with this employee number compared without case, other than
+   * `exceptId` (SPEC-001 rule 9).
+   */
+  findDriverByEmployeeNumber(
+    employeeNumber: string,
+    exceptId?: string,
+  ): Promise<StoredResource | undefined>;
+  /** @throws PlateTakenError, EmployeeNumberTakenError */
   create(resource: NewResource): Promise<StoredResource>;
-  /** All or nothing, in one transaction. @throws PlateTakenError */
+  /** All or nothing, in one transaction. @throws PlateTakenError, EmployeeNumberTakenError */
   createMany(resources: readonly NewResource[]): Promise<number>;
-  /** @throws PlateTakenError */
+  /** @throws PlateTakenError, EmployeeNumberTakenError */
   update(id: string, details: ResourceDetails): Promise<StoredResource | undefined>;
   /** @throws PlateTakenError when restoring a plate another active resource now uses. */
   setArchived(id: string, archived: boolean): Promise<StoredResource | undefined>;

@@ -41,9 +41,13 @@ export function simplify(value: string): string {
     .trim();
 }
 
-/** A header line in English or French, separated by semicolons as French spreadsheets expect. */
+/**
+ * A header line in English or French, separated by semicolons as French spreadsheets expect.
+ * It starts with a byte order mark: without it, spreadsheet software reads UTF-8 in the local
+ * code page and garbles the accents (SPEC-001, Import).
+ */
 export function csvTemplate(columns: readonly CsvColumn[], language: 'en' | 'fr'): string {
-  return `${columns.map((c) => c[language]).join(';')}\r\n`;
+  return `\uFEFF${columns.map((c) => c[language]).join(';')}\r\n`;
 }
 
 export function readCsv(

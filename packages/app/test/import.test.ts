@@ -66,7 +66,7 @@ describe('checkImport', () => {
     expect(check).toMatchObject({ ready: true, summary: { valid: 1, documents: 1 } });
   });
 
-  it('lists every error with its line: kind, category, date, duplicate, plate already in Timon', async () => {
+  it('lists every error with its line: kind, category, weight, date, duplicate, plate in Timon', async () => {
     const { ports } = memoryPorts();
     await createResource(ports, {
       kind: 'trailer',
@@ -89,6 +89,7 @@ describe('checkImport', () => {
       'SR-4482;semi-trailer;O4;35000;31/02/2027',
       'sr 4471;semi-trailer;O4;35000;14/08/2027',
       'sr 4480;semi-trailer;O4;35000;29/10/2026',
+      'SR-4483;semi-trailer;O3;34000;29/10/2027',
     ].join('\n');
     const check = await checkImport(ports, 'trailer', csv);
     expect(
@@ -102,8 +103,40 @@ describe('checkImport', () => {
       [6, ['invalid-date']],
       [7, ['plate-duplicated']],
       [8, ['plate-taken']],
+      [9, ['category-weight-mismatch']],
     ]);
-    expect(check.summary).toMatchObject({ lines: 7, valid: 1, invalid: 6, alreadyInTimon: 1 });
+    expect(check.summary).toMatchObject({ lines: 8, valid: 1, invalid: 7, alreadyInTimon: 1 });
+  });
+
+  it('criterion 17: an employee number used in the file or in Timon is refused, without case', async () => {
+    const { ports } = memoryPorts();
+    await createResource(ports, {
+      kind: 'driver',
+      lastName: 'Benali',
+      firstName: 'Karim',
+      displayName: null,
+      employeeNumber: 'E-1001',
+      phone: null,
+      protectiveEquipmentIds: [],
+    });
+    const csv = [
+      'last_name;first_name;employee_number;phone',
+      'Morel;Yanis;e-1001;',
+      'Fabre;Lucie;E-2002;',
+      'Giraud;Laura;e-2002;',
+      'Haddad;Sofiane;E-3003;abc',
+    ].join('\n');
+    const check = await checkImport(ports, 'driver', csv);
+    expect(
+      check.rows
+        .filter((r) => r.issues.length > 0)
+        .map((r) => [r.line, r.issues.map((i) => i.code)]),
+    ).toEqual([
+      [2, ['employee-number-taken']],
+      [4, ['employee-number-duplicated']],
+      [5, ['phone-invalid']],
+    ]);
+    expect(check.summary).toMatchObject({ alreadyInTimon: 1 });
   });
 
   it('refuses a file over 1 MB or over 2,000 lines, and one without its required columns', async () => {
@@ -135,7 +168,7 @@ describe('checkImport', () => {
   });
 
   it('gives a template in each language', () => {
-    expect(importTemplate('trailer', 'en')).toMatch(/^plate;kind;category;gvw_kg;/);
-    expect(importTemplate('trailer', 'fr')).toMatch(/^immatriculation;type;categorie;ptac_kg;/);
+    expect(importTemplate('trailer', 'en')).toMatch(/^﻿plate;kind;category;gvw_kg;/);
+    expect(importTemplate('trailer', 'fr')).toMatch(/^﻿immatriculation;type;categorie;ptac_kg;/);
   });
 });
