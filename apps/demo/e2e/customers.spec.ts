@@ -48,6 +48,34 @@ test('criterion 1: a wrong check digit is refused, the right one proposes the VA
   await expect(page.getByRole('heading', { level: 1, name: 'Nouveau client' })).toBeVisible();
 });
 
+test('criterion 16: leaving France clears the SIRET and the VAT number computed from it', async ({
+  page,
+}) => {
+  await open(page, '/customers/new');
+  await page.getByLabel('Legal name').fill('Autre GmbH');
+  await page.getByLabel('Code', { exact: true }).fill('AUTRE-QA');
+  await page.getByLabel(/^SIRET/).fill('404 833 048 00014');
+  await expect(page.getByLabel(/^VAT number/)).toHaveValue('FR83404833048');
+  await page.getByLabel('Country').selectOption({ label: 'Germany' });
+  await expect(page.getByLabel(/^SIRET/)).toHaveCount(0);
+  await expect(page.getByLabel(/^VAT number/)).toHaveValue('');
+  await page.getByRole('button', { name: 'Create' }).click();
+  await expect(page.getByRole('heading', { level: 1, name: 'Autre GmbH' })).toBeVisible();
+});
+
+test('criterion 17: a German VAT number is accepted, "FR00MANUEL" is refused in France', async ({
+  page,
+}) => {
+  await open(page, '/customers/new');
+  const vat = page.getByLabel(/^VAT number/);
+  await vat.fill('FR00MANUEL');
+  await page.getByRole('button', { name: 'Create' }).click();
+  await expect(page.getByText(/The VAT number does not have the expected form/)).toBeVisible();
+  await page.getByLabel('Country').selectOption({ label: 'Germany' });
+  await vat.fill('DE123456789');
+  await expect(page.getByText(/The VAT number does not have the expected form/)).toHaveCount(0);
+});
+
 test('criterion 4: a contact with a name only asks for a phone or an email', async ({ page }) => {
   await open(page, '/customers/new');
   await page.getByLabel('Legal name').fill('Sans contact');
@@ -65,6 +93,50 @@ test('criterion 4: a contact with a name only asks for a phone or an email', asy
       .getByText('A contact needs a phone or an email.'),
   ).toBeVisible();
   await expect(page.getByRole('heading', { level: 1, name: 'New customer' })).toBeVisible();
+});
+
+test('criterion 18: the phone "zz" is refused and the contact still needs a phone or an email', async ({
+  page,
+}) => {
+  await open(page, '/customers/new');
+  await page.getByLabel('Legal name').fill('Téléphone faux');
+  await page.getByLabel('Code', { exact: true }).fill('TEL-FAUX');
+  await page.getByRole('button', { name: 'Add a contact' }).click();
+  const contact = page.getByRole('group', { name: 'Contact 1' });
+  await contact.getByLabel('Name', { exact: true }).fill('Yanis Mercier');
+  await contact.getByLabel('Phone').fill('zz');
+  await page.getByRole('button', { name: 'Create' }).click();
+  await expect(contact.getByText(/not a phone number/)).toBeVisible();
+  await expect(contact.getByText('A contact needs a phone or an email.')).toBeVisible();
+  await expect(page.getByRole('heading', { level: 1, name: 'New customer' })).toBeVisible();
+});
+
+test('criterion 20: a site created from a customer not yet saved joins it, and the form keeps its input', async ({
+  page,
+}) => {
+  await open(page, '/customers/new');
+  await page.getByLabel('Legal name').fill('Nouveau chargeur');
+  await page.getByLabel('Code', { exact: true }).fill('NOUV-CHARG');
+  await page.getByRole('button', { name: 'New site' }).click();
+
+  const dialog = page.getByRole('dialog', { name: 'New site' });
+  await dialog.getByLabel('Name', { exact: true }).fill('Entrepôt Corbas');
+  await dialog.getByRole('combobox', { name: 'Street' }).fill('12 rue des Frères Lumière');
+  await dialog.getByLabel('Postcode').fill('69960');
+  await dialog.getByLabel('City').fill('Corbas');
+  await dialog.getByRole('button', { name: 'Create' }).click();
+  await expect(dialog).toBeHidden();
+
+  await expect(page.getByLabel('Legal name')).toHaveValue('Nouveau chargeur');
+  await expect(page.getByLabel('Code', { exact: true })).toHaveValue('NOUV-CHARG');
+  const usualSites = page.getByRole('region', { name: 'Usual sites' });
+  await expect(usualSites.getByRole('row', { name: /Entrepôt Corbas/ })).toBeVisible();
+  await page.getByRole('button', { name: 'Create' }).click();
+  await expect(page.getByRole('heading', { level: 1, name: 'Nouveau chargeur' })).toBeVisible();
+  await expect(usualSites.getByRole('row', { name: /Entrepôt Corbas/ })).toBeVisible();
+
+  await open(page, '/customers/sites');
+  await expect(page.getByRole('table')).toContainText('Entrepôt Corbas');
 });
 
 test('criterion 14: the equipment ticked on a driver shows in the form and the list', async ({
@@ -113,7 +185,7 @@ test('a row opens its record from any cell; a button in the row keeps its own ac
 
   const usualSites = page.getByRole('region', { name: 'Usual sites' }).getByRole('row');
   await expect(usualSites).toHaveCount(5);
-  await page.getByRole('button', { name: 'Remove Bricolage Chassieu' }).click();
+  await page.getByRole('button', { name: 'Remove Bricolage Chassieu from the list' }).click();
   await expect(usualSites).toHaveCount(4);
   await expect(page.getByRole('heading', { level: 1, name: 'Dupont Matériaux' })).toBeVisible();
 

@@ -25,6 +25,7 @@ async function newDriver(page: Page, lastName: string) {
 test('an archived resource says so in one banner', async ({ page }) => {
   await newDriver(page, 'Archive');
   await page.getByRole('button', { name: 'Archive' }).click();
+  await page.getByRole('alertdialog').getByRole('button', { name: 'Archive' }).click();
   await expect(page.getByRole('button', { name: 'Restore' })).toBeVisible();
   const banners = page.locator('main .t-banner');
   await expect(banners).toHaveCount(1);
@@ -88,4 +89,41 @@ test('switching the language keeps an import under way', async ({ page }) => {
   await expect(page.getByRole('button', { name: 'Tout importer (1)' })).toBeEnabled();
   await expect(page.getByRole('cell', { name: 'LANG-1' })).toBeVisible();
   await expect(page.locator('html')).toHaveAttribute('lang', 'fr');
+});
+
+test('in English, every date is British: day before month, no comma after the weekday', async ({
+  page,
+}) => {
+  const american =
+    /\b(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]* \d{1,2}, \d{4}\b|\b(?:Mon|Tue|Wed|Thu|Fri|Sat|Sun)[a-z]*, /;
+  for (const path of [
+    '/resources/drivers',
+    '/resources/trailers',
+    '/resources/expiries',
+    '/resources/units',
+    '/customers',
+    '/customers/sites',
+  ]) {
+    await open(page, path);
+    await expect(page.locator('main table').first()).toBeVisible();
+    expect(await page.locator('main').innerText(), path).not.toMatch(american);
+  }
+  await open(page, '/resources/drivers');
+  await page.getByRole('link', { name: 'Karim Benali' }).click();
+  await expect(page.getByRole('region', { name: /^Units/ })).toBeVisible();
+  expect(await page.locator('main').innerText()).not.toMatch(american);
+  await expect(page.locator('main')).toContainText(/\d{2}\/\d{2}\/\d{4}/);
+});
+
+test('the expiry counters say they cover every resource, whatever the filters', async ({
+  page,
+}) => {
+  await open(page, '/resources/expiries');
+  await expect(
+    page.getByText('These counters cover every resource in service, whatever the filters below.'),
+  ).toBeVisible();
+  const counters = (await page.locator('.t-metrics').textContent()) ?? '';
+  await page.getByRole('button', { name: 'Trailers' }).click();
+  await page.getByLabel('Blocking only').check();
+  await expect(page.locator('.t-metrics')).toHaveText(counters);
 });

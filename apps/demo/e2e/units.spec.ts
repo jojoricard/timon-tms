@@ -76,7 +76,7 @@ test('criterion 8: a change of driver ends the unit and starts another', async (
   const dialog = page.getByRole('dialog', { name: "Change S. Moreau's unit" });
   const from = `${parisDay(1)}T06:00`;
   await dialog.getByLabel('From').fill(from);
-  await dialog.getByLabel('New driver').selectOption({ label: 'Marc Laurent (C · CE)' });
+  await dialog.getByRole('radio', { name: /Marc Laurent/ }).check();
   await expect(dialog.getByText('Marc Laurent is free from')).toBeVisible();
   await dialog.getByRole('button', { name: /Change driver from/ }).click();
   await expect(dialog).toBeHidden();
@@ -95,6 +95,38 @@ test('criterion 8: a change of driver ends the unit and starts another', async (
   await expect(drivers).toContainText('Samuel Moreau');
 });
 
+test('criterion 13: the change of driver lists the drivers it cannot take, greyed, with the reason', async ({
+  page,
+}) => {
+  await open(page, '/resources/units', '/api/units');
+  await page.getByRole('button', { name: 'Change the driver or trailer of S. Moreau' }).click();
+  const dialog = page.getByRole('dialog', { name: "Change S. Moreau's unit" });
+  await dialog.getByLabel('From').fill(`${parisDay(1)}T06:00`);
+  const giraud = dialog.getByRole('radio', { name: /Laura Giraud/ });
+  await expect(giraud).toBeDisabled();
+  await expect(giraud).toHaveAccessibleName(/Holds C1, needs CE/);
+  const marchand = dialog.getByRole('radio', { name: /Élodie Marchand/ });
+  await expect(marchand).toBeDisabled();
+  await expect(marchand).toHaveAccessibleName(/In É\. Marchand since/);
+  await expect(dialog.getByRole('radio', { name: /Marc Laurent/ })).toBeEnabled();
+  await expect(dialog.getByRole('radio', { name: /Samuel Moreau/ })).toHaveCount(0);
+});
+
+test('criterion 14: a tractor in a unit with no end cannot start another; the unit is named', async ({
+  page,
+}) => {
+  await open(page, '/resources/power-units', '/api/reference-lists');
+  await page.getByRole('link', { name: 'CD-456-EF' }).click();
+  const units = page.getByRole('region', { name: /^Units/ });
+  await expect(units.getByRole('button', { name: 'New unit with this vehicle' })).toBeDisabled();
+  await expect(units).toContainText('In the unit H. Perrin, with no end');
+  await expect(units.getByRole('link', { name: 'New unit with this vehicle' })).toHaveCount(0);
+
+  await open(page, '/resources/power-units', '/api/reference-lists');
+  await page.getByRole('link', { name: 'MN-345-OP' }).click();
+  await expect(page.getByRole('link', { name: 'New unit with this vehicle' })).toBeVisible();
+});
+
 test('criterion 11: a trailer in a running unit cannot be archived; the unit is named', async ({
   page,
 }) => {
@@ -105,6 +137,7 @@ test('criterion 11: a trailer in a running unit cannot be archived; the unit is 
   await expect(units.getByRole('row', { name: /M\. Laurent/ })).toContainText('Ended');
 
   await page.getByRole('button', { name: 'Archive' }).click();
+  await page.getByRole('alertdialog').getByRole('button', { name: 'Archive' }).click();
   await expect(
     page.getByRole('alert').filter({ hasText: 'This resource belongs to the unit H. Perrin' }),
   ).toContainText('End the unit first.');
