@@ -2,6 +2,7 @@ import type { z } from '@hono/zod-openapi';
 import type {
   DocumentView,
   Expiry as ExpiryView,
+  GuideColumn,
   ImportCheck as ImportCheckView,
   NewDocument,
   ResourceView,
@@ -12,6 +13,7 @@ import type {
   DocumentInput,
   Expiry,
   ImportCheck,
+  ImportGuide,
   Resource,
   ResourceInput,
 } from './schemas.ts';
@@ -81,7 +83,7 @@ export function fromInput(input: z.infer<typeof ResourceInput>): ResourceDetails
       kind: 'driver',
       lastName: input.lastName,
       firstName: input.firstName,
-      displayName: input.displayName ?? '',
+      displayName: input.displayName ?? null,
       employeeNumber: input.employeeNumber ?? null,
       phone: input.phone ?? null,
       protectiveEquipmentIds: input.protectiveEquipmentIds ?? [],
@@ -108,4 +110,15 @@ export function fromDocumentInput(input: z.infer<typeof DocumentInput>): NewDocu
     issuedOn: input.issuedOn ? Temporal.PlainDate.from(input.issuedOn) : null,
     expiresOn: Temporal.PlainDate.from(input.expiresOn),
   };
+}
+
+/** The columns of an import file, with mutable copies for the response schema. */
+export function toImportGuide(guide: readonly GuideColumn[]): z.infer<typeof ImportGuide> {
+  return guide.map((column) => ({
+    ...column,
+    accepts:
+      'values' in column.accepts
+        ? { kind: column.accepts.kind, values: column.accepts.values.map((v) => [...v]) }
+        : { kind: column.accepts.kind },
+  }));
 }

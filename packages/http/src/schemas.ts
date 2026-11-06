@@ -30,11 +30,18 @@ export const PlateOwner = z
   })
   .openapi('PlateOwner');
 
+/** The driver, archived or not, that already has an employee number (SPEC-001 rule 9). */
+export const EmployeeNumberOwner = z
+  .object({ id: z.uuid(), name: z.string(), archived: z.boolean() })
+  .openapi('EmployeeNumberOwner');
+
 export const Issue = z
   .object({
     field: z.string(),
     code: z.string(),
-    params: z.record(z.string(), z.union([z.string(), z.number(), PlateOwner])).optional(),
+    params: z
+      .record(z.string(), z.union([z.string(), z.number(), PlateOwner, EmployeeNumberOwner]))
+      .optional(),
   })
   .openapi('Issue');
 
@@ -43,10 +50,12 @@ export const Problem = z
     error: z.enum([
       'invalid-request',
       'not-found',
+      'archived',
       'unknown-resource',
       'overlap',
       'invalid',
       'plate-taken',
+      'employee-number-taken',
       'document-type-taken',
       'import-too-large',
       'in-unit',
@@ -67,6 +76,10 @@ export const Invalid = z
 export const PlateTaken = z
   .object({ error: z.literal('plate-taken'), owner: PlateOwner })
   .openapi('PlateTaken');
+
+export const EmployeeNumberTaken = z
+  .object({ error: z.literal('employee-number-taken'), owner: EmployeeNumberOwner })
+  .openapi('EmployeeNumberTaken');
 
 /** A unit named in a message: SPEC-003 rules 4 and 7. */
 export const UnitRef = z
@@ -221,6 +234,33 @@ export const ExpiryList = z
   .openapi('ExpiryList');
 
 export const ImportInput = z.object({ csv: z.string() }).openapi('ImportInput');
+
+/** SPEC-001, Import: each column of a file, and the values it accepts. */
+export const ImportGuide = z
+  .array(
+    z.object({
+      field: z.string(),
+      header: z.string(),
+      required: z.boolean(),
+      accepts: z.object({
+        kind: z.enum([
+          'text',
+          'date',
+          'weight',
+          'number',
+          'metres',
+          'yes-no',
+          'country',
+          'hours',
+          'one-of',
+          'list-of',
+        ]),
+        /** Each accepted value, as the ways it may be written. */
+        values: z.array(z.array(z.string())).optional(),
+      }),
+    }),
+  )
+  .openapi('ImportGuide');
 
 export const ImportCheck = z
   .object({

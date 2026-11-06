@@ -59,7 +59,7 @@ async function driver(lastName: string, firstName: string) {
     firstName,
   });
   expect(status).toBe(201);
-  return body as { id: string; displayName: string };
+  return body as { id: string; name: string; displayName: string | null };
 }
 
 async function document(resourceId: string, code: string, expiresOn: string) {
@@ -74,7 +74,7 @@ async function document(resourceId: string, code: string, expiresOn: string) {
 describe('documents and status', () => {
   it('criteria 1 to 3: a CE licence expiring on 2026-11-20', async () => {
     const benali = await driver('Benali', 'Karim');
-    expect(benali.displayName).toBe('K. Benali');
+    expect([benali.name, benali.displayName]).toEqual(['K. Benali', null]);
     await document(benali.id, 'licence-ce', '2026-11-20');
 
     const status = async () => {
@@ -142,6 +142,26 @@ describe('rules on vehicles', () => {
     });
   });
 
+  it('criterion 14: the category agrees with the gross vehicle weight', async () => {
+    const light = await call('POST', '/resources', { ...tractor('MN-145-OP'), gvwKg: 7_500 });
+    expect(light.status).toBe(400);
+    expect(light.body.issues).toEqual([
+      {
+        field: 'category',
+        code: 'category-weight-mismatch',
+        params: { category: 'N3', gvwKg: 7_500, overKg: 12_000 },
+      },
+    ]);
+    const semi = await call('POST', '/resources', {
+      kind: 'trailer',
+      vehicleKind: 'semi-trailer',
+      plate: 'SR-3400',
+      category: 'O3',
+      gvwKg: 34_000,
+    });
+    expect([semi.status, semi.body.issues?.[0]?.code]).toEqual([400, 'category-weight-mismatch']);
+  });
+
   it('criterion 7: a tractor takes no body type', async () => {
     const { status, body } = await call('POST', '/resources', {
       ...tractor('KL-678-MN'),
@@ -149,6 +169,154 @@ describe('rules on vehicles', () => {
     });
     expect(status).toBe(400);
     expect(body.issues).toEqual([{ field: 'bodyTypeId', code: 'body-type-not-allowed' }]);
+  });
+});
+
+describe('drivers (rules 8 to 10)', () => {
+  const names = (drivers: { firstName: string; lastName: string }[]) =>
+    drivers.map((d) => `${d.firstName} ${d.lastName}`);
+
+  it('criterion 16: a renamed driver is named and sorted after the new names everywhere', async () => {
+    at('2026-10-06T10:00:00Z');
+    const xavier = await driver("D'Artagnan", 'Xavier');
+    const before = (await call('GET', '/resources?kind=driver')).body.resources;
+    const renamed = await call('PUT', `/resources/${xavier.id}`, {
+      kind: 'driver',
+      lastName: 'Zola',
+      firstName: 'Émile',
+    });
+    expect([renamed.status, renamed.body.name, renamed.body.displayName]).toEqual([
+      200,
+      'É. Zola',
+      null,
+    ]);
+    const after = names((await call('GET', '/resources?kind=driver')).body.resources);
+    expect(after).toEqual(
+      names(before)
+        .filter((n) => n !== "Xavier D'Artagnan")
+        .concat('Émile Zola')
+        .sort((a, b) => {
+          const last = (n: string) => n.split(' ').slice(1).join(' ');
+          return last(a).localeCompare(last(b), 'fr', { sensitivity: 'base' });
+        }),
+    );
+
+    // The units screen names him and sorts the drivers left free the same way.
+    const free = (await call('GET', '/units')).body.free.driver;
+    expect(free.find((d: any) => d.id === xavier.id).name).toBe('É. Zola');
+    const lastNames = free.map((d: any) => d.fullName.split(' ').slice(1).join(' '));
+    expect(lastNames).toEqual(
+      [...lastNames].sort((a, b) => a.localeCompare(b, 'fr', { sensitivity: 'base' })),
+    );
+  });
+
+  it('criterion 17: an archived driver keeps his employee number, compared without case', async () => {
+    const { body: first } = await call('POST', '/resources', {
+      kind: 'driver',
+      lastName: 'Arnaud',
+      firstName: 'Paul',
+      employeeNumber: 'E-9001',
+    });
+    await call('POST', `/resources/${first.id}/archive`);
+    const second = await call('POST', '/resources', {
+      kind: 'driver',
+      lastName: 'Bernard',
+      firstName: 'Luc',
+      employeeNumber: 'e-9001',
+    });
+    expect(second).toEqual({
+      status: 409,
+      body: {
+        error: 'employee-number-taken',
+        owner: { id: first.id, name: 'P. Arnaud', archived: true },
+      },
+    });
+  });
+
+  it('criterion 18: the phone "abc" is refused, French and foreign numbers are accepted', async () => {
+    const make = (phone: string) =>
+      call('POST', '/resources', { kind: 'driver', lastName: 'Tel', firstName: 'Test', phone });
+    const refused = await make('abc');
+    expect([refused.status, refused.body.issues]).toEqual([
+      400,
+      [{ field: 'phone', code: 'phone-invalid' }],
+    ]);
+    expect((await make('06 12 34 56 78')).status).toBe(201);
+    expect((await make('+49 30 1234567')).status).toBe(201);
+  });
+});
+
+describe('archived resources (rule 5)', () => {
+  it('criterion 15: nothing of an archived driver changes, documents included, until restored', async () => {
+    at('2026-10-06T10:00:00Z');
+    const roux = await driver('Roux', 'Julien');
+    const cpc = await document(roux.id, 'cpc', '2030-01-15');
+    const cpcId = cpc.documents[0].id;
+    await call('POST', `/resources/${roux.id}/archive`);
+
+    const refused = { status: 409, body: { error: 'archived' } };
+    expect(
+      await call('PUT', `/resources/${roux.id}`, {
+        kind: 'driver',
+        lastName: 'Roux',
+        firstName: 'Jules',
+      }),
+    ).toEqual(refused);
+    expect(
+      await call('POST', `/resources/${roux.id}/documents`, {
+        documentTypeId: typeId('health-check'),
+        expiresOn: '2027-01-15',
+      }),
+    ).toEqual(refused);
+    expect(
+      await call('PUT', `/documents/${cpcId}`, {
+        documentTypeId: typeId('cpc'),
+        expiresOn: '2031-01-15',
+      }),
+    ).toEqual(refused);
+    expect(await call('DELETE', `/documents/${cpcId}`)).toEqual(refused);
+
+    const { body } = await call('GET', `/resources/${roux.id}`);
+    expect([body.firstName, body.documents.length, body.documents[0].expiresOn]).toEqual([
+      'Julien',
+      1,
+      '2030-01-15',
+    ]);
+
+    await call('POST', `/resources/${roux.id}/restore`);
+    const changed = await call('PUT', `/resources/${roux.id}`, {
+      kind: 'driver',
+      lastName: 'Roux',
+      firstName: 'Jules',
+    });
+    expect([changed.status, changed.body.firstName]).toEqual([200, 'Jules']);
+  });
+});
+
+describe('import screen (SPEC-001, Import)', () => {
+  it('serves templates with a byte order mark and the accepted values of each column', async () => {
+    const response = await app.request('/api/imports/driver/template?lang=fr');
+    const template = new Uint8Array(await response.arrayBuffer());
+    expect([...template.slice(0, 3)]).toEqual([0xef, 0xbb, 0xbf]);
+    expect(new TextDecoder().decode(template)).toContain(';epi');
+
+    const { status, body } = await call('GET', '/imports/power-unit/columns?lang=fr');
+    expect(status).toBe(200);
+    expect(body.find((c: any) => c.field === 'vehicleKind')).toEqual({
+      field: 'vehicleKind',
+      header: 'type',
+      required: true,
+      accepts: {
+        kind: 'one-of',
+        values: [
+          ['tractor', 'tracteur'],
+          ['rigid truck', 'rigid', 'porteur'],
+          ['light van', 'van', 'vul', 'utilitaire', 'vehicule utilitaire leger'],
+        ],
+      },
+    });
+    expect((await call('GET', '/imports/customers/columns')).status).toBe(200);
+    expect((await call('GET', '/imports/sites/columns?lang=fr')).body[0].header).toBe('nom');
   });
 });
 
@@ -187,6 +355,16 @@ describe('GET /api/expiries', () => {
       daysUntil: 75,
       warnDays: 90,
     });
+  });
+});
+
+describe('expiry counters (SPEC-001, Expiries)', () => {
+  it('cover every resource whatever the filters', async () => {
+    const all = (await call('GET', '/expiries')).body;
+    for (const query of ['?kind=trailer', '?kind=driver&blocking=true', '?blocking=true']) {
+      const filtered = (await call('GET', `/expiries${query}`)).body;
+      expect([query, filtered.summary]).toEqual([query, all.summary]);
+    }
   });
 });
 

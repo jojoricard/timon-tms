@@ -6,6 +6,7 @@ import {
   countryFilters,
   createCustomer,
   createSite,
+  customerImportGuide,
   customerSummary,
   customerTemplate,
   findNearbySites,
@@ -22,6 +23,7 @@ import {
   setCustomerArchived,
   setSiteArchived,
   siteFilters,
+  siteImportGuide,
   siteTemplate,
   suggestAddresses,
   updateCustomer,
@@ -47,7 +49,8 @@ import {
   SiteWithNearby,
   SuggestionQuery,
 } from './customer-schemas.ts';
-import { ImportInput, Invalid, Problem } from './schemas.ts';
+import { ImportGuide, ImportInput, Invalid, Problem } from './schemas.ts';
+import { toImportGuide } from './to-json.ts';
 import { validationHook } from './validation.ts';
 
 const json = <T extends z.ZodType>(schema: T, description: string) => ({
@@ -277,6 +280,12 @@ const routes = {
       200: { content: { 'text/csv': { schema: z.string() } }, description: 'CSV header line' },
     },
   }),
+  customerImportGuide: createRoute({
+    method: 'get',
+    path: '/imports/customers/columns',
+    request: { query: language },
+    responses: { 200: json(ImportGuide, 'The columns of the file and the values they accept') },
+  }),
   checkCustomerImport: createRoute({
     method: 'post',
     path: '/imports/customers/check',
@@ -302,6 +311,12 @@ const routes = {
     responses: {
       200: { content: { 'text/csv': { schema: z.string() } }, description: 'CSV header line' },
     },
+  }),
+  siteImportGuide: createRoute({
+    method: 'get',
+    path: '/imports/sites/columns',
+    request: { query: language },
+    responses: { 200: json(ImportGuide, 'The columns of the file and the values they accept') },
   }),
   checkSiteImport: createRoute({
     method: 'post',
@@ -503,6 +518,15 @@ export function customerApi(ports: Ports) {
       const lang = c.req.valid('query').lang ?? 'en';
       csv(c, `timon-sites-${lang}.csv`);
       return c.body(siteTemplate(lang), 200, { 'Content-Type': 'text/csv; charset=utf-8' });
+    })
+    .openapi(routes.customerImportGuide, (c) => {
+      const guide = customerImportGuide(c.req.valid('query').lang ?? 'en');
+      return c.json(toImportGuide(guide), 200);
+    })
+    .openapi(routes.siteImportGuide, async (c) => {
+      const lists = await ports.referenceLists.get();
+      const guide = siteImportGuide(c.req.valid('query').lang ?? 'en', lists);
+      return c.json(toImportGuide(guide), 200);
     })
     .openapi(routes.checkSiteImport, async (c) => {
       return c.json(toSiteImportCheck(await checkSiteImport(ports, c.req.valid('json').csv)), 200);
