@@ -1,8 +1,11 @@
 import { describe, expect, it } from 'vitest';
 import {
   checkSite,
+  countries,
+  countryBounds,
   findDuplicateSites,
   haversineMetres,
+  isInCountry,
   type SiteDetails,
   type SiteForDuplicates,
   streetKey,
@@ -122,5 +125,31 @@ describe('checkSite', () => {
       'maxLengthCm:value-not-positive',
       'bookingMethod:booking-method-required',
     ]);
+  });
+});
+
+describe('countryBounds (locating a site)', () => {
+  it('has a box for every country, south-west below north-east', () => {
+    for (const country of countries) {
+      const { south, west, north, east } = countryBounds[country];
+      expect([country, south < north && west < east]).toEqual([country, true]);
+    }
+  });
+
+  it('criterion 19: a pin near Lyon is outside Germany, one in Berlin is inside', () => {
+    const lyon = { latitude: 45.75, longitude: 4.85 };
+    const berlin = { latitude: 52.52, longitude: 13.405 };
+    expect(isInCountry(lyon, 'DE')).toBe(false);
+    expect(isInCountry(berlin, 'DE')).toBe(true);
+    expect(isInCountry(lyon, 'FR')).toBe(true);
+  });
+
+  it('keeps the overseas departments outside France: the box is mainland France and Corsica', () => {
+    expect(isInCountry({ latitude: 42.7, longitude: 9.45 }, 'FR')).toBe(true); // Bastia
+    expect(isInCountry({ latitude: -20.88, longitude: 55.45 }, 'FR')).toBe(false); // Saint-Denis
+  });
+
+  it('says nothing for a country it does not know', () => {
+    expect(isInCountry({ latitude: 0, longitude: 0 }, 'XX')).toBe(true);
   });
 });

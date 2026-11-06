@@ -42,7 +42,7 @@ const driver = (firstName: string, lastName: string): UnitResource => ({
   kind: 'driver',
   firstName,
   lastName,
-  displayName: `${firstName[0]}. ${lastName}`,
+  displayName: null,
   employeeNumber: null,
   phone: null,
   protectiveEquipmentIds: [],
