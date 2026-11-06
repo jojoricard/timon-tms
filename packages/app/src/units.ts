@@ -2,9 +2,11 @@ import {
   checkComposition,
   checkUnitPeriod,
   companyDay,
+  compareDrivers,
   compareMemberStatus,
   contains,
   documentStatus,
+  driverName,
   fullName,
   type Issue,
   type LicenceCategory,
@@ -159,7 +161,7 @@ function memberView(resource: StoredResource, lists: ReferenceLists): MemberView
     return {
       id: resource.id,
       kind: 'driver',
-      name: resource.displayName,
+      name: driverName(resource),
       fullName: fullName(resource),
       archived: resource.archived,
       vehicleKind: null,
@@ -305,6 +307,17 @@ const kindOrder = (unit: UnitView) =>
 const byName = (a: { name: string }, b: { name: string }) =>
   a.name.localeCompare(b.name, 'fr', { sensitivity: 'base', numeric: true });
 
+/** Free resources and candidates: drivers by last then first name (SPEC-001 rule 8). */
+function byMember(ctx: Context) {
+  return (a: MemberView, b: MemberView): number => {
+    const one = ctx.resources.get(a.id);
+    const other = ctx.resources.get(b.id);
+    return one?.kind === 'driver' && other?.kind === 'driver'
+      ? compareDrivers(one, other)
+      : byName(a, b);
+  };
+}
+
 export type UnitsAt = {
   readonly at: Temporal.Instant;
   /** By kind of power unit (tractors, rigid trucks, light vans), then by name. */
@@ -326,7 +339,7 @@ export async function unitsAt(ports: Ports, at?: Temporal.Instant): Promise<Unit
       [...ctx.resources.values()]
         .filter((r) => r.kind === role && !r.archived && !busy.has(r.id))
         .map((r) => memberView(r, ctx.lists))
-        .sort(byName),
+        .sort(byMember(ctx)),
     ]),
   ) as Record<UnitRole, MemberView[]>;
   return {
@@ -451,7 +464,7 @@ export async function unitOptions(ports: Ports, input: OptionsInput): Promise<Un
           }
           return { resource: view, reason: issues[0] ?? null };
         })
-        .sort((a, b) => byName(a.resource, b.resource));
+        .sort((a, b) => byMember(ctx)(a.resource, b.resource));
       return [role, list];
     }),
   ) as Record<UnitRole, Candidate[]>;

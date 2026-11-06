@@ -9,7 +9,13 @@ import {
   requiredLicence,
   sortCategories,
 } from './licence.ts';
-import type { Driver, Resource, ResourceKind, Vehicle } from './resource.ts';
+import {
+  type Driver,
+  driverName,
+  type Resource,
+  type ResourceKind,
+  type Vehicle,
+} from './resource.ts';
 import { Temporal } from './temporal.ts';
 
 /** The place a resource takes in a unit: one of each at most. */
@@ -146,10 +152,10 @@ export function checkUnitPeriod(start: Temporal.Instant, end: Temporal.Instant |
 /** A unit's name: the one given, else its driver's, else its power unit's plate. */
 export function unitName(
   name: string | null,
-  driver: Pick<Driver, 'displayName'> | null,
+  driver: Pick<Driver, 'firstName' | 'lastName' | 'displayName'> | null,
   powerUnit: Pick<Vehicle, 'plate'>,
 ): string {
-  return name ?? driver?.displayName ?? powerUnit.plate;
+  return name ?? (driver ? driverName(driver) : powerUnit.plate);
 }
 
 /** A document a member of the unit must have, by the code of its type (SPEC-001). */

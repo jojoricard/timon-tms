@@ -5,6 +5,7 @@ import {
   canHaveBodyType,
   canPull,
   checkResource,
+  defaultDisplayName,
   type ResourceDetails,
   type ResourceKind,
   textLimits,
@@ -14,6 +15,7 @@ import {
 } from '@timon/domain';
 import type {
   DocumentJson,
+  EmployeeNumberOwnerJson,
   IssueJson,
   PlateOwnerJson,
   ReferenceListsJson,
@@ -34,10 +36,11 @@ import {
 } from '@timon/ui';
 import { type FormEvent, useEffect, useState } from 'react';
 import { ApiError, api, ok } from '../api.ts';
+import { useConfirm } from '../confirm.tsx';
 import { equipmentLabel } from '../customers/customer-labels.ts';
 import { errorText, keys, useReferenceLists, useRefreshResources, useResource } from '../data.ts';
 import { bannerError, IssueBanner, useFormIssues } from '../form.tsx';
-import { failureText, issueSentence, ownerKind } from '../issues.ts';
+import { employeeNumberTakenText, failureText, issueSentence, ownerKind } from '../issues.ts';
 import { kindSlugs, newTitle, tabLabel } from '../kinds.ts';
 import {
   entryLabel,
@@ -153,14 +156,7 @@ function toInput(
       phone: s.phone || null,
       protectiveEquipmentIds: s.protectiveEquipmentIds,
     } as const;
-    // The display name is filled by the server when left empty.
-    const issues = checkResource({
-      ...input,
-      displayName: s.displayName || 'x',
-      employeeNumber: null,
-      phone: null,
-    });
-    return { input, issues };
+    return { input, issues: checkResource(input) };
   }
   // What the domain cannot check yet: a field left empty, a weight that is not digits.
   const missing: IssueJson[] = [];
@@ -212,6 +208,7 @@ function ResourceForm({
   const [initial] = useState(() => initialState(kind, resource));
   const [state, setState] = useState(initial);
   const [plateOwner, setPlateOwner] = useState<PlateOwnerJson>();
+  const [numberOwner, setNumberOwner] = useState<EmployeeNumberOwnerJson>();
   const [documentChanged, setDocumentChanged] = useState(false);
   const guard = useLeaveGuard(changed(initial, state) || documentChanged);
 
@@ -228,6 +225,7 @@ function ResourceForm({
     form.touch(field);
     onNotice(undefined);
     if (field === 'plate') setPlateOwner(undefined);
+    if (field === 'employeeNumber') setNumberOwner(undefined);
   };
   const limit = textLimits.resource;
 
@@ -254,9 +252,13 @@ function ResourceForm({
       if (error instanceof ApiError && error.code === 'plate-taken') {
         setPlateOwner((error.body as { owner?: PlateOwnerJson }).owner);
       }
+      if (error instanceof ApiError && error.code === 'employee-number-taken') {
+        setNumberOwner((error.body as { owner?: EmployeeNumberOwnerJson }).owner);
+      }
     },
   });
 
+  const confirm = useConfirm();
   const archive = useSubmit({
     mutationFn: async (archived: boolean) => {
       const param = { param: { id: resource?.id ?? '' } };
@@ -280,11 +282,13 @@ function ResourceForm({
     if (form.submit() && input) save.mutate(input);
   };
 
+  const readOnly = resource?.archived ?? false;
   const vehicleKind = state.vehicleKind;
   const categories =
     kind === 'power-unit' ? (['N1', 'N2', 'N3'] as const) : (['O1', 'O2', 'O3', 'O4'] as const);
   const kindText = vehicleKind ? vehicleKindLabel[vehicleKind]() : '';
-  const writeError = bannerError(save.error, ['plate-taken']) ?? archive.error;
+  const writeError =
+    bannerError(save.error, ['plate-taken', 'employee-number-taken']) ?? archive.error;
 
   return (
     <div className="page">
@@ -337,7 +341,16 @@ function ResourceForm({
             {resource ? (
               <Button
                 variant="danger"
-                onClick={() => archive.mutate(!resource.archived)}
+                onClick={() =>
+                  resource.archived
+                    ? archive.mutate(false)
+                    : confirm.ask({
+                        title: m.confirm_archive_title({ name: resource.name }),
+                        text: m.confirm_archive_resource_text(),
+                        confirmLabel: m.action_archive(),
+                        onConfirm: () => archive.mutate(true),
+                      })
+                }
                 busy={archive.isPending}
               >
                 {resource.archived ? m.action_restore() : m.action_archive()}
@@ -346,14 +359,17 @@ function ResourceForm({
             <Link className="t-button" to="/resources/$kind" params={{ kind: kindSlugs[kind] }}>
               {m.action_cancel()}
             </Link>
-            <Button type="submit" form="resource-form" variant="primary" busy={save.isPending}>
-              {resource ? m.action_save() : m.action_create()}
-            </Button>
+            {readOnly ? null : (
+              <Button type="submit" form="resource-form" variant="primary" busy={save.isPending}>
+                {resource ? m.action_save() : m.action_create()}
+              </Button>
+            )}
           </>
         }
       />
 
       {guard.dialog}
+      {confirm.dialog}
       {resource?.archived ? <Banner tone="warning">{m.archived_banner()}</Banner> : null}
       {notice ? <Banner tone={notice.tone}>{notice.text}</Banner> : null}
       {writeError ? <Banner tone="conflict">{failureText(writeError, lists)}</Banner> : null}
@@ -367,244 +383,262 @@ function ResourceForm({
           onSubmit={submit}
           noValidate
         >
-          <h2>{m.section_identity()}</h2>
-          <FormGrid>
-            {kind === 'driver' ? (
-              <>
-                <Field label={m.field_last_name()} error={errorFor('lastName')}>
-                  <input
-                    value={state.lastName}
-                    maxLength={limit.lastName}
-                    onChange={(e) => set('lastName', e.target.value)}
-                    autoComplete="family-name"
-                  />
-                </Field>
-                <Field label={m.field_first_name()} error={errorFor('firstName')}>
-                  <input
-                    value={state.firstName}
-                    maxLength={limit.firstName}
-                    onChange={(e) => set('firstName', e.target.value)}
-                    autoComplete="given-name"
-                  />
-                </Field>
-                <Field
-                  label={m.field_display_name()}
-                  optional={m.optional()}
-                  hint={m.display_name_hint()}
-                  error={errorFor('displayName')}
-                >
-                  <input
-                    value={state.displayName}
-                    maxLength={limit.displayName}
-                    onChange={(e) => set('displayName', e.target.value)}
-                  />
-                </Field>
-                <Field
-                  label={m.field_employee_number()}
-                  optional={m.optional()}
-                  error={errorFor('employeeNumber')}
-                >
-                  <input
-                    value={state.employeeNumber}
-                    maxLength={limit.employeeNumber}
-                    onChange={(e) => set('employeeNumber', e.target.value)}
-                  />
-                </Field>
-                <Field label={m.field_phone()} optional={m.optional()} error={errorFor('phone')}>
-                  <input
-                    type="tel"
-                    value={state.phone}
-                    maxLength={limit.phone}
-                    onChange={(e) => set('phone', e.target.value)}
-                    autoComplete="tel"
-                  />
-                </Field>
-                <fieldset className="t-span-all capabilities">
-                  <legend>{m.section_driver_protective_equipment()}</legend>
-                  <p className="t-field-hint">
-                    {m.pe_held({
-                      held: state.protectiveEquipmentIds.length,
-                      total: lists.protectiveEquipment.length,
-                    })}
-                  </p>
-                  <div className="capability-list">
-                    {lists.protectiveEquipment.map((item) => (
-                      <Checkbox
-                        key={item.id}
-                        label={equipmentLabel(item)}
-                        checked={state.protectiveEquipmentIds.includes(item.id)}
-                        onChange={(checked) =>
-                          set(
-                            'protectiveEquipmentIds',
-                            checked
-                              ? [...state.protectiveEquipmentIds, item.id]
-                              : state.protectiveEquipmentIds.filter((x) => x !== item.id),
-                          )
-                        }
-                      />
-                    ))}
-                  </div>
-                  <p className="t-field-hint">{m.pe_hint()}</p>
-                </fieldset>
-              </>
-            ) : (
-              <>
-                <Field
-                  label={m.field_plate()}
-                  hint={m.plate_hint()}
-                  error={
-                    plateOwner ? (
-                      <>
-                        {m.plate_taken({ name: plateOwner.name, kind: ownerKind(plateOwner) })}{' '}
-                        <Link
-                          to="/resources/$kind/$id"
-                          params={{ kind: kindSlugs[plateOwner.kind], id: plateOwner.id }}
-                        >
-                          {m.action_open_named({ name: plateOwner.name })}
-                        </Link>
-                      </>
-                    ) : (
-                      errorFor('plate')
-                    )
-                  }
-                >
-                  <input
-                    className="t-mono"
-                    value={state.plate}
-                    maxLength={limit.plate}
-                    onChange={(e) => set('plate', e.target.value)}
-                  />
-                </Field>
-                <Field
-                  label={m.field_make_model()}
-                  optional={m.optional()}
-                  error={errorFor('makeModel')}
-                >
-                  <input
-                    value={state.makeModel}
-                    maxLength={limit.makeModel}
-                    onChange={(e) => set('makeModel', e.target.value)}
-                  />
-                </Field>
-                <div className="t-span-all">
-                  <SegmentedControl
-                    legend={m.field_vehicle_kind()}
-                    value={vehicleKind}
-                    options={vehicleKindsOf(kind).map((k) => ({
-                      value: k,
-                      label: vehicleKindLabel[k](),
-                    }))}
-                    onChange={(k) => {
-                      set('vehicleKind', k);
-                      if (!canHaveBodyType(k)) set('bodyTypeId', '');
-                      if (!canPull(k)) set('gcwKg', '');
-                    }}
-                    error={errorFor('vehicleKind')}
-                  />
-                </div>
-                <SegmentedControl
-                  legend={m.field_category()}
-                  value={state.category}
-                  options={categories.map((c) => ({ value: c, label: c }))}
-                  onChange={(c) => set('category', c)}
-                  hint={
-                    vehicleKind
-                      ? m.category_hint({
-                          kind: kindText,
-                          allowed: joinOr(allowedCategories[vehicleKind]),
-                        })
-                      : undefined
-                  }
-                  error={errorFor('category')}
-                />
-                <Field label={m.field_trade_label()} optional={m.optional()}>
-                  <select
-                    value={state.tradeLabelId}
-                    onChange={(e) => set('tradeLabelId', e.target.value)}
-                  >
-                    <option value="">{m.none()}</option>
-                    {lists.tradeLabels.map((l) => (
-                      <option key={l.id} value={l.id}>
-                        {entryLabel(l)}
-                      </option>
-                    ))}
-                  </select>
-                </Field>
-                <Field label={`${m.field_gvw()} (${m.kg()})`} error={errorFor('gvwKg')}>
-                  <input
-                    inputMode="numeric"
-                    className="t-mono"
-                    value={state.gvwKg}
-                    onChange={(e) => set('gvwKg', e.target.value)}
-                  />
-                </Field>
-                {kind === 'power-unit' && vehicleKind && canPull(vehicleKind) ? (
-                  <Field
-                    label={`${m.field_gcw()} (${m.kg()})`}
-                    optional={m.optional()}
-                    error={errorFor('gcwKg')}
-                  >
+          {/* Rule 5: an archived resource is read only until restored. */}
+          <fieldset className="t-plain-fieldset" disabled={readOnly}>
+            <h2>{m.section_identity()}</h2>
+            <FormGrid>
+              {kind === 'driver' ? (
+                <>
+                  <Field label={m.field_last_name()} error={errorFor('lastName')}>
                     <input
-                      inputMode="numeric"
-                      className="t-mono"
-                      value={state.gcwKg}
-                      onChange={(e) => set('gcwKg', e.target.value)}
+                      value={state.lastName}
+                      maxLength={limit.lastName}
+                      onChange={(e) => set('lastName', e.target.value)}
+                      autoComplete="family-name"
                     />
                   </Field>
-                ) : (
-                  <span />
-                )}
-                <div className="t-span-all">
+                  <Field label={m.field_first_name()} error={errorFor('firstName')}>
+                    <input
+                      value={state.firstName}
+                      maxLength={limit.firstName}
+                      onChange={(e) => set('firstName', e.target.value)}
+                      autoComplete="given-name"
+                    />
+                  </Field>
                   <Field
-                    label={m.field_body_type()}
-                    optional={
-                      vehicleKind && canHaveBodyType(vehicleKind) ? m.optional() : undefined
+                    label={m.field_display_name()}
+                    optional={m.optional()}
+                    hint={m.display_name_hint()}
+                    error={errorFor('displayName')}
+                  >
+                    <input
+                      value={state.displayName}
+                      placeholder={defaultDisplayName(state.firstName, state.lastName)}
+                      maxLength={limit.displayName}
+                      onChange={(e) => set('displayName', e.target.value)}
+                    />
+                  </Field>
+                  <Field
+                    label={m.field_employee_number()}
+                    optional={m.optional()}
+                    error={
+                      numberOwner ? (
+                        <>
+                          {employeeNumberTakenText(numberOwner)}{' '}
+                          <Link
+                            to="/resources/$kind/$id"
+                            params={{ kind: 'drivers', id: numberOwner.id }}
+                          >
+                            {m.action_open_named({ name: numberOwner.name })}
+                          </Link>
+                        </>
+                      ) : (
+                        errorFor('employeeNumber')
+                      )
                     }
+                  >
+                    <input
+                      value={state.employeeNumber}
+                      maxLength={limit.employeeNumber}
+                      onChange={(e) => set('employeeNumber', e.target.value)}
+                    />
+                  </Field>
+                  <Field label={m.field_phone()} optional={m.optional()} error={errorFor('phone')}>
+                    <input
+                      type="tel"
+                      value={state.phone}
+                      maxLength={limit.phone}
+                      onChange={(e) => set('phone', e.target.value)}
+                      autoComplete="tel"
+                    />
+                  </Field>
+                  <fieldset className="t-span-all capabilities">
+                    <legend>{m.section_driver_protective_equipment()}</legend>
+                    <p className="t-field-hint">
+                      {m.pe_held({
+                        held: state.protectiveEquipmentIds.length,
+                        total: lists.protectiveEquipment.length,
+                      })}
+                    </p>
+                    <div className="capability-list">
+                      {lists.protectiveEquipment.map((item) => (
+                        <Checkbox
+                          key={item.id}
+                          label={equipmentLabel(item)}
+                          checked={state.protectiveEquipmentIds.includes(item.id)}
+                          onChange={(checked) =>
+                            set(
+                              'protectiveEquipmentIds',
+                              checked
+                                ? [...state.protectiveEquipmentIds, item.id]
+                                : state.protectiveEquipmentIds.filter((x) => x !== item.id),
+                            )
+                          }
+                        />
+                      ))}
+                    </div>
+                    <p className="t-field-hint">{m.pe_hint()}</p>
+                  </fieldset>
+                </>
+              ) : (
+                <>
+                  <Field
+                    label={m.field_plate()}
+                    hint={m.plate_hint()}
+                    error={
+                      plateOwner ? (
+                        <>
+                          {m.plate_taken({ name: plateOwner.name, kind: ownerKind(plateOwner) })}{' '}
+                          <Link
+                            to="/resources/$kind/$id"
+                            params={{ kind: kindSlugs[plateOwner.kind], id: plateOwner.id }}
+                          >
+                            {m.action_open_named({ name: plateOwner.name })}
+                          </Link>
+                        </>
+                      ) : (
+                        errorFor('plate')
+                      )
+                    }
+                  >
+                    <input
+                      className="t-mono"
+                      value={state.plate}
+                      maxLength={limit.plate}
+                      onChange={(e) => set('plate', e.target.value)}
+                    />
+                  </Field>
+                  <Field
+                    label={m.field_make_model()}
+                    optional={m.optional()}
+                    error={errorFor('makeModel')}
+                  >
+                    <input
+                      value={state.makeModel}
+                      maxLength={limit.makeModel}
+                      onChange={(e) => set('makeModel', e.target.value)}
+                    />
+                  </Field>
+                  <div className="t-span-all">
+                    <SegmentedControl
+                      legend={m.field_vehicle_kind()}
+                      value={vehicleKind}
+                      options={vehicleKindsOf(kind).map((k) => ({
+                        value: k,
+                        label: vehicleKindLabel[k](),
+                      }))}
+                      onChange={(k) => {
+                        set('vehicleKind', k);
+                        if (!canHaveBodyType(k)) set('bodyTypeId', '');
+                        if (!canPull(k)) set('gcwKg', '');
+                      }}
+                      error={errorFor('vehicleKind')}
+                    />
+                  </div>
+                  <SegmentedControl
+                    legend={m.field_category()}
+                    value={state.category}
+                    options={categories.map((c) => ({ value: c, label: c }))}
+                    onChange={(c) => set('category', c)}
                     hint={
-                      vehicleKind && !canHaveBodyType(vehicleKind)
-                        ? m.body_type_tractor_hint()
+                      vehicleKind
+                        ? m.category_hint({
+                            kind: kindText,
+                            allowed: joinOr(allowedCategories[vehicleKind]),
+                          })
                         : undefined
                     }
-                    error={errorFor('bodyTypeId')}
-                  >
+                    error={errorFor('category')}
+                  />
+                  <Field label={m.field_trade_label()} optional={m.optional()}>
                     <select
-                      value={state.bodyTypeId}
-                      disabled={!vehicleKind || !canHaveBodyType(vehicleKind)}
-                      onChange={(e) => set('bodyTypeId', e.target.value)}
+                      value={state.tradeLabelId}
+                      onChange={(e) => set('tradeLabelId', e.target.value)}
                     >
                       <option value="">{m.none()}</option>
-                      {lists.bodyTypes.map((b) => (
-                        <option key={b.id} value={b.id}>
-                          {entryLabel(b)}
+                      {lists.tradeLabels.map((l) => (
+                        <option key={l.id} value={l.id}>
+                          {entryLabel(l)}
                         </option>
                       ))}
                     </select>
                   </Field>
-                </div>
-                <fieldset className="t-span-all capabilities">
-                  <legend>{m.section_capabilities()}</legend>
-                  <p className="t-field-hint">{m.capabilities_hint()}</p>
-                  <div className="capability-list">
-                    {lists.capabilities.map((c) => (
-                      <Checkbox
-                        key={c.id}
-                        label={entryLabel(c)}
-                        checked={state.capabilityIds.includes(c.id)}
-                        onChange={(checked) =>
-                          set(
-                            'capabilityIds',
-                            checked
-                              ? [...state.capabilityIds, c.id]
-                              : state.capabilityIds.filter((x) => x !== c.id),
-                          )
-                        }
+                  <Field label={`${m.field_gvw()} (${m.kg()})`} error={errorFor('gvwKg')}>
+                    <input
+                      inputMode="numeric"
+                      className="t-mono"
+                      value={state.gvwKg}
+                      onChange={(e) => set('gvwKg', e.target.value)}
+                    />
+                  </Field>
+                  {kind === 'power-unit' && vehicleKind && canPull(vehicleKind) ? (
+                    <Field
+                      label={`${m.field_gcw()} (${m.kg()})`}
+                      optional={m.optional()}
+                      error={errorFor('gcwKg')}
+                    >
+                      <input
+                        inputMode="numeric"
+                        className="t-mono"
+                        value={state.gcwKg}
+                        onChange={(e) => set('gcwKg', e.target.value)}
                       />
-                    ))}
+                    </Field>
+                  ) : (
+                    <span />
+                  )}
+                  <div className="t-span-all">
+                    <Field
+                      label={m.field_body_type()}
+                      optional={
+                        vehicleKind && canHaveBodyType(vehicleKind) ? m.optional() : undefined
+                      }
+                      hint={
+                        vehicleKind && !canHaveBodyType(vehicleKind)
+                          ? m.body_type_tractor_hint()
+                          : undefined
+                      }
+                      error={errorFor('bodyTypeId')}
+                    >
+                      <select
+                        value={state.bodyTypeId}
+                        disabled={!vehicleKind || !canHaveBodyType(vehicleKind)}
+                        onChange={(e) => set('bodyTypeId', e.target.value)}
+                      >
+                        <option value="">{m.none()}</option>
+                        {lists.bodyTypes.map((b) => (
+                          <option key={b.id} value={b.id}>
+                            {entryLabel(b)}
+                          </option>
+                        ))}
+                      </select>
+                    </Field>
                   </div>
-                </fieldset>
-              </>
-            )}
-          </FormGrid>
+                  <fieldset className="t-span-all capabilities">
+                    <legend>{m.section_capabilities()}</legend>
+                    <p className="t-field-hint">{m.capabilities_hint()}</p>
+                    <div className="capability-list">
+                      {lists.capabilities.map((c) => (
+                        <Checkbox
+                          key={c.id}
+                          label={entryLabel(c)}
+                          checked={state.capabilityIds.includes(c.id)}
+                          onChange={(checked) =>
+                            set(
+                              'capabilityIds',
+                              checked
+                                ? [...state.capabilityIds, c.id]
+                                : state.capabilityIds.filter((x) => x !== c.id),
+                            )
+                          }
+                        />
+                      ))}
+                    </div>
+                  </fieldset>
+                </>
+              )}
+            </FormGrid>
+          </fieldset>
         </form>
         <section className="t-panel resource-documents" aria-labelledby="documents-title">
           <h2 id="documents-title">{m.section_documents()}</h2>
@@ -740,6 +774,8 @@ function Documents({
     mutationFn: async (id: string) => ok(await api.documents[':id'].$delete({ param: { id } })),
     onSuccess: done,
   });
+  // Rule 11: deleting a document cannot be undone, so it asks first.
+  const confirm = useConfirm();
 
   const startEdit = (d: DocumentJson) => {
     setEditing(d);
@@ -761,10 +797,13 @@ function Documents({
     }
   };
   const writeError = bannerError(write.error) ?? remove.error;
+  // Rule 5: the documents of an archived resource are read only until it is restored.
+  const readOnly = resource.archived;
 
   return (
     <>
-      <TableFrame actions>
+      {confirm.dialog}
+      <TableFrame actions={!readOnly}>
         <table className="t-table">
           <caption className="t-visually-hidden">{m.section_documents()}</caption>
           <thead>
@@ -774,15 +813,17 @@ function Documents({
               <th scope="col">{m.col_issued()}</th>
               <th scope="col">{m.col_expires()}</th>
               <th scope="col">{m.col_status()}</th>
-              <th scope="col">
-                <span className="t-visually-hidden">{m.col_actions()}</span>
-              </th>
+              {readOnly ? null : (
+                <th scope="col">
+                  <span className="t-visually-hidden">{m.col_actions()}</span>
+                </th>
+              )}
             </tr>
           </thead>
           <tbody>
             {resource.documents.length === 0 ? (
               <tr>
-                <td colSpan={6}>{m.documents_empty()}</td>
+                <td colSpan={readOnly ? 5 : 6}>{m.documents_empty()}</td>
               </tr>
             ) : null}
             {resource.documents.map((d) => {
@@ -810,28 +851,37 @@ function Documents({
                       {severityLabel[d.severity]()}
                     </StatusBadge>
                   </td>
-                  <td className="t-end">
-                    <span className="row-actions">
-                      <Button
-                        variant="link"
-                        onClick={() => startEdit(d)}
-                        aria-label={m.action_edit_named({ name: label })}
-                      >
-                        {m.action_edit()}
-                      </Button>
-                      <Button
-                        variant="link"
-                        onClick={() => {
-                          onAction();
-                          remove.mutate(d.id);
-                        }}
-                        busy={remove.isPending}
-                        aria-label={m.action_remove_named({ name: label })}
-                      >
-                        {m.action_remove()}
-                      </Button>
-                    </span>
-                  </td>
+                  {readOnly ? null : (
+                    <td className="t-end">
+                      <span className="row-actions">
+                        <Button
+                          variant="link"
+                          onClick={() => startEdit(d)}
+                          aria-label={m.action_edit_named({ name: label })}
+                        >
+                          {m.action_edit()}
+                        </Button>
+                        <Button
+                          variant="link"
+                          onClick={() =>
+                            confirm.ask({
+                              title: m.confirm_remove_document_title({ type: label }),
+                              text: m.confirm_remove_document_text(),
+                              confirmLabel: m.action_remove(),
+                              onConfirm: () => {
+                                onAction();
+                                remove.mutate(d.id);
+                              },
+                            })
+                          }
+                          busy={remove.isPending}
+                          aria-label={m.action_remove_named({ name: label })}
+                        >
+                          {m.action_remove()}
+                        </Button>
+                      </span>
+                    </td>
+                  )}
                 </tr>
               );
             })}
@@ -839,96 +889,102 @@ function Documents({
         </table>
       </TableFrame>
 
-      <form
-        ref={form.formRef}
-        className="document-editor t-container"
-        onSubmit={submit}
-        aria-labelledby="document-editor-title"
-        noValidate
-      >
-        <h3 id="document-editor-title">
-          {editing
-            ? m.editing_document({ type: entryLabel(typeOf(editing.documentTypeId)) })
-            : m.adding_document()}
-        </h3>
-        <FormGrid columns={4}>
-          <Field label={m.field_document_type()} error={form.errorFor('documentTypeId')}>
-            <select
-              value={draft.documentTypeId}
-              disabled={editing !== undefined}
-              onChange={(e) => change('documentTypeId', e.target.value)}
-            >
-              <option value="" />
-              {applicable.map((t) => (
-                <option key={t.id} value={t.id}>
-                  {entryLabel(t)}
-                </option>
-              ))}
-            </select>
-          </Field>
-          <Field
-            label={m.field_reference()}
-            optional={m.optional()}
-            error={form.errorFor('reference')}
-          >
-            <input
-              value={draft.reference}
-              maxLength={textLimits.document.reference}
-              onChange={(e) => change('reference', e.target.value)}
-            />
-          </Field>
-          <Field label={m.field_issued()} optional={m.optional()} error={form.errorFor('issuedOn')}>
-            <input
-              type="date"
-              value={draft.issuedOn}
-              onChange={(e) => change('issuedOn', e.target.value)}
-            />
-          </Field>
-          <Field label={m.field_expires()} error={form.errorFor('expiresOn')}>
-            <input
-              type="date"
-              required
-              value={draft.expiresOn}
-              onChange={(e) => change('expiresOn', e.target.value)}
-            />
-          </Field>
-          <div className="t-form-actions">
-            <Button type="submit" variant="primary" busy={write.isPending}>
-              {editing ? m.action_update() : m.action_add()}
-            </Button>
-            {editing ? (
-              <Button
-                onClick={() => {
-                  setEditing(undefined);
-                  setDraft(emptyDraft);
-                  form.clear();
-                }}
+      {readOnly ? null : (
+        <form
+          ref={form.formRef}
+          className="document-editor t-container"
+          onSubmit={submit}
+          aria-labelledby="document-editor-title"
+          noValidate
+        >
+          <h3 id="document-editor-title">
+            {editing
+              ? m.editing_document({ type: entryLabel(typeOf(editing.documentTypeId)) })
+              : m.adding_document()}
+          </h3>
+          <FormGrid columns={4}>
+            <Field label={m.field_document_type()} error={form.errorFor('documentTypeId')}>
+              <select
+                value={draft.documentTypeId}
+                disabled={editing !== undefined}
+                onChange={(e) => change('documentTypeId', e.target.value)}
               >
-                {m.action_cancel()}
+                <option value="" />
+                {applicable.map((t) => (
+                  <option key={t.id} value={t.id}>
+                    {entryLabel(t)}
+                  </option>
+                ))}
+              </select>
+            </Field>
+            <Field
+              label={m.field_reference()}
+              optional={m.optional()}
+              error={form.errorFor('reference')}
+            >
+              <input
+                value={draft.reference}
+                maxLength={textLimits.document.reference}
+                onChange={(e) => change('reference', e.target.value)}
+              />
+            </Field>
+            <Field
+              label={m.field_issued()}
+              optional={m.optional()}
+              error={form.errorFor('issuedOn')}
+            >
+              <input
+                type="date"
+                value={draft.issuedOn}
+                onChange={(e) => change('issuedOn', e.target.value)}
+              />
+            </Field>
+            <Field label={m.field_expires()} error={form.errorFor('expiresOn')}>
+              <input
+                type="date"
+                required
+                value={draft.expiresOn}
+                onChange={(e) => change('expiresOn', e.target.value)}
+              />
+            </Field>
+            <div className="t-form-actions">
+              <Button type="submit" variant="primary" busy={write.isPending}>
+                {editing ? m.action_update() : m.action_add()}
               </Button>
-            ) : null}
-          </div>
-        </FormGrid>
-        {selected ? (
-          <p className="t-field-hint">
-            {m.document_rule({
-              type: entryLabel(selected),
-              rule: selected.blocking ? m.rule_blocking() : m.rule_not_blocking(),
-              days: selected.warnDays,
-            })}
-          </p>
-        ) : null}
-        {writeError ? (
-          <p className="t-field-error" role="alert">
-            {failureText(writeError, lists)}
-          </p>
-        ) : null}
-        {form.unplaced.length > 0 ? (
-          <p className="t-field-error" role="alert">
-            {form.unplaced.map((issue) => issueSentence(issue, lists)).join(' ')}
-          </p>
-        ) : null}
-      </form>
+              {editing ? (
+                <Button
+                  onClick={() => {
+                    setEditing(undefined);
+                    setDraft(emptyDraft);
+                    form.clear();
+                  }}
+                >
+                  {m.action_cancel()}
+                </Button>
+              ) : null}
+            </div>
+          </FormGrid>
+          {selected ? (
+            <p className="t-field-hint">
+              {m.document_rule({
+                type: entryLabel(selected),
+                rule: selected.blocking ? m.rule_blocking() : m.rule_not_blocking(),
+                days: selected.warnDays,
+              })}
+            </p>
+          ) : null}
+          {writeError ? (
+            <p className="t-field-error" role="alert">
+              {failureText(writeError, lists)}
+            </p>
+          ) : null}
+          {form.unplaced.length > 0 ? (
+            <p className="t-field-error" role="alert">
+              {form.unplaced.map((issue) => issueSentence(issue, lists)).join(' ')}
+            </p>
+          ) : null}
+        </form>
+      )}
     </>
   );
 }

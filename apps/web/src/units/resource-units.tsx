@@ -1,6 +1,6 @@
 import { Link } from '@tanstack/react-router';
 import type { ResourceJson, UnitJson } from '@timon/http';
-import { Banner, Count, Plate, StatusBadge, TableFrame } from '@timon/ui';
+import { Banner, Button, Count, Plate, StatusBadge, TableFrame } from '@timon/ui';
 import { useState } from 'react';
 import { errorText } from '../data.ts';
 import { m } from '../paraglide/messages.js';
@@ -28,6 +28,8 @@ export function ResourceUnits({ resource }: { resource: ResourceJson }) {
   const [changing, setChanging] = useState<UnitJson | undefined>();
   const current = units.data?.find((u) => u.state !== 'ended');
   const running = units.data?.find((u) => u.state === 'running');
+  // SPEC-003, Screens: a unit with no end holds the resource for good; a new one cannot start.
+  const endless = units.data?.find((u) => u.state !== 'ended' && u.end === null);
 
   return (
     <section className="t-panel" aria-labelledby="units-title">
@@ -41,7 +43,11 @@ export function ResourceUnits({ resource }: { resource: ResourceJson }) {
               {m.action_change_from_date()}
             </button>
           ) : null}
-          {!resource.archived ? (
+          {resource.archived ? null : endless ? (
+            <Button disabled aria-describedby="new-unit-reason">
+              {newUnitLabel[resource.kind]()}
+            </Button>
+          ) : (
             <Link
               className="t-button"
               to="/resources/units/new"
@@ -49,9 +55,14 @@ export function ResourceUnits({ resource }: { resource: ResourceJson }) {
             >
               {newUnitLabel[resource.kind]()}
             </Link>
-          ) : null}
+          )}
         </div>
       </div>
+      {endless && !resource.archived ? (
+        <p id="new-unit-reason" className="t-field-hint">
+          {m.new_unit_unavailable({ unit: endless.name })}
+        </p>
+      ) : null}
       {units.error ? <Banner tone="conflict">{errorText(units.error)}</Banner> : null}
       {units.data && units.data.length === 0 ? (
         <p className="t-field-hint">{m.resource_units_empty()}</p>

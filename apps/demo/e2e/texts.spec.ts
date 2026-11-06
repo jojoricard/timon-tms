@@ -77,7 +77,9 @@ test('the driver import shows the rules of drivers only', async ({ page }) => {
 test('a file in one column points to the separator', async ({ page }) => {
   await open(page, '/resources/drivers/import');
   await page.getByLabel('CSV file').setInputFiles(csv('drivers.csv', ['nom|prenom', 'Pipe|Paul']));
-  await expect(page.getByText(/separated by ; or ,/)).toBeVisible();
+  await expect(
+    page.getByText(/single column: are its columns separated by a semicolon, a comma or a tab/),
+  ).toBeVisible();
 });
 
 test('unreadable hours recall how hours are written, in the same case as the table', async ({

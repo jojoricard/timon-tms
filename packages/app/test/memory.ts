@@ -318,6 +318,13 @@ export function memoryPorts(
           (r) =>
             r.kind !== 'driver' && !r.archived && r.id !== exceptId && plateKey(r.plate) === key,
         ),
+      findDriverByEmployeeNumber: async (employeeNumber, exceptId) =>
+        resources.find(
+          (r) =>
+            r.kind === 'driver' &&
+            r.id !== exceptId &&
+            r.employeeNumber?.toLowerCase() === employeeNumber.toLowerCase(),
+        ),
       create: async (input) => {
         const created = build(input);
         if (plateTaken(created)) throw new PlateTakenError();

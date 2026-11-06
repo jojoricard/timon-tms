@@ -1,3 +1,13 @@
+/**
+ * SPEC-001 rule 10: eight digits at least; besides digits, only spaces, dots, dashes,
+ * parentheses and a leading "+". Shared by drivers and the contacts of customers.
+ */
+export function isValidPhone(phone: string): boolean {
+  const value = phone.trim();
+  if (!/^\+?[\d\s.()-]+$/.test(value)) return false;
+  return (value.match(/\d/g)?.length ?? 0) >= 8;
+}
+
 /** "404 833 048 00014" → "40483304800014": spaces and dots are only for reading. */
 export function normaliseSiret(value: string): string {
   return value.replace(/[\s. ]/g, '');
@@ -37,6 +47,20 @@ export function sirenOf(siret: string): string {
 export function vatFromSiren(siren: string): string {
   const key = (12 + 3 * (Number(siren) % 97)) % 97;
   return `FR${String(key).padStart(2, '0')}${siren}`;
+}
+
+/**
+ * SPEC-002 rule 2. For a French customer: FR, two characters, nine digits; when the two
+ * characters are digits, they are the key computed from the nine. For another country: two
+ * letters, then 2 to 13 letters or digits. The number is compared in capitals, without spaces.
+ */
+export function isValidVatNumber(vatNumber: string, country: string): boolean {
+  const value = vatNumber.replace(/\s/g, '').toUpperCase();
+  if (country !== 'FR') return /^[A-Z]{2}[A-Z0-9]{2,13}$/.test(value);
+  const french = /^FR([A-Z0-9]{2})(\d{9})$/.exec(value);
+  if (!french) return false;
+  const [, key = '', siren = ''] = french;
+  return /^\d{2}$/.test(key) ? vatFromSiren(siren) === value : true;
 }
 
 /** Upper case, spaces as dashes: "dupont idf" → "DUPONT-IDF". */

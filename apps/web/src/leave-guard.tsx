@@ -1,6 +1,6 @@
 import { useBlocker } from '@tanstack/react-router';
-import { Button } from '@timon/ui';
-import { type ReactNode, useEffect, useId, useRef } from 'react';
+import { ConfirmDialog } from '@timon/ui';
+import { type ReactNode, useEffect, useRef } from 'react';
 import { m } from './paraglide/messages.js';
 
 /**
@@ -42,36 +42,16 @@ export function useLeaveGuard(dirty: boolean): { release: () => void; dialog: Re
 }
 
 function LeaveDialog({ onStay, onLeave }: { onStay: () => void; onLeave: () => void }) {
-  const dialog = useRef<HTMLDialogElement>(null);
-  const id = useId();
-
-  useEffect(() => {
-    const element = dialog.current;
-    if (element && !element.open) element.showModal();
-  }, []);
-
+  // Escape closes the dialog: the person stays on the page, as with "Stay".
   return (
-    // Escape closes the dialog: the person stays on the page, as with "Stay".
-    <dialog
-      ref={dialog}
-      role="alertdialog"
-      className="t-panel leave-dialog"
-      aria-labelledby={`${id}-title`}
-      aria-describedby={`${id}-text`}
-      onClose={onStay}
-    >
-      <h2 id={`${id}-title`}>{m.leave_title()}</h2>
-      <p id={`${id}-text`}>{m.leave_text()}</p>
-      <div className="t-actions dialog-actions">
-        {/* The safe choice takes the focus when the dialog opens. */}
-        <Button autoFocus onClick={onStay}>
-          {m.action_stay()}
-        </Button>
-        <Button variant="danger" onClick={onLeave}>
-          {m.action_leave()}
-        </Button>
-      </div>
-    </dialog>
+    <ConfirmDialog
+      title={m.leave_title()}
+      text={m.leave_text()}
+      cancelLabel={m.action_stay()}
+      confirmLabel={m.action_leave()}
+      onCancel={onStay}
+      onConfirm={onLeave}
+    />
   );
 }
 

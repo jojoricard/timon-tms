@@ -225,7 +225,7 @@ function ResourceTable({
               <>
                 <th scope="row">
                   <ResourceLink resource={r}>{`${r.firstName} ${r.lastName}`}</ResourceLink>
-                  <span className="t-secondary">{r.displayName}</span>
+                  <span className="t-secondary">{r.name}</span>
                 </th>
                 <td className="t-mono">
                   {r.documents

@@ -1,3 +1,4 @@
+import { isValidPhone } from './identifiers.ts';
 import type { Issue } from './issue.ts';
 import {
   type Driver,
@@ -20,6 +21,37 @@ export const allowedCategories: Record<VehicleKind, readonly VehicleCategory[]> 
   'drawbar-trailer': ['O1', 'O2', 'O3', 'O4'],
 };
 
+/**
+ * Rule 2: the gross vehicle weights of each category, French Highway Code art. R311-1. A
+ * category holds the weights over `overKg` and up to `upToKg`, bounds being null when open.
+ */
+export const categoryWeights: Record<
+  VehicleCategory,
+  { readonly overKg: number | null; readonly upToKg: number | null }
+> = {
+  N1: { overKg: null, upToKg: 3_500 },
+  N2: { overKg: 3_500, upToKg: 12_000 },
+  N3: { overKg: 12_000, upToKg: null },
+  O1: { overKg: null, upToKg: 750 },
+  O2: { overKg: 750, upToKg: 3_500 },
+  O3: { overKg: 3_500, upToKg: 10_000 },
+  O4: { overKg: 10_000, upToKg: null },
+};
+
+export function categoryFitsWeight(category: VehicleCategory, gvwKg: number): boolean {
+  const { overKg, upToKg } = categoryWeights[category];
+  return (overKg === null || gvwKg > overKg) && (upToKg === null || gvwKg <= upToKg);
+}
+
+/** The bounds of a category that exist, for the message: N3 has no upper one. */
+function boundsOf(category: VehicleCategory): Record<string, number> {
+  const { overKg, upToKg } = categoryWeights[category];
+  return {
+    ...(overKg === null ? {} : { overKg }),
+    ...(upToKg === null ? {} : { upToKg }),
+  };
+}
+
 /** A tractor carries nothing without a semi-trailer: the body type is the semi-trailer's. */
 export function canHaveBodyType(kind: VehicleKind): boolean {
   return kind !== 'tractor';
@@ -40,7 +72,9 @@ export function checkDriver(driver: Driver): Issue[] {
   const issues: Issue[] = [];
   if (blank(driver.lastName)) issues.push({ field: 'lastName', code: 'required' });
   if (blank(driver.firstName)) issues.push({ field: 'firstName', code: 'required' });
-  if (blank(driver.displayName)) issues.push({ field: 'displayName', code: 'required' });
+  if (!blank(driver.phone) && !isValidPhone(driver.phone ?? '')) {
+    issues.push({ field: 'phone', code: 'phone-invalid' });
+  }
   return issues;
 }
 
@@ -68,6 +102,15 @@ export function checkVehicle(vehicle: Vehicle): Issue[] {
 
   if (!Number.isInteger(vehicle.gvwKg) || vehicle.gvwKg <= 0) {
     issues.push({ field: 'gvwKg', code: 'weight-not-positive' });
+  } else if (
+    allowed.includes(vehicle.category) &&
+    !categoryFitsWeight(vehicle.category, vehicle.gvwKg)
+  ) {
+    issues.push({
+      field: 'category',
+      code: 'category-weight-mismatch',
+      params: { category: vehicle.category, gvwKg: vehicle.gvwKg, ...boundsOf(vehicle.category) },
+    });
   }
   if (vehicle.gcwKg !== null) {
     if (!canPull(vehicle.vehicleKind)) {

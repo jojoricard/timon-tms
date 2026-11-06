@@ -14,6 +14,7 @@ import {
   listResources,
   type Ports,
   removeDocument,
+  resourceImportGuide,
   resourceSummary,
   setArchived,
   statusFilters,
@@ -26,8 +27,10 @@ import { customerApi } from './customer-routes.ts';
 import {
   Booking,
   DocumentInput,
+  EmployeeNumberTaken,
   ExpiryList,
   ImportCheck,
+  ImportGuide,
   ImportInput,
   ImportRefused,
   InUnit,
@@ -43,7 +46,14 @@ import {
   ResourceList,
   ResourceSummary,
 } from './schemas.ts';
-import { fromDocumentInput, fromInput, toExpiry, toImportCheck, toResource } from './to-json.ts';
+import {
+  fromDocumentInput,
+  fromInput,
+  toExpiry,
+  toImportCheck,
+  toImportGuide,
+  toResource,
+} from './to-json.ts';
 import { toUnitRef, unitApi } from './unit-routes.ts';
 import { validationHook } from './validation.ts';
 
@@ -73,8 +83,8 @@ const resourceAnswers = {
   400: json(z.union([Invalid, Problem]), 'A rule is broken; each issue names its field'),
   404: json(Problem, 'No such resource'),
   409: json(
-    z.union([PlateTaken, InUnit, Problem]),
-    'Plate used by another active resource (rule 1), or the resource is in a running or future unit',
+    z.union([PlateTaken, EmployeeNumberTaken, InUnit, Problem]),
+    'Plate used by another active resource (rule 1), employee number used by another driver (rule 9), resource archived (rule 5), or the resource is in a running or future unit',
   ),
 };
 
@@ -172,6 +182,15 @@ const routes = {
       200: { content: { 'text/csv': { schema: z.string() } }, description: 'CSV header line' },
     },
   }),
+  importGuide: createRoute({
+    method: 'get',
+    path: '/imports/{kind}/columns',
+    request: {
+      params: z.object({ kind: ResourceKind }),
+      query: z.object({ lang: z.enum(['en', 'fr']).optional() }),
+    },
+    responses: { 200: json(ImportGuide, 'The columns of the file and the values they accept') },
+  }),
   checkImport: createRoute({
     method: 'post',
     path: '/imports/{kind}/check',
@@ -215,6 +234,8 @@ function failure(result: Exclude<DocumentResult, { ok: true }>) {
   switch (result.reason) {
     case 'not-found':
       return { status: 404, body: { error: 'not-found' } } as const;
+    case 'archived':
+      return { status: 409, body: { error: 'archived' } } as const;
     case 'invalid':
       return {
         status: 400,
@@ -222,6 +243,11 @@ function failure(result: Exclude<DocumentResult, { ok: true }>) {
       } as const;
     case 'plate-taken':
       return { status: 409, body: { error: 'plate-taken', owner: result.owner } } as const;
+    case 'employee-number-taken':
+      return {
+        status: 409,
+        body: { error: 'employee-number-taken', owner: result.owner },
+      } as const;
     case 'document-type-taken':
       return { status: 409, body: { error: 'document-type-taken' } } as const;
     case 'in-unit':
@@ -359,6 +385,15 @@ export function createApp(ports: Ports) {
       return c.body(importTemplate(kind, language), 200, {
         'Content-Type': 'text/csv; charset=utf-8',
       });
+    })
+    .openapi(routes.importGuide, async (c) => {
+      const lists = await ports.referenceLists.get();
+      const guide = resourceImportGuide(
+        c.req.valid('param').kind,
+        c.req.valid('query').lang ?? 'en',
+        lists,
+      );
+      return c.json(toImportGuide(guide), 200);
     })
     .openapi(routes.checkImport, async (c) => {
       const check = await checkImport(ports, c.req.valid('param').kind, c.req.valid('json').csv);

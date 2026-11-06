@@ -1,6 +1,6 @@
 import {
   checkResource,
-  defaultDisplayName,
+  compareDrivers,
   type Issue,
   plateKey,
   type ResourceDetails,
@@ -10,7 +10,13 @@ import {
   type Temporal,
   type VehicleKind,
 } from '@timon/domain';
-import { PlateTakenError, type Ports, type ReferenceLists, type StoredResource } from './ports.ts';
+import {
+  EmployeeNumberTakenError,
+  PlateTakenError,
+  type Ports,
+  type ReferenceLists,
+  type StoredResource,
+} from './ports.ts';
 import { searchable } from './search.ts';
 import { currentUnitOf, type UnitRef } from './units.ts';
 import { type ResourceView, resourceView, statusDay } from './views.ts';
@@ -39,11 +45,25 @@ export type PlateOwner = {
   readonly vehicleKind: VehicleKind | null;
 };
 
+/** The driver, archived or not, that already has an employee number (rule 9). */
+export type EmployeeNumberOwner = {
+  readonly id: string;
+  readonly name: string;
+  readonly archived: boolean;
+};
+
 export type ResourceResult =
   | { readonly ok: true; readonly resource: ResourceView }
   | { readonly ok: false; readonly reason: 'not-found' }
+  /** Rule 5: an archived resource is read only, its documents included, until restored. */
+  | { readonly ok: false; readonly reason: 'archived' }
   | { readonly ok: false; readonly reason: 'invalid'; readonly issues: readonly FieldIssue[] }
   | { readonly ok: false; readonly reason: 'plate-taken'; readonly owner: PlateOwner }
+  | {
+      readonly ok: false;
+      readonly reason: 'employee-number-taken';
+      readonly owner: EmployeeNumberOwner;
+    }
   /** SPEC-003 rule 7: the resource belongs to a running or future unit. */
   | { readonly ok: false; readonly reason: 'in-unit'; readonly unit: UnitRef };
 
@@ -59,12 +79,16 @@ export function plateOwner(resource: StoredResource): PlateOwner {
   };
 }
 
+export function employeeNumberOwner(driver: StoredResource): EmployeeNumberOwner {
+  return { id: driver.id, name: resourceName(driver), archived: driver.archived };
+}
+
 const clean = (value: string | null | undefined) => {
   const trimmed = value?.trim() ?? '';
   return trimmed === '' ? null : trimmed;
 };
 
-/** Trims text and fills the display name of a driver when left empty. */
+/** Trims text; a display name left empty stays empty, the name being built when read. */
 export function normalise(details: ResourceDetails): ResourceDetails {
   if (details.kind === 'driver') {
     const lastName = details.lastName.trim();
@@ -73,7 +97,7 @@ export function normalise(details: ResourceDetails): ResourceDetails {
       ...details,
       lastName,
       firstName,
-      displayName: clean(details.displayName) ?? defaultDisplayName(firstName, lastName),
+      displayName: clean(details.displayName),
       employeeNumber: clean(details.employeeNumber),
       phone: clean(details.phone),
       protectiveEquipmentIds: [...new Set(details.protectiveEquipmentIds)],
@@ -124,12 +148,22 @@ async function save(
   const issues = checkDetails(details, await ports.referenceLists.get());
   if (issues.length > 0) return { ok: false, reason: 'invalid', issues };
 
-  const taken = async () =>
-    details.kind === 'driver'
-      ? undefined
-      : ports.resources.findActiveByPlate(plateKey(details.plate), exceptId);
-  const owner = await taken();
-  if (owner) return { ok: false, reason: 'plate-taken', owner: plateOwner(owner) };
+  const taken = async (): Promise<ResourceResult | undefined> => {
+    if (details.kind !== 'driver') {
+      const owner = await ports.resources.findActiveByPlate(plateKey(details.plate), exceptId);
+      return owner && { ok: false, reason: 'plate-taken', owner: plateOwner(owner) };
+    }
+    if (details.employeeNumber === null) return undefined;
+    const owner = await ports.resources.findDriverByEmployeeNumber(
+      details.employeeNumber,
+      exceptId,
+    );
+    return (
+      owner && { ok: false, reason: 'employee-number-taken', owner: employeeNumberOwner(owner) }
+    );
+  };
+  const refused = await taken();
+  if (refused) return refused;
 
   try {
     const saved = await write(details);
@@ -137,9 +171,11 @@ async function save(
       ? { ok: true, resource: await view(ports, saved) }
       : { ok: false, reason: 'not-found' };
   } catch (error) {
-    // Another resource took the plate between the check and the write: the database refused it.
-    const latest = error instanceof PlateTakenError ? await taken() : undefined;
-    if (latest) return { ok: false, reason: 'plate-taken', owner: plateOwner(latest) };
+    // Another resource took the plate or the number between the check and the write: the
+    // database refused it.
+    const raced = error instanceof PlateTakenError || error instanceof EmployeeNumberTakenError;
+    const latest = raced ? await taken() : undefined;
+    if (latest) return latest;
     throw error;
   }
 }
@@ -155,6 +191,7 @@ export async function updateResource(
 ): Promise<ResourceResult> {
   const existing = await ports.resources.get(id);
   if (!existing || existing.kind !== details.kind) return { ok: false, reason: 'not-found' };
+  if (existing.archived) return { ok: false, reason: 'archived' };
   // A vehicle in a running or future unit keeps its kind: the unit was composed for it.
   if (existing.kind !== 'driver' && details.kind !== 'driver') {
     if (existing.vehicleKind !== details.vehicleKind) {
@@ -205,7 +242,12 @@ export async function setArchived(
 function matches(resource: StoredResource, query: string): boolean {
   const words =
     resource.kind === 'driver'
-      ? [resource.lastName, resource.firstName, resource.displayName, resource.employeeNumber ?? '']
+      ? [
+          resource.lastName,
+          resource.firstName,
+          resourceName(resource),
+          resource.employeeNumber ?? '',
+        ]
       : [resource.plate, plateKey(resource.plate), resource.makeModel ?? ''];
   const haystack = searchable(words.join(' '));
   return searchable(query)
@@ -213,9 +255,12 @@ function matches(resource: StoredResource, query: string): boolean {
     .every((word) => haystack.includes(word));
 }
 
-/** Drivers by last name, vehicles by plate. */
-const sortKey = (r: StoredResource | ResourceView) =>
-  r.kind === 'driver' ? `${r.lastName} ${r.firstName}` : plateKey(r.plate);
+/** Drivers by last name then first name (rule 8), vehicles by plate. */
+function compareResources(a: ResourceView, b: ResourceView): number {
+  if (a.kind === 'driver' && b.kind === 'driver') return compareDrivers(a, b);
+  const key = (r: ResourceView) => (r.kind === 'driver' ? r.lastName : plateKey(r.plate));
+  return key(a).localeCompare(key(b), 'fr', { sensitivity: 'base', numeric: true });
+}
 
 export type ResourceList = {
   readonly day: Temporal.PlainDate;
@@ -257,9 +302,7 @@ export async function listResources(
     .filter(
       (r) => status === 'all' || (status === 'expired' ? isExpired(r) : r.severity === status),
     )
-    .sort((a, b) =>
-      sortKey(a).localeCompare(sortKey(b), 'fr', { sensitivity: 'base', numeric: true }),
-    );
+    .sort(compareResources);
   return { day, counts, resources };
 }
 

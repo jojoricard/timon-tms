@@ -109,10 +109,10 @@ describe('site import', () => {
 
   it('gives templates in both languages', () => {
     expect(siteTemplate('en')).toMatch(
-      /^name;street;street2;postcode;city;country;latitude;longitude;monday;/,
+      /^﻿name;street;street2;postcode;city;country;latitude;longitude;monday;/,
     );
-    expect(siteTemplate('fr')).toMatch(/^nom;adresse;complement_adresse;code_postal;ville;pays;/);
-    expect(customerTemplate('fr')).toMatch(/^code;raison_sociale;pays;siret;/);
+    expect(siteTemplate('fr')).toMatch(/^﻿nom;adresse;complement_adresse;code_postal;ville;pays;/);
+    expect(customerTemplate('fr')).toMatch(/^﻿code;raison_sociale;pays;siret;/);
   });
 });
 

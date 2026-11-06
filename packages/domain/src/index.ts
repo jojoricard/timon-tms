@@ -1,9 +1,12 @@
 export { findOverlaps, type ResourceBooking } from './booking.ts';
 export {
+  type Bounds,
   type Country,
   countries,
+  countryBounds,
   countryTimeZones,
   isCountry,
+  isInCountry,
   timeZoneOf,
 } from './countries.ts';
 export {
@@ -38,7 +41,9 @@ export {
 } from './geo.ts';
 export {
   customerCodePattern,
+  isValidPhone,
   isValidSiret,
+  isValidVatNumber,
   normaliseCustomerCode,
   normaliseSiret,
   sirenOf,
@@ -84,8 +89,10 @@ export {
 } from './period.ts';
 export { plateKey } from './plate.ts';
 export {
+  compareDrivers,
   type Driver,
   defaultDisplayName,
+  driverName,
   powerUnitKinds,
   type Resource,
   type ResourceDetails,
@@ -131,6 +138,8 @@ export {
   allowedCategories,
   canHaveBodyType,
   canPull,
+  categoryFitsWeight,
+  categoryWeights,
   checkDriver,
   checkResource,
   checkVehicle,

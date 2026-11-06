@@ -10,12 +10,13 @@ async function checkDocument(
   ports: Ports,
   resourceId: string,
   input: NewDocument,
-): Promise<FieldIssue[] | 'not-found'> {
+): Promise<FieldIssue[] | 'not-found' | 'archived'> {
   const [resource, lists] = await Promise.all([
     ports.resources.get(resourceId),
     ports.referenceLists.get(),
   ]);
   if (!resource) return 'not-found';
+  if (resource.archived) return 'archived';
   const type = lists.documentTypes.find((t) => t.id === input.documentTypeId);
   const issues: FieldIssue[] = [];
   if (!type?.appliesTo.includes(resource.kind)) {
@@ -36,7 +37,7 @@ async function write(
 ): Promise<DocumentResult> {
   const document = { ...input, reference: input.reference?.trim() || null };
   const issues = await checkDocument(ports, resourceId, document);
-  if (issues === 'not-found') return { ok: false, reason: 'not-found' };
+  if (issues === 'not-found' || issues === 'archived') return { ok: false, reason: issues };
   if (issues.length > 0) return { ok: false, reason: 'invalid', issues };
   try {
     if ((await run(document)) === undefined) return { ok: false, reason: 'not-found' };
@@ -69,6 +70,10 @@ export async function updateDocument(
 export async function removeDocument(ports: Ports, documentId: string): Promise<DocumentResult> {
   const existing = await ports.documents.get(documentId);
   if (!existing) return { ok: false, reason: 'not-found' };
+  // Rule 5: the documents of an archived resource are read only too.
+  if ((await ports.resources.get(existing.resourceId))?.archived) {
+    return { ok: false, reason: 'archived' };
+  }
   await ports.documents.remove(documentId);
   const resource = await getResource(ports, existing.resourceId);
   return resource ? { ok: true, resource } : { ok: false, reason: 'not-found' };

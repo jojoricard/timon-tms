@@ -153,7 +153,7 @@ describe('customers', () => {
         code: 'C11',
         siret: null,
         contacts: [
-          { name: 'Gardé', phone: '01' },
+          { name: 'Gardé', phone: '01 23 45 67 89' },
           { name: 'Supprimé', email: 'x@y.fr' },
         ],
       }),
@@ -168,6 +168,45 @@ describe('customers', () => {
     const names = all.body.customers.flatMap((c: any) => c.contacts.map((x: any) => x.name));
     expect(names).toContain('Gardé');
     expect(names).not.toContain('Supprimé');
+  });
+});
+
+describe('VAT numbers (rule 2)', () => {
+  it('criterion 17: "DE123456789" for a German customer, not "FR00MANUEL" for a French one', async () => {
+    const german = await call(
+      'POST',
+      '/customers',
+      customer({ code: 'AUTRE-DE', country: 'DE', siret: null, vatNumber: 'DE123456789' }),
+    );
+    expect(german.status).toBe(201);
+    const french = await call(
+      'POST',
+      '/customers',
+      customer({ code: 'MANUEL-FR', siret: null, vatNumber: 'FR00MANUEL' }),
+    );
+    expect([french.status, french.body.issues]).toEqual([
+      400,
+      [{ field: 'vatNumber', code: 'vat-invalid' }],
+    ]);
+  });
+});
+
+describe('contacts (SPEC-002 rule 3, SPEC-001 rule 10)', () => {
+  it('criterion 18: the phone "zz" is refused and the contact still needs a phone or an email', async () => {
+    const { status, body } = await call(
+      'POST',
+      '/customers',
+      customer({
+        code: 'ZZ-PHONE',
+        siret: null,
+        contacts: [{ name: 'Yanis Mercier', phone: 'zz' }],
+      }),
+    );
+    expect(status).toBe(400);
+    expect(body.issues).toEqual([
+      { field: 'contacts.0', code: 'contact-unreachable' },
+      { field: 'contacts.0.phone', code: 'phone-invalid' },
+    ]);
   });
 });
 

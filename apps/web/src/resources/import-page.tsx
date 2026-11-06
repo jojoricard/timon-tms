@@ -1,3 +1,4 @@
+import { useQuery } from '@tanstack/react-query';
 import { Link, useNavigate } from '@tanstack/react-router';
 import type { ResourceKind } from '@timon/domain';
 import type { ImportCheckJson } from '@timon/http';
@@ -30,6 +31,12 @@ export function ImportPage({ kind }: { kind: ResourceKind }) {
   const refresh = useRefreshResources();
   const lists = useReferenceLists().data;
   type Row = ImportCheckJson['rows'][number];
+  const lang = getLocale();
+  const guide = useQuery({
+    queryKey: ['imports', kind, 'columns', lang],
+    queryFn: async () =>
+      ok(await api.imports[':kind'].columns.$get({ param: { kind }, query: { lang } })),
+  });
 
   return (
     <ImportScreen<Row, ImportCheckJson>
@@ -79,9 +86,16 @@ export function ImportPage({ kind }: { kind: ResourceKind }) {
       ]}
       rules={
         kind === 'driver'
-          ? [m.rule_all_or_nothing(), m.rule_formats_driver()]
-          : [m.rule_all_or_nothing(), m.rule_plates(), m.rule_kinds(), m.rule_formats()]
+          ? [m.rule_all_or_nothing(), m.rule_separator(), m.rule_formats_driver()]
+          : [
+              m.rule_all_or_nothing(),
+              m.rule_separator(),
+              m.rule_plates(),
+              m.rule_kinds(),
+              m.rule_formats(),
+            ]
       }
+      guide={guide.data}
       templates={[
         {
           href: `/api/imports/${kind}/template?lang=${getLocale()}`,

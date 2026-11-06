@@ -1,5 +1,10 @@
 import { isCountry } from './countries.ts';
-import { customerCodePattern, isValidSiret } from './identifiers.ts';
+import {
+  customerCodePattern,
+  isValidPhone,
+  isValidSiret,
+  isValidVatNumber,
+} from './identifiers.ts';
 import { blank, type Issue } from './issue.ts';
 
 export type ContactDetails = {
@@ -44,8 +49,14 @@ function looksLikeEmail(value: string): boolean {
 export function checkContact(contact: ContactDetails, index: number): Issue[] {
   const issues: Issue[] = [];
   if (blank(contact.name)) issues.push({ field: `contacts.${index}.name`, code: 'required' });
-  if (blank(contact.phone) && blank(contact.email)) {
+  // A phone that is not one does not reach the contact (SPEC-001 rule 10).
+  const phone = blank(contact.phone) ? null : (contact.phone?.trim() ?? null);
+  const phoneValid = phone !== null && isValidPhone(phone);
+  if (!phoneValid && blank(contact.email)) {
     issues.push({ field: `contacts.${index}`, code: 'contact-unreachable' });
+  }
+  if (phone !== null && !phoneValid) {
+    issues.push({ field: `contacts.${index}.phone`, code: 'phone-invalid' });
   }
   if (!blank(contact.email) && !looksLikeEmail(contact.email?.trim() ?? '')) {
     issues.push({ field: `contacts.${index}.email`, code: 'email-invalid' });
@@ -65,6 +76,9 @@ export function checkCustomer(customer: CustomerDetails): Issue[] {
   if (customer.siret !== null) {
     if (customer.country !== 'FR') issues.push({ field: 'siret', code: 'siret-not-french' });
     else if (!isValidSiret(customer.siret)) issues.push({ field: 'siret', code: 'siret-invalid' });
+  }
+  if (customer.vatNumber !== null && !isValidVatNumber(customer.vatNumber, customer.country)) {
+    issues.push({ field: 'vatNumber', code: 'vat-invalid' });
   }
   if (
     customer.country === 'FR' &&

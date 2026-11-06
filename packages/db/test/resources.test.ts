@@ -1,4 +1,10 @@
-import { DocumentTypeTakenError, type NewResource, PlateTakenError, type Ports } from '@timon/app';
+import {
+  DocumentTypeTakenError,
+  EmployeeNumberTakenError,
+  type NewResource,
+  PlateTakenError,
+  type Ports,
+} from '@timon/app';
 import { Temporal, type Vehicle } from '@timon/domain';
 import { sql } from 'drizzle-orm';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
@@ -137,6 +143,38 @@ describe('resources', () => {
             values (${subsidiary}, 'power-unit', 'KL-678-MN', 'KL678MN', 'tractor', 'N3', 19000, ${box})`,
       ),
     ).rejects.toThrow();
+  });
+});
+
+describe('drivers', () => {
+  const driver = (lastName: string, employeeNumber: string | null): NewResource => ({
+    details: {
+      kind: 'driver',
+      lastName,
+      firstName: 'Test',
+      displayName: null,
+      employeeNumber,
+      phone: null,
+      protectiveEquipmentIds: [],
+    },
+    documents: [],
+  });
+
+  it('stores no display name when none was typed', async () => {
+    const created = await ports.resources.create(driver('Sansnom', null));
+    expect(created).toMatchObject({ kind: 'driver', displayName: null });
+  });
+
+  it('criterion 17: an employee number is unique without case, archived drivers included', async () => {
+    const first = await ports.resources.create(driver('Premier', 'E-7001'));
+    await ports.resources.setArchived(first.id, true);
+    await expect(ports.resources.create(driver('Second', 'e-7001'))).rejects.toBeInstanceOf(
+      EmployeeNumberTakenError,
+    );
+    expect(await ports.resources.findDriverByEmployeeNumber('E-7001')).toMatchObject({
+      id: first.id,
+    });
+    expect(await ports.resources.findDriverByEmployeeNumber('e-7001', first.id)).toBeUndefined();
   });
 });
 

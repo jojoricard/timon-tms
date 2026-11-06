@@ -22,6 +22,7 @@ import type {
 import { Banner, Button, CardRow, CardStack, Field, FormGrid, Plate, TableFrame } from '@timon/ui';
 import { type FormEvent, useId, useState } from 'react';
 import { ApiError, api, ok } from '../api.ts';
+import { useConfirm } from '../confirm.tsx';
 import { errorText, useReferenceLists } from '../data.ts';
 import { bannerError, IssueBanner, useFormIssues } from '../form.tsx';
 import { type FieldLabels, failureText } from '../issues.ts';
@@ -39,6 +40,7 @@ import {
 } from './customer-data.ts';
 import { accessAndBooking, countryName, weekdayName } from './customer-labels.ts';
 import { DayRanges, EquipmentTags, LocatedBadge } from './section.tsx';
+import { NewSiteDialog } from './site-page.tsx';
 
 /** Create and edit in the same form. */
 export function CustomerPage({ id }: { id?: string }) {
@@ -187,6 +189,7 @@ function CustomerForm({
   const [state, setState] = useState(initial);
   const guard = useLeaveGuard(changed(initial, state));
   const [taken, setTaken] = useState<{ field: 'code' | 'siret'; owner: CustomerOwnerJson }>();
+  const [creatingSite, setCreatingSite] = useState(false);
 
   const form = useFormIssues({
     issues: clientIssues(state).map((i) => ({ ...i })),
@@ -215,6 +218,19 @@ function CustomerForm({
     if (proposed && (state.vatNumber === '' || state.vatNumber === previous)) {
       setState((s) => ({ ...s, vatNumber: proposed }));
     }
+  };
+
+  // Rule 2: the SIRET is French only. Leaving France clears it, and the VAT number computed
+  // from it; a VAT number typed by hand stays.
+  const setCountry = (country: string) => {
+    set('country', country);
+    if (country === 'FR') return;
+    const computed = isValidSiret(siret) ? vatFromSiren(sirenOf(siret)) : null;
+    setState((s) => ({
+      ...s,
+      siret: '',
+      vatNumber: computed !== null && s.vatNumber === computed ? '' : s.vatNumber,
+    }));
   };
 
   const setContact = (key: string, field: keyof Omit<ContactRow, 'key' | 'id'>, value: string) => {
@@ -248,6 +264,7 @@ function CustomerForm({
     },
   });
 
+  const confirm = useConfirm();
   const archive = useSubmit({
     mutationFn: async (archived: boolean) => {
       const param = { param: { id: customer?.id ?? '' } };
@@ -315,7 +332,16 @@ function CustomerForm({
             {customer ? (
               <Button
                 variant="danger"
-                onClick={() => archive.mutate(!customer.archived)}
+                onClick={() =>
+                  customer.archived
+                    ? archive.mutate(false)
+                    : confirm.ask({
+                        title: m.confirm_archive_title({ name: customer.name }),
+                        text: m.confirm_archive_customer_text(),
+                        confirmLabel: m.action_archive(),
+                        onConfirm: () => archive.mutate(true),
+                      })
+                }
                 busy={archive.isPending}
               >
                 {customer.archived ? m.action_restore() : m.action_archive()}
@@ -332,6 +358,17 @@ function CustomerForm({
       />
 
       {guard.dialog}
+      {/* Outside the customer's form: the site has a form of its own. */}
+      {creatingSite ? (
+        <NewSiteDialog
+          onClose={() => setCreatingSite(false)}
+          onCreated={(site) => {
+            setCreatingSite(false);
+            setState((s) => ({ ...s, sites: [...s.sites, site] }));
+          }}
+        />
+      ) : null}
+      {confirm.dialog}
       {customer?.archived ? <Banner tone="warning">{m.customer_archived_banner()}</Banner> : null}
       {notice ? <Banner tone="ok">{notice}</Banner> : null}
       {writeError ? <Banner tone="conflict">{failureText(writeError, lists)}</Banner> : null}
@@ -361,7 +398,7 @@ function CustomerForm({
                   />
                 </Field>
                 <Field label={m.field_country()} error={errorFor('country')}>
-                  <select value={state.country} onChange={(e) => set('country', e.target.value)}>
+                  <select value={state.country} onChange={(e) => setCountry(e.target.value)}>
                     {countryOptions.map((code) => (
                       <option key={code} value={code}>
                         {countryName(code)}
@@ -496,8 +533,8 @@ function CustomerForm({
             />
             <UsualSites
               sites={state.sites}
-              customerId={customer?.id}
               today={today}
+              onNewSite={() => setCreatingSite(true)}
               onAdd={(site) => set('sites', [...state.sites, site])}
               onRemove={(siteId) =>
                 set(
@@ -618,14 +655,15 @@ function Contacts({
 
 function UsualSites({
   sites,
-  customerId,
   today,
+  onNewSite,
   onAdd,
   onRemove,
 }: {
   sites: readonly SiteJson[];
-  customerId: string | undefined;
   today: number;
+  /** Opens the site form over this one, also while the customer is not saved yet. */
+  onNewSite: () => void;
   onAdd: (site: SiteJson) => void;
   onRemove: (siteId: string) => void;
 }) {
@@ -657,11 +695,7 @@ function UsualSites({
           value={query}
           onChange={(e) => setQuery(e.target.value)}
         />
-        {customerId ? (
-          <Link className="t-button" to="/customers/sites/new" search={{ customer: customerId }}>
-            {m.action_new_site()}
-          </Link>
-        ) : null}
+        <Button onClick={onNewSite}>{m.action_new_site()}</Button>
       </div>
       {matches.length > 0 ? (
         <ul className="site-matches">
@@ -722,12 +756,13 @@ function UsualSites({
                   </td>
                   <td>{accessAndBooking(site)}</td>
                   <td className="t-end">
+                    {/* The site stays in the address book: only this customer's list changes. */}
                     <Button
                       variant="link"
                       onClick={() => onRemove(site.id)}
-                      aria-label={m.action_remove_named({ name: site.name })}
+                      aria-label={m.action_remove_from_list_named({ name: site.name })}
                     >
-                      {m.action_remove()}
+                      {m.action_remove_from_list()}
                     </Button>
                   </td>
                 </tr>

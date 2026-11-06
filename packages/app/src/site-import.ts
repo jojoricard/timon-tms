@@ -20,6 +20,7 @@ import {
   simplify,
 } from './csv.ts';
 import { type Located, locateAddress, notLocated } from './geocoding.ts';
+import { bookingAliases, noBookingAliases, valueAliases } from './import-format.ts';
 import type { Ports, ReferenceLists, SiteRecord } from './ports.ts';
 import type { FieldIssue } from './resources.ts';
 import { checkSiteRecord, type NearbySite, nearbyAmong, normaliseSite } from './sites.ts';
@@ -62,20 +63,6 @@ export const siteColumns: readonly CsvColumn[] = [
   column('gatePhone', 'gate_phone', 'telephone_accueil'),
   column('instructions', 'instructions', 'consignes'),
 ];
-
-const bookingAliases: Record<BookingMethod, readonly string[]> = {
-  phone: ['phone', 'telephone', 'tel'],
-  email: ['email', 'e mail', 'mail', 'courriel'],
-  portal: ['portal', 'web portal', 'portail', 'web', 'site web'],
-};
-
-const equipmentAliases: Record<string, readonly string[]> = {
-  'safety-shoes': ['safety shoes', 'shoes', 'chaussures de securite', 'chaussures'],
-  'high-visibility-vest': ['high visibility vest', 'vest', 'gilet haute visibilite', 'gilet'],
-  'hard-hat': ['hard hat', 'helmet', 'casque'],
-  'safety-glasses': ['safety glasses', 'glasses', 'lunettes de securite', 'lunettes'],
-  gloves: ['gloves', 'gants'],
-};
 
 export type SiteImportRow = {
   readonly line: number;
@@ -154,7 +141,7 @@ function parseLine(
 
   const bookingText = simplify(value('bookingMethod'));
   const bookingMethod =
-    bookingText === '' || ['no', 'non', 'none', 'aucun'].includes(bookingText)
+    bookingText === '' || noBookingAliases.includes(bookingText)
       ? null
       : ((Object.keys(bookingAliases) as BookingMethod[]).find((m) =>
           bookingAliases[m].includes(bookingText),
@@ -170,8 +157,7 @@ function parseLine(
         lists.protectiveEquipment.find(
           (item) =>
             (item.code !== null &&
-              (simplify(item.code) === part ||
-                (equipmentAliases[item.code] ?? []).includes(part))) ||
+              (simplify(item.code) === part || (valueAliases[item.code] ?? []).includes(part))) ||
             (item.name !== null && simplify(item.name) === part),
         )?.id,
     );

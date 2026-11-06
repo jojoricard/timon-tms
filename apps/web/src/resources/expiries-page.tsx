@@ -90,6 +90,7 @@ export function ExpiriesPage({
           </Metric>
         </Metrics>
       ) : null}
+      {data ? <p className="t-field-hint">{m.metrics_scope()}</p> : null}
 
       <div className="toolbar">
         <div className="toolbar-start">

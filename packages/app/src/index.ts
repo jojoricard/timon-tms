@@ -55,6 +55,13 @@ export {
 } from './import.ts';
 export { type ColumnKind, type ImportColumn, importColumns } from './import-format.ts';
 export {
+  type AcceptedValues,
+  customerImportGuide,
+  type GuideColumn,
+  resourceImportGuide,
+  siteImportGuide,
+} from './import-guide.ts';
+export {
   BookingOverlapError,
   type BookingRepository,
   type Clock,
@@ -65,6 +72,7 @@ export {
   type DocumentRepository,
   type DocumentType,
   DocumentTypeTakenError,
+  EmployeeNumberTakenError,
   type ListItem,
   type NewBooking,
   type NewDocument,
@@ -91,6 +99,7 @@ export {
 } from './ports.ts';
 export {
   createResource,
+  type EmployeeNumberOwner,
   type FieldIssue,
   getReferenceLists,
   getResource,

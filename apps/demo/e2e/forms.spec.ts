@@ -1,4 +1,4 @@
-import { expect, type Page, test } from '@playwright/test';
+import { expect, type Locator, type Page, test } from '@playwright/test';
 
 // How every form behaves: one request per submit, errors next to their field, no input lost
 // without a warning. Each test gets a fresh browser context, hence a fresh demo haulier.
@@ -45,8 +45,8 @@ function countRequests(page: Page, method: string, path: RegExp) {
  * Three clicks in the same task, faster than any person: React has not rendered the disabled
  * button between them, so only a lock taken at the first click stops the second.
  */
-async function burst(page: Page, name: string) {
-  await page.getByRole('button', { name, exact: true }).evaluate((button: HTMLButtonElement) => {
+async function burst(page: Page, name: string, within: Page | Locator = page) {
+  await within.getByRole('button', { name, exact: true }).evaluate((button: HTMLButtonElement) => {
     for (let i = 0; i < 3; i += 1) button.click();
   });
 }
@@ -76,14 +76,15 @@ test.describe('one request per submit', () => {
     expect(imported).toHaveLength(2);
   });
 
-  test('a burst of clicks on Archive sends one request', async ({ page }) => {
+  test('a burst of clicks on Archive, once confirmed, sends one request', async ({ page }) => {
     await open(page, '/resources/drivers/new');
     await page.getByLabel('Last name').fill('Archive');
     await page.getByLabel('First name').fill('Test');
     await page.getByRole('button', { name: 'Create' }).click();
     await expect(page.getByRole('button', { name: 'Archive' })).toBeVisible();
     const archives = countRequests(page, 'POST', /\/api\/resources\/[^/]+\/archive$/);
-    await burst(page, 'Archive');
+    await page.getByRole('button', { name: 'Archive' }).click();
+    await burst(page, 'Archive', page.getByRole('alertdialog'));
     await expect(page.getByRole('button', { name: 'Restore' })).toBeVisible();
     expect(archives()).toBe(1);
   });

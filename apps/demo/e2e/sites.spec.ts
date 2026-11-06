@@ -91,6 +91,80 @@ test('criterion 6: a site in Germany placed by hand is in Europe/Berlin', async 
   await expect(locatedBy(page)).toHaveText('By hand');
 });
 
+/** The area the map tiles asked for at the deepest zoom cover, in degrees, and that zoom. */
+function tilesArea(urls: readonly string[]) {
+  const tiles = urls.flatMap((url) => {
+    const match = /\/(\d+)\/(\d+)\/(\d+)\.png$/.exec(url);
+    return match ? [match.slice(1).map(Number) as [number, number, number]] : [];
+  });
+  const zoom = Math.max(...tiles.map(([z]) => z));
+  const deepest = tiles.filter(([z]) => z === zoom);
+  const n = 2 ** zoom;
+  const longitude = (x: number) => (x / n) * 360 - 180;
+  const latitude = (y: number) =>
+    (Math.atan(Math.sinh(Math.PI * (1 - (2 * y) / n))) * 180) / Math.PI;
+  const xs = deepest.map(([, x]) => x);
+  const ys = deepest.map(([, , y]) => y);
+  return {
+    zoom,
+    west: longitude(Math.min(...xs)),
+    east: longitude(Math.max(...xs) + 1),
+    north: latitude(Math.min(...ys)),
+    south: latitude(Math.max(...ys) + 1),
+  };
+}
+
+test('criterion 19: a site in Germany centres the map on Germany; a pin elsewhere warns, and saves', async ({
+  page,
+  context,
+}) => {
+  const tiles: string[] = [];
+  await context.route('https://tile.openstreetmap.org/**', (route) => {
+    tiles.push(route.request().url());
+    return route.abort();
+  });
+  /** Waits until the map asks for no more tiles: it has stopped moving. */
+  const settled = async () => {
+    let seen = -1;
+    await expect
+      .poll(
+        () => {
+          const still = tiles.length > 0 && tiles.length === seen;
+          seen = tiles.length;
+          return still;
+        },
+        { intervals: [400] },
+      )
+      .toBe(true);
+  };
+  await newSite(page, 'Lager Berlin');
+  await settled();
+  tiles.length = 0;
+  await page.getByLabel('Country').selectOption('DE');
+  await settled();
+  // The map shows the whole of Germany's box (47.27 to 55.06 north, 5.87 to 15.04 east), at
+  // the zoom of a country, not of a city.
+  const area = tilesArea(tiles);
+  expect(area.zoom).toBeLessThanOrEqual(7);
+  expect(area.west).toBeLessThanOrEqual(5.87);
+  expect(area.east).toBeGreaterThanOrEqual(15.04);
+  expect(area.south).toBeLessThanOrEqual(47.27);
+  expect(area.north).toBeGreaterThanOrEqual(55.06);
+  await expect(page.getByText(/The pin is outside/)).toHaveCount(0);
+
+  // A pin placed by hand in France stays when the country becomes Germany: it warns.
+  await page.getByLabel('Country').selectOption('FR');
+  await page.getByRole('application', { name: /Map of the site/ }).click();
+  await page.getByLabel('Country').selectOption('DE');
+  await expect(page.getByText('The pin is outside Germany.')).toBeVisible();
+  await page.getByRole('combobox', { name: 'Street' }).fill('Alexanderplatz 1');
+  await page.getByLabel('Postcode').fill('10178');
+  await page.getByLabel('City').fill('Berlin');
+  await page.getByRole('button', { name: 'Create' }).click();
+  await expect(page.getByRole('heading', { level: 1, name: 'Lager Berlin' })).toBeVisible();
+  await expect(page.getByText('The pin is outside Germany.')).toBeVisible();
+});
+
 test('criterion 7: with the IGN unreachable, a French site is saved as not located', async ({
   page,
   context,

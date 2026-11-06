@@ -1,5 +1,5 @@
 import { useMutation } from '@tanstack/react-query';
-import type { IssueJson, ReferenceListsJson } from '@timon/http';
+import type { ImportGuideJson, IssueJson, ReferenceListsJson } from '@timon/http';
 import {
   Banner,
   Button,
@@ -87,6 +87,7 @@ export function ImportScreen<Row extends ImportRowLike, Check extends ImportChec
   filters = [],
   summary,
   rules,
+  guide,
   templates,
   templateText = m.template_text(),
   readyText = m.import_ready(),
@@ -107,6 +108,8 @@ export function ImportScreen<Row extends ImportRowLike, Check extends ImportChec
   filters?: readonly { label: string; test: (row: Row) => boolean }[];
   summary: (check: Check) => readonly { label: string; value: number }[];
   rules: readonly string[];
+  /** The columns of the file and the values each accepts (SPEC-001, Import). */
+  guide: ImportGuideJson | undefined;
   templates: readonly { href: string; download: string; label: string }[];
   templateText?: string;
   readyText?: string;
@@ -344,6 +347,70 @@ export function ImportScreen<Row extends ImportRowLike, Check extends ImportChec
           </section>
         </aside>
       </CardRow>
+      {guide ? <ColumnGuide guide={guide} /> : null}
     </div>
+  );
+}
+
+type Accepts = ImportGuideJson[number]['accepts'];
+
+/** "tractor / tracteur · rigid truck / porteur": each value, with the ways it may be written. */
+const spellings = (values: readonly (readonly string[])[] | undefined) =>
+  (values ?? []).map((ways) => ways.join(' / ')).join(' · ');
+
+function acceptsText(accepts: Accepts): string {
+  switch (accepts.kind) {
+    case 'text':
+      return m.accepts_text();
+    case 'date':
+      return m.accepts_date();
+    case 'weight':
+      return m.accepts_weight();
+    case 'number':
+      return m.accepts_number();
+    case 'metres':
+      return m.accepts_metres();
+    case 'yes-no':
+      return m.accepts_yes_no();
+    case 'country':
+      return m.accepts_country();
+    case 'hours':
+      return m.accepts_hours();
+    case 'one-of':
+      return m.accepts_one_of({ values: spellings(accepts.values) });
+    case 'list-of':
+      return m.accepts_list_of({ values: spellings(accepts.values) });
+  }
+}
+
+function ColumnGuide({ guide }: { guide: ImportGuideJson }) {
+  return (
+    <section className="t-panel" aria-labelledby="column-guide-title">
+      <h2 id="column-guide-title">{m.guide_title()}</h2>
+      <TableFrame>
+        <table className="t-table">
+          <caption className="t-visually-hidden">{m.guide_title()}</caption>
+          <thead>
+            <tr>
+              <th scope="col">{m.guide_column()}</th>
+              <th scope="col">{m.guide_accepts()}</th>
+            </tr>
+          </thead>
+          <tbody>
+            {guide.map((column) => (
+              <tr key={column.field}>
+                <th scope="row">
+                  <span className="t-mono">{column.header}</span>
+                  {column.required ? (
+                    <span className="t-secondary">{m.guide_required()}</span>
+                  ) : null}
+                </th>
+                <td>{acceptsText(column.accepts)}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </TableFrame>
+    </section>
   );
 }

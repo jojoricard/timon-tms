@@ -119,9 +119,14 @@ export const resource = pgTable(
   },
   (t) => [
     uniqueIndex('resource_active_plate').on(t.plateKey).where(sql`${t.archivedAt} is null`),
+    // SPEC-001 rule 9: unique among drivers, archived ones included, without case.
+    uniqueIndex('resource_driver_employee_number')
+      .on(sql`lower(${t.employeeNumber})`)
+      .where(sql`${t.kind} = 'driver'`),
+    // The display name is null unless typed (rule 8): it is built from the names when read.
     check(
       'resource_driver_fields',
-      sql`${t.kind} <> 'driver' or (${t.lastName} is not null and ${t.firstName} is not null and ${t.displayName} is not null and ${t.plate} is null and ${t.vehicleKind} is null)`,
+      sql`${t.kind} <> 'driver' or (${t.lastName} is not null and ${t.firstName} is not null and ${t.plate} is null and ${t.vehicleKind} is null)`,
     ),
     check(
       'resource_vehicle_fields',

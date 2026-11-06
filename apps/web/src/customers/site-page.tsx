@@ -5,23 +5,21 @@ import {
   bookingMethods,
   checkSite,
   countries,
+  countryBounds,
+  isCountry,
+  isInCountry,
   type LocatedBy,
   type SiteDetails,
   textLimits,
   timeZoneOf,
 } from '@timon/domain';
-import type {
-  AddressCandidateJson,
-  CustomerWithSitesJson,
-  IssueJson,
-  SiteInputJson,
-  SiteJson,
-} from '@timon/http';
+import type { AddressCandidateJson, IssueJson, SiteInputJson, SiteJson } from '@timon/http';
 import {
   Banner,
   Button,
   CardRow,
   Checkbox,
+  Dialog,
   Field,
   FormGrid,
   SegmentedControl,
@@ -29,6 +27,7 @@ import {
 } from '@timon/ui';
 import { type FormEvent, lazy, Suspense, useId, useState } from 'react';
 import { api, ok } from '../api.ts';
+import { useConfirm } from '../confirm.tsx';
 import { errorText, useReferenceLists } from '../data.ts';
 import { bannerError, IssueBanner, useFormIssues } from '../form.tsx';
 import { type FieldLabels, failureText } from '../issues.ts';
@@ -56,7 +55,7 @@ import { LocatedBadge } from './section.tsx';
 // The map, and Leaflet with it, load only when a site form opens.
 const SiteMap = lazy(() => import('./site-map.tsx'));
 
-export function SitePage({ id, customerId }: { id?: string; customerId?: string | undefined }) {
+export function SitePage({ id }: { id?: string }) {
   const site = useSite(id);
   // Kept here: the form is built again from the saved site, and "Saved." must stay.
   const [notice, setNotice] = useState<string>();
@@ -79,10 +78,35 @@ export function SitePage({ id, customerId }: { id?: string; customerId?: string 
       key={site.data?.site.updatedAt ?? 'new'}
       site={site.data?.site}
       initialNearby={site.data?.nearby ?? []}
-      customerId={customerId}
       notice={notice}
       onNotice={setNotice}
     />
+  );
+}
+
+/**
+ * A new site from a customer's form, without leaving it (SPEC-002, Customer form): the site is
+ * written to the address book at once; the customer form adds it to its usual sites, and the
+ * link is saved with the customer.
+ */
+export function NewSiteDialog({
+  onCreated,
+  onClose,
+}: {
+  onCreated: (site: SiteJson) => void;
+  onClose: () => void;
+}) {
+  const [notice, setNotice] = useState<string>();
+  return (
+    <Dialog title={m.new_site()} size="large" onClose={onClose}>
+      <SiteForm
+        site={undefined}
+        initialNearby={[]}
+        notice={notice}
+        onNotice={setNotice}
+        inDialog={{ onCreated, onCancel: onClose }}
+      />
+    </Dialog>
   );
 }
 
@@ -221,9 +245,9 @@ function clientIssues(s: FormState): IssueJson[] {
 function SiteForm({
   site,
   initialNearby,
-  customerId,
   notice,
   onNotice: setNotice,
+  inDialog,
 }: {
   site: SiteJson | undefined;
   initialNearby: readonly {
@@ -232,9 +256,10 @@ function SiteForm({
     distanceMetres: number | null;
     sameStreet: boolean;
   }[];
-  customerId: string | undefined;
   notice: string | undefined;
   onNotice: (notice: string | undefined) => void;
+  /** Shown in a dialog over another form: the new site goes back to it. */
+  inDialog?: { onCreated: (site: SiteJson) => void; onCancel: () => void } | undefined;
 }) {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
@@ -242,7 +267,10 @@ function SiteForm({
   const lists = useReferenceLists().data;
   const [initial] = useState(() => initialState(site));
   const [state, setState] = useState(initial);
-  const guard = useLeaveGuard(changed(initial, state));
+  // In a dialog, the form underneath guards the page.
+  const guard = useLeaveGuard(!inDialog && changed(initial, state));
+  // Ids unique on the page: the dialog opens over a customer's form.
+  const ids = useId();
   const [suggestionsOpen, setSuggestionsOpen] = useState(false);
   const [active, setActive] = useState(0);
   const listboxId = useId();
@@ -320,29 +348,9 @@ function SiteForm({
     onSuccess: async (saved) => {
       guard.release();
       queryClient.setQueryData(customerKeys.site(saved.site.id), saved);
-      if (!site && customerId) {
-        // Created from a customer's form: the new site becomes one of its usual sites.
-        const customer: CustomerWithSitesJson = await ok(
-          await api.customers[':id'].$get({ param: { id: customerId } }),
-        );
-        await ok(
-          await api.customers[':id'].$put({
-            param: { id: customerId },
-            json: {
-              ...customer,
-              contacts: customer.contacts.map(({ id, name, role, phone, email }) => ({
-                id,
-                name,
-                role,
-                phone,
-                email,
-              })),
-              siteIds: [...customer.siteIds, saved.site.id],
-            },
-          }),
-        );
+      if (inDialog) {
         await refresh();
-        await navigate({ to: '/customers/$id', params: { id: customerId } });
+        inDialog.onCreated(saved.site);
         return;
       }
       await refresh();
@@ -353,6 +361,7 @@ function SiteForm({
     onError: form.refused,
   });
 
+  const confirm = useConfirm();
   const archive = useSubmit({
     mutationFn: async (archived: boolean) => {
       const param = { param: { id: site?.id ?? '' } };
@@ -368,6 +377,7 @@ function SiteForm({
     },
   });
 
+  const formId = inDialog ? `${ids}-site-form` : 'site-form';
   const submit = (event: FormEvent) => {
     event.preventDefault();
     setNotice(undefined);
@@ -384,50 +394,58 @@ function SiteForm({
   );
   const zone = timeZoneOf(state.country);
   const subtitle = site ? m.used_by({ count: site.customerIds.length }) : null;
-  const backTo = customerId ? (
-    <Link className="t-button" to="/customers/$id" params={{ id: customerId }}>
-      {m.action_cancel()}
-    </Link>
-  ) : (
-    <Link className="t-button" to="/customers/sites">
-      {m.action_cancel()}
-    </Link>
-  );
+  const area = isCountry(state.country) ? countryBounds[state.country] : undefined;
+  // SPEC-002, Locating a site: a pin outside the site's country warns, and never blocks.
+  const outside = state.location !== null && !isInCountry(state.location, state.country);
+  const submitLabel = site ? m.action_save() : m.action_create();
 
-  return (
-    <div className="page">
-      <PageHeader
-        breadcrumb={
-          <>
-            <li>
-              <Link to="/customers">{m.customers_title()}</Link>
-            </li>
-            <li>
-              <Link to="/customers/sites">{m.sites_title()}</Link>
-            </li>
-            <li aria-current="page">{site?.name ?? m.new_site()}</li>
-          </>
-        }
-        title={site?.name ?? m.new_site()}
-        subtitle={subtitle}
-        actions={
-          <>
-            {site ? (
-              <Button
-                variant="danger"
-                onClick={() => archive.mutate(!site.archived)}
-                busy={archive.isPending}
-              >
-                {site.archived ? m.action_restore() : m.action_archive()}
+  const content = (
+    <>
+      {inDialog ? null : (
+        <PageHeader
+          breadcrumb={
+            <>
+              <li>
+                <Link to="/customers">{m.customers_title()}</Link>
+              </li>
+              <li>
+                <Link to="/customers/sites">{m.sites_title()}</Link>
+              </li>
+              <li aria-current="page">{site?.name ?? m.new_site()}</li>
+            </>
+          }
+          title={site?.name ?? m.new_site()}
+          subtitle={subtitle}
+          actions={
+            <>
+              {site ? (
+                <Button
+                  variant="danger"
+                  onClick={() =>
+                    site.archived
+                      ? archive.mutate(false)
+                      : confirm.ask({
+                          title: m.confirm_archive_title({ name: site.name }),
+                          text: m.confirm_archive_site_text(),
+                          confirmLabel: m.action_archive(),
+                          onConfirm: () => archive.mutate(true),
+                        })
+                  }
+                  busy={archive.isPending}
+                >
+                  {site.archived ? m.action_restore() : m.action_archive()}
+                </Button>
+              ) : null}
+              <Link className="t-button" to="/customers/sites">
+                {m.action_cancel()}
+              </Link>
+              <Button type="submit" form={formId} variant="primary" busy={save.isPending}>
+                {submitLabel}
               </Button>
-            ) : null}
-            {backTo}
-            <Button type="submit" form="site-form" variant="primary" busy={save.isPending}>
-              {site ? m.action_save() : m.action_create()}
-            </Button>
-          </>
-        }
-      />
+            </>
+          }
+        />
+      )}
 
       {site?.archived ? <Banner tone="warning">{m.site_archived_banner()}</Banner> : null}
       {warnings.map((w) => (
@@ -441,15 +459,16 @@ function SiteForm({
         </Banner>
       ))}
       {guard.dialog}
+      {confirm.dialog}
       {notice ? <Banner tone={notice === m.saved() ? 'ok' : 'warning'}>{notice}</Banner> : null}
       {writeError ? <Banner tone="conflict">{failureText(writeError, lists)}</Banner> : null}
       <IssueBanner issues={form.unplaced} lists={lists} labels={siteLabels} />
 
-      <form id="site-form" ref={form.formRef} onSubmit={submit} noValidate>
+      <form id={formId} ref={form.formRef} onSubmit={submit} noValidate>
         <CardRow columns={['1fr', '1fr']}>
-          <section className="t-panel" aria-labelledby="address-title">
+          <section className="t-panel" aria-labelledby={`${ids}-address`}>
             <div className="panel-title-row">
-              <h2 id="address-title">{m.section_address()}</h2>
+              <h2 id={`${ids}-address`}>{m.section_address()}</h2>
               <LocatedBadge locatedBy={state.location ? state.locatedBy : 'not-located'} />
             </div>
             <FormGrid>
@@ -582,9 +601,9 @@ function SiteForm({
             </FormGrid>
           </section>
 
-          <section className="t-panel" aria-labelledby="hours-title">
+          <section className="t-panel" aria-labelledby={`${ids}-hours`}>
             <div className="panel-title-row">
-              <h2 id="hours-title">{m.section_opening_hours()}</h2>
+              <h2 id={`${ids}-hours`}>{m.section_opening_hours()}</h2>
               <span className="t-field-hint">{m.opening_hint({ zone })}</span>
             </div>
             <OpeningHoursEditor
@@ -594,9 +613,9 @@ function SiteForm({
             />
           </section>
 
-          <section className="t-panel" aria-labelledby="location-title">
+          <section className="t-panel" aria-labelledby={`${ids}-location`}>
             <div className="panel-title-row">
-              <h2 id="location-title">{m.section_location()}</h2>
+              <h2 id={`${ids}-location`}>{m.section_location()}</h2>
               <span className="location-facts">
                 {state.location ? (
                   <span className="t-mono">
@@ -611,9 +630,14 @@ function SiteForm({
               </span>
             </div>
             <Suspense fallback={<div className="site-map">{m.loading()}</div>}>
-              <SiteMap location={state.location} onPlace={place} />
+              <SiteMap location={state.location} area={area} onPlace={place} />
             </Suspense>
             <p className="t-field-hint">{m.map_hint()}</p>
+            {outside ? (
+              <Banner tone="warning">
+                {m.pin_outside_country({ country: countryName(state.country) })}
+              </Banner>
+            ) : null}
             {errorFor('location') ? <p className="t-field-error">{errorFor('location')}</p> : null}
             {state.location ? (
               <Button
@@ -627,8 +651,8 @@ function SiteForm({
             ) : null}
           </section>
 
-          <section className="t-panel" aria-labelledby="requirements-title">
-            <h2 id="requirements-title">{m.section_requirements()}</h2>
+          <section className="t-panel" aria-labelledby={`${ids}-requirements`}>
+            <h2 id={`${ids}-requirements`}>{m.section_requirements()}</h2>
             <FormGrid>
               <SegmentedControl
                 legend={m.field_booking()}
@@ -762,7 +786,17 @@ function SiteForm({
             </FormGrid>
           </section>
         </CardRow>
+        {inDialog ? (
+          <div className="t-actions t-dialog-actions">
+            <Button onClick={inDialog.onCancel}>{m.action_cancel()}</Button>
+            <Button type="submit" variant="primary" busy={save.isPending}>
+              {submitLabel}
+            </Button>
+          </div>
+        ) : null}
       </form>
-    </div>
+    </>
   );
+
+  return inDialog ? content : <div className="page">{content}</div>;
 }

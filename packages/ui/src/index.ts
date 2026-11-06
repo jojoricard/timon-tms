@@ -14,6 +14,7 @@ export {
   Steps,
   type Tone,
 } from './controls.tsx';
+export { ConfirmDialog, Dialog } from './dialog.tsx';
 export { Field } from './field.tsx';
 export { CardRow, CardStack, FormGrid, PageHeader, TableFrame, Tabs } from './layout.tsx';
 export { Columns } from './table.tsx';
