@@ -2,7 +2,6 @@ import type { NewDocument, NewResource, ReferenceLists } from '@timon/app';
 import {
   companyDay,
   type Driver,
-  defaultDisplayName,
   Temporal,
   type Vehicle,
   type VehicleCategory,
@@ -168,6 +167,11 @@ const drivers: DriverRow[] = [
     card: '2027-09-15',
   },
 ];
+
+/** The names of the demo's drivers, for the test of migration 0014. */
+export const seedDriverNames: readonly { first: string; last: string }[] = drivers.map(
+  ({ first, last }) => ({ first, last }),
+);
 
 type DocumentRow = { expires: string; reference?: string; issued?: string };
 type VehicleRow = {
@@ -343,7 +347,7 @@ function build(lists: ReferenceLists, shift: number) {
       kind: 'driver',
       lastName: d.last,
       firstName: d.first,
-      displayName: defaultDisplayName(d.first, d.last),
+      displayName: null,
       employeeNumber: `E-${1001 + index}`,
       phone: `06 12 34 ${20 + index} ${40 + index}`,
       // Samuel Moreau holds three of the five items on the driver mockup of SPEC-002.

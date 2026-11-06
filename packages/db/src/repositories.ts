@@ -102,7 +102,7 @@ function toResource(
       kind: 'driver',
       lastName: row.lastName ?? '',
       firstName: row.firstName ?? '',
-      displayName: row.displayName ?? '',
+      displayName: row.displayName,
       employeeNumber: row.employeeNumber,
       phone: row.phone,
       protectiveEquipmentIds,
@@ -242,6 +242,19 @@ function resourceRepository(db: Database): ResourceRepository {
       return load(rows);
     },
     get,
+    findDriverByEmployeeNumber: async (employeeNumber, exceptId) => {
+      const rows = await db
+        .select()
+        .from(resource)
+        .where(
+          and(
+            eq(resource.kind, 'driver'),
+            sql`lower(${resource.employeeNumber}) = lower(${employeeNumber})`,
+            exceptId ? ne(resource.id, exceptId) : undefined,
+          ),
+        );
+      return (await load(rows))[0];
+    },
     findActiveByPlate: async (key, exceptId) => {
       const rows = await db
         .select()

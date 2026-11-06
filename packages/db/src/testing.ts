@@ -10,10 +10,13 @@ export type TestDatabase = { db: Database; close: () => Promise<void> };
 /** A geocoder that never finds anything: tests never reach the network. */
 export const offline = { search: async () => [] };
 
-export async function createTestDatabase(): Promise<TestDatabase> {
+/** `through` stops the migrations after the one named, for a test of the next one. */
+export async function createTestDatabase(
+  options: { through?: string } = {},
+): Promise<TestDatabase> {
   const url = process.env.TEST_DATABASE_URL;
   const database = url ? await onPostgres(url) : await onPglite();
-  await migrate(database.db);
+  await migrate(database.db, options);
   return database;
 }
 

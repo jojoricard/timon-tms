@@ -2,6 +2,7 @@ import {
   BookingOverlapError,
   CustomerCodeTakenError,
   DocumentTypeTakenError,
+  EmployeeNumberTakenError,
   OpeningOverlapError,
   PlateTakenError,
   SiretTakenError,
@@ -18,6 +19,8 @@ const violations: Record<string, () => Error> = {
   resource_booking_no_overlap: () => new BookingOverlapError('Overlapping booking'),
   unit_member_no_overlap: () => new UnitOverlapError('Resource already in another unit'),
   resource_active_plate: () => new PlateTakenError('Plate used by another active resource'),
+  resource_driver_employee_number: () =>
+    new EmployeeNumberTakenError('Employee number used by another driver'),
   document_resource_type: () => new DocumentTypeTakenError('Document type already recorded'),
 };
 

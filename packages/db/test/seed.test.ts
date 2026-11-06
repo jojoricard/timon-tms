@@ -8,7 +8,7 @@ import {
   unitsAt,
   unitsOfResource,
 } from '@timon/app';
-import { Temporal } from '@timon/domain';
+import { isInCountry, Temporal } from '@timon/domain';
 import { afterEach, describe, expect, it } from 'vitest';
 import { createRepositories, seed } from '../src/index.ts';
 import { createTestDatabase, offline, type TestDatabase } from '../src/testing.ts';
@@ -79,6 +79,11 @@ describe('seed', () => {
     expect(customers[0]?.siteIds).toHaveLength(4);
     const { counts } = await listSites(ports);
     expect(counts).toEqual({ all: 12, 'not-located': 1, booking: 8, 'protective-equipment': 11 });
+    // SPEC-002, Locating a site: the demo places every pin inside its country.
+    const outside = (await listSites(ports)).sites
+      .filter((site) => site.location && !isInCountry(site.location, site.country))
+      .map((site) => site.name);
+    expect(outside).toEqual([]);
     const { resources } = await listResources(ports, { kind: 'driver', query: 'Moreau' });
     expect(resources[0]?.kind === 'driver' && resources[0].protectiveEquipmentIds).toHaveLength(3);
   });
