@@ -323,11 +323,8 @@ const sitesRoute = createRoute({
 const newSiteRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/customers/sites/new',
-  validateSearch: (search: Record<string, unknown>): { customer?: string } =>
-    typeof search.customer === 'string' ? { customer: search.customer } : {},
   component: localised(function NewSite() {
-    const { customer } = newSiteRoute.useSearch();
-    return <SitePage customerId={customer} />;
+    return <SitePage />;
   }),
 });
 

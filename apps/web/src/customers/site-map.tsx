@@ -1,4 +1,5 @@
 import 'leaflet/dist/leaflet.css';
+import type { Bounds } from '@timon/domain';
 import L from 'leaflet';
 import { useEffect, useRef } from 'react';
 import { m } from '../paraglide/messages.js';
@@ -23,14 +24,20 @@ const pin = L.divIcon({
 /** Lyon, where the demo haulier works, when there is nothing to centre on. */
 const fallback: Point = { latitude: 45.75, longitude: 4.85 };
 
+const latLngBounds = (area: Bounds) =>
+  L.latLngBounds([area.south, area.west], [area.north, area.east]);
+
 export default function SiteMap({
   location,
-  centre,
+  area,
   onPlace,
 }: {
   location: Point | null;
-  /** Where to look when the site is not located: its city, for instance. */
-  centre?: Point | null;
+  /**
+   * The site's country, to look at while the site is not located (SPEC-002, Locating a site).
+   * The map moves to it again when the country changes.
+   */
+  area?: Bounds | undefined;
   /** The pin was dropped or dragged: the site is now located by hand. */
   onPlace: (point: Point) => void;
 }) {
@@ -39,16 +46,16 @@ export default function SiteMap({
   const marker = useRef<L.Marker | null>(null);
   const place = useRef(onPlace);
   place.current = onPlace;
+  const shownArea = useRef(area);
 
   // The map is created once per form; later changes move the pin in the effect below.
   // biome-ignore lint/correctness/useExhaustiveDependencies: created once, on mount.
   useEffect(() => {
     if (!element.current) return;
-    const start = location ?? centre ?? fallback;
-    const instance = L.map(element.current, { scrollWheelZoom: false }).setView(
-      [start.latitude, start.longitude],
-      location ? 17 : centre ? 14 : 10,
-    );
+    const instance = L.map(element.current, { scrollWheelZoom: false });
+    if (location) instance.setView([location.latitude, location.longitude], 17);
+    else if (area) instance.fitBounds(latLngBounds(area));
+    else instance.setView([fallback.latitude, fallback.longitude], 10);
     L.tileLayer(tiles, { attribution, maxZoom: 19 }).addTo(instance);
     instance.on('click', (event: L.LeafletMouseEvent) => {
       place.current({ latitude: event.latlng.lat, longitude: event.latlng.lng });
@@ -64,10 +71,12 @@ export default function SiteMap({
   useEffect(() => {
     const instance = map.current;
     if (!instance) return;
+    const areaChanged = area !== shownArea.current;
+    shownArea.current = area;
     if (!location) {
       marker.current?.remove();
       marker.current = null;
-      if (centre) instance.setView([centre.latitude, centre.longitude], 14);
+      if (area && areaChanged) instance.fitBounds(latLngBounds(area));
       return;
     }
     const latLng = L.latLng(location.latitude, location.longitude);
@@ -88,7 +97,7 @@ export default function SiteMap({
       marker.current = created;
     }
     if (!instance.getBounds().pad(-0.2).contains(latLng)) instance.setView(latLng, 17);
-  }, [location, centre]);
+  }, [location, area]);
 
   return <div ref={element} className="site-map" role="application" aria-label={m.map_label()} />;
 }

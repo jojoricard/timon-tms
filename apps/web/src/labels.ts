@@ -75,8 +75,11 @@ export const textTone = (severity: Severity): 'warning' | 'conflict' | undefined
   return tone === 'warning' || tone === 'conflict' ? tone : undefined;
 };
 
-/** French and English both read dates day first: 06/10/2026. */
-const dateLocale = () => (getLocale() === 'fr' ? 'fr-FR' : 'en-GB');
+/**
+ * French and English both read dates day first: 06/10/2026. English is British English, never
+ * the American order (SPEC-001, Screens); every date the application writes goes through it.
+ */
+export const dateLocale = () => (getLocale() === 'fr' ? 'fr-FR' : 'en-GB');
 
 function utc(isoDate: string): Date {
   const [year = 1970, month = 1, day = 1] = isoDate.split('-').map(Number);

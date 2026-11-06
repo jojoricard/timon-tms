@@ -1,3 +1,4 @@
+import { useQuery } from '@tanstack/react-query';
 import { Link, useNavigate } from '@tanstack/react-router';
 import type { LocatedBy } from '@timon/domain';
 import type { CustomerImportCheckJson, SiteImportCheckJson } from '@timon/http';
@@ -17,11 +18,26 @@ const template = (kind: 'customers' | 'sites', label: string) => [
   },
 ];
 
+/** The columns of a file and the values each accepts, in the language of the screen. */
+function useGuide(kind: 'customers' | 'sites') {
+  const lang = getLocale();
+  return useQuery({
+    queryKey: ['imports', kind, 'columns', lang],
+    queryFn: async () =>
+      ok(
+        kind === 'customers'
+          ? await api.imports.customers.columns.$get({ query: { lang } })
+          : await api.imports.sites.columns.$get({ query: { lang } }),
+      ),
+  }).data;
+}
+
 export function CustomerImportPage() {
   const navigate = useNavigate();
   const refresh = useRefreshCustomers();
   const lists = useReferenceLists().data;
   type Row = CustomerImportCheckJson['rows'][number];
+  const guide = useGuide('customers');
 
   return (
     <ImportScreen<Row, CustomerImportCheckJson>
@@ -60,7 +76,8 @@ export function CustomerImportPage() {
         { label: m.summary_already(), value: check.summary.alreadyInTimon },
         { label: m.summary_contacts(), value: check.summary.contacts },
       ]}
-      rules={[m.rule_all_or_nothing(), m.rule_codes()]}
+      rules={[m.rule_all_or_nothing(), m.rule_separator(), m.rule_codes()]}
+      guide={guide}
       templates={template('customers', m.download_customer_template())}
       templateText={m.template_text_customers()}
     />
@@ -72,6 +89,7 @@ export function SiteImportPage() {
   const refresh = useRefreshCustomers();
   const lists = useReferenceLists().data;
   type Row = SiteImportCheckJson['rows'][number];
+  const guide = useGuide('sites');
   const valid = (row: Row) => row.issues.length === 0;
 
   return (
@@ -151,7 +169,14 @@ export function SiteImportPage() {
         { label: m.summary_invalid(), value: check.summary.invalid },
         { label: m.summary_near(), value: check.summary.nearExisting },
       ]}
-      rules={[m.rule_all_or_nothing(), m.rule_locate(), m.rule_coordinates(), m.rule_hours()]}
+      rules={[
+        m.rule_all_or_nothing(),
+        m.rule_separator(),
+        m.rule_locate(),
+        m.rule_coordinates(),
+        m.rule_hours(),
+      ]}
+      guide={guide}
       templates={template('sites', m.download_site_template())}
       templateText={m.template_text_sites()}
       readyText={m.site_import_ready()}

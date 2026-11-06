@@ -1,7 +1,7 @@
 import type { LocatedBy } from '@timon/domain';
 import type { ListItemJson, OpeningJson, SiteJson } from '@timon/http';
 import type { Tone } from '@timon/ui';
-import { formatNumber, inSentence } from '../labels.ts';
+import { dateLocale, formatNumber, inSentence } from '../labels.ts';
 import { m } from '../paraglide/messages.js';
 import { getLocale } from '../paraglide/runtime.js';
 
@@ -49,7 +49,7 @@ export function equipmentLabel(item: ListItemJson | undefined, short = false): s
 export function weekdayName(weekday: number, width: 'long' | 'short' = 'long'): string {
   // 5 January 2026 is a Monday.
   const date = new Date(Date.UTC(2026, 0, 4 + weekday));
-  return new Intl.DateTimeFormat(getLocale(), { weekday: width, timeZone: 'UTC' }).format(date);
+  return new Intl.DateTimeFormat(dateLocale(), { weekday: width, timeZone: 'UTC' }).format(date);
 }
 
 export function formatTime(minutes: number): string {

@@ -1,7 +1,9 @@
 import { afterEach, describe, expect, it } from 'vitest';
-import { formatLongDate } from '../src/labels.ts';
+import { weekdayName } from '../src/customers/customer-labels.ts';
+import { formatDate, formatLongDate, formatMonth } from '../src/labels.ts';
 import { m } from '../src/paraglide/messages.js';
 import { overwriteGetLocale } from '../src/paraglide/runtime.js';
+import { formatTime } from '../src/units/unit-data.ts';
 
 // The day of a status reads in full, and counts agree with their number, in each language.
 
@@ -52,5 +54,16 @@ describe('counts', () => {
     );
     expect(m.imported({ count: 1 })).toBe('Imported: 1. It is now in the list.');
     expect(m.imported({ count: 2 })).toBe('Imported: 2. They are now in the list.');
+  });
+});
+
+describe('British dates in English (SPEC-001, Screens)', () => {
+  it('writes the day before the month, never the American way', () => {
+    inLocale('en');
+    expect(formatDate('2026-11-05')).toBe('05/11/2026');
+    expect(formatMonth('2026-11-05')).toBe('11/2026');
+    expect(formatLongDate('2026-11-05')).toBe('Thursday 5 November 2026');
+    expect(formatTime('2026-11-05T05:00:00Z', { year: true })).toBe('05/11/2026 06:00');
+    expect(weekdayName(4)).toBe('Thursday');
   });
 });

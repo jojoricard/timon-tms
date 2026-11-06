@@ -1,11 +1,12 @@
 import type { UnitJson } from '@timon/http';
-import { Banner, Button, Field, SegmentedControl } from '@timon/ui';
-import { type FormEvent, useEffect, useRef, useState } from 'react';
+import { Banner, Button, Dialog, Field, SegmentedControl } from '@timon/ui';
+import { type FormEvent, useState } from 'react';
 import { api, ok } from '../api.ts';
 import { bannerError, IssueBanner, useFormIssues } from '../form.tsx';
 import { failureText } from '../issues.ts';
 import { m } from '../paraglide/messages.js';
 import { useSubmit } from '../submit.ts';
+import { CandidateColumn } from './candidate-list.tsx';
 import {
   formatTime,
   fromLocal,
@@ -20,7 +21,8 @@ const none = '';
 
 /**
  * From a running unit: a new driver or trailer from a date and time. Shows the two units that
- * will result; only the resources free from then that fit the unit are offered.
+ * will result. The resources are listed as the unit form lists them: those that cannot be
+ * chosen from then stay visible, greyed, with the reason (SPEC-003, Screens).
  */
 export function ChangeDialog({
   unit,
@@ -31,7 +33,6 @@ export function ChangeDialog({
   onClose: () => void;
   onChanged?: (started: UnitJson) => void;
 }) {
-  const dialog = useRef<HTMLDialogElement>(null);
   const refresh = useRefreshUnits();
   const [role, setRole] = useState<Role>('driver');
   const [from, setFrom] = useState<LocalTime>(nextHourLocal());
@@ -42,11 +43,6 @@ export function ChangeDialog({
     issues: fromInstant ? [] : [{ field: 'from', code: 'required' }],
     placed: ['from', 'driverId', 'trailerId', 'resourceId'],
   });
-
-  useEffect(() => {
-    const element = dialog.current;
-    if (element && !element.open) element.showModal();
-  }, []);
 
   const options = useUnitOptions(
     fromInstant
@@ -61,10 +57,9 @@ export function ChangeDialog({
       : undefined,
   );
   const current = role === 'driver' ? unit.driver : unit.trailer;
-  const candidates = (options.data?.candidates[role] ?? []).filter(
-    (c) => c.reason === null && c.resource.id !== current?.id,
-  );
-  const picked = candidates.find((c) => c.resource.id === chosen)?.resource ?? null;
+  const picked =
+    options.data?.candidates[role].find((c) => c.resource.id === chosen && c.reason === null)
+      ?.resource ?? null;
 
   const change = useSubmit({
     mutationFn: async () =>
@@ -101,19 +96,8 @@ export function ChangeDialog({
       : m.action_change_trailer_from({ from: fromText });
 
   return (
-    <dialog
-      ref={dialog}
-      className="t-panel change-dialog"
-      aria-labelledby="change-title"
-      onClose={onClose}
-    >
+    <Dialog title={m.change_title({ name: unit.name })} size="large" onClose={onClose}>
       <form ref={form.formRef} onSubmit={submit} className="change-form" noValidate>
-        <div className="panel-title-row">
-          <h2 id="change-title">{m.change_title({ name: unit.name })}</h2>
-          <Button variant="link" onClick={onClose} aria-label={m.action_close()}>
-            ×
-          </Button>
-        </div>
         <p className="t-field-hint">
           {members(null, unit.trailer?.name ?? null)} ·{' '}
           {m.since_time({ start: formatTime(unit.start, { year: true }) })}
@@ -143,29 +127,23 @@ export function ChangeDialog({
               }}
             />
           </Field>
-          <Field
-            label={role === 'driver' ? m.field_new_driver() : m.field_new_trailer()}
-            error={form.errorFor(resourceField) ?? form.errorFor('resourceId')}
-          >
-            <select
-              value={chosen}
-              onChange={(e) => {
-                setChosen(e.target.value);
-                form.touch(resourceField);
-                form.touch('resourceId');
-              }}
-            >
-              <option value={none}>{role === 'driver' ? m.no_driver() : m.no_trailer()}</option>
-              {candidates.map((c) => (
-                <option key={c.resource.id} value={c.resource.id}>
-                  {c.resource.kind === 'driver'
-                    ? `${c.resource.fullName} (${c.resource.licences.join(' · ')})`
-                    : c.resource.name}
-                </option>
-              ))}
-            </select>
-          </Field>
         </div>
+        <CandidateColumn
+          key={role}
+          place={role}
+          title={role === 'driver' ? m.field_new_driver() : m.field_new_trailer()}
+          placeholder={role === 'driver' ? m.search_name() : m.search_plate()}
+          noneLabel={role === 'driver' ? m.no_driver() : m.no_trailer()}
+          options={options.data}
+          except={current?.id}
+          error={form.errorFor(resourceField) ?? form.errorFor('resourceId')}
+          chosen={chosen === none ? null : chosen}
+          onChoose={(id) => {
+            setChosen(id ?? none);
+            form.touch(resourceField);
+            form.touch('resourceId');
+          }}
+        />
 
         <h3 className="label-heading">{m.change_recorded()}</h3>
         <ul className="change-result">
@@ -207,13 +185,13 @@ export function ChangeDialog({
         {changeError ? <Banner tone="conflict">{failureText(changeError)}</Banner> : null}
         <IssueBanner issues={form.unplaced} />
 
-        <div className="t-actions dialog-actions">
+        <div className="t-actions t-dialog-actions">
           <Button onClick={onClose}>{m.action_cancel()}</Button>
           <Button type="submit" variant="primary" busy={change.isPending}>
             {changeLabel}
           </Button>
         </div>
       </form>
-    </dialog>
+    </Dialog>
   );
 }

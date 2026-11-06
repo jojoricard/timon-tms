@@ -1,6 +1,7 @@
 import type { ResourceKind, VehicleKind } from '@timon/domain';
 import type {
   CustomerOwnerJson,
+  EmployeeNumberOwnerJson,
   IssueJson,
   PlateOwnerJson,
   ReferenceListsJson,
@@ -13,6 +14,7 @@ import { errorText } from './data.ts';
 import {
   capitalise,
   entryLabel,
+  formatNumber,
   inSentence,
   joinOr,
   kindLabel,
@@ -143,6 +145,17 @@ export function issueText(
         allowed: joinOr(text(params.allowed).split(', ')),
         category: text(params.category),
       });
+    case 'category-weight-mismatch': {
+      const values = {
+        category: text(params.category),
+        weight: formatNumber(Number(params.gvwKg)),
+        over: params.overKg === undefined ? '' : formatNumber(Number(params.overKg)),
+        upTo: params.upToKg === undefined ? '' : formatNumber(Number(params.upToKg)),
+      };
+      if (values.over === '') return m.issue_category_weight_up_to(values);
+      if (values.upTo === '') return m.issue_category_weight_over(values);
+      return m.issue_category_weight_between(values);
+    }
     case 'weight-not-positive':
       return m.issue_weight_not_positive({ field });
     case 'combination-not-above-vehicle':
@@ -169,12 +182,20 @@ export function issueText(
     }
     case 'plate-duplicated':
       return m.issue_plate_duplicated({ line: text(params.line) });
+    case 'employee-number-taken':
+      return `${field} ${m.issue_employee_number_taken({ name: (params.owner as EmployeeNumberOwnerJson).name })}`;
+    case 'employee-number-duplicated':
+      return m.issue_employee_number_duplicated({ line: text(params.line) });
+    case 'phone-invalid':
+      return m.issue_phone_invalid({ field });
     case 'code-invalid':
       return m.issue_code_invalid({ field });
     case 'siret-invalid':
       return m.issue_siret_invalid();
     case 'siret-not-french':
       return m.issue_siret_not_french();
+    case 'vat-invalid':
+      return m.issue_vat_invalid();
     case 'country-unknown':
       return m.issue_country_unknown({ field });
     case 'contact-unreachable':
@@ -277,6 +298,11 @@ export function failureText(error: unknown, lists?: ReferenceListsJson): string 
       return m.plate_taken({ name: body.owner.name, kind: ownerKind(body.owner) });
     }
     if (error.code === 'document-type-taken') return m.document_type_taken();
+    if (error.code === 'archived') return m.archived_read_only();
+    if (error.code === 'employee-number-taken') {
+      const owner = (error.body as { owner?: EmployeeNumberOwnerJson } | undefined)?.owner;
+      if (owner) return employeeNumberTakenText(owner);
+    }
     const unitFailure = unitFailureText(error);
     if (unitFailure) return unitFailure;
     const customer = (error.body as { owner?: CustomerOwnerJson } | undefined)?.owner;
@@ -292,6 +318,13 @@ export function failureText(error: unknown, lists?: ReferenceListsJson): string 
     if (error.code === 'invalid' && first) return issueSentence(first, lists);
   }
   return errorText(error);
+}
+
+/** SPEC-001 rule 9: the driver who has the number, archived or not. */
+export function employeeNumberTakenText(owner: EmployeeNumberOwnerJson): string {
+  return owner.archived
+    ? m.employee_number_taken_archived({ name: owner.name })
+    : m.employee_number_taken({ name: owner.name });
 }
 
 /** The refusals of SPEC-003, in one sentence each. */

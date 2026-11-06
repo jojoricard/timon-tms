@@ -20,6 +20,7 @@ import {
 } from '@timon/ui';
 import { type FormEvent, useState } from 'react';
 import { ApiError, api, ok } from '../api.ts';
+import { useConfirm } from '../confirm.tsx';
 import { errorText } from '../data.ts';
 import { bannerError, IssueBanner, useFormIssues } from '../form.tsx';
 import { type FieldLabels, failureText } from '../issues.ts';
@@ -28,6 +29,7 @@ import { changed, useLeaveGuard } from '../leave-guard.tsx';
 import { m } from '../paraglide/messages.js';
 import { PageHeader } from '../resources/section.tsx';
 import { useSubmit } from '../submit.ts';
+import { CandidateColumn } from './candidate-list.tsx';
 import { ChangeDialog } from './change-dialog.tsx';
 import {
   formatTime,
@@ -45,7 +47,6 @@ import {
   memberStatusLabel,
   memberStatusTone,
   periodText,
-  reasonText,
   unitStateLabel,
   unitStateTone,
 } from './unit-labels.ts';
@@ -185,6 +186,8 @@ function UnitForm({ unit, initial }: { unit: UnitJson | undefined; initial: Unit
     },
     onError: form.refused,
   });
+  // Rule 6: a unit that has not started can be deleted, after a confirmation.
+  const confirm = useConfirm();
   const remove = useSubmit({
     mutationFn: async () => {
       const response = await api.units[':id'].$delete({ param: { id: unit?.id ?? '' } });
@@ -225,7 +228,18 @@ function UnitForm({ unit, initial }: { unit: UnitJson | undefined; initial: Unit
         actions={
           <>
             {unit ? (
-              <Button variant="danger" onClick={() => remove.mutate()} busy={remove.isPending}>
+              <Button
+                variant="danger"
+                onClick={() =>
+                  confirm.ask({
+                    title: m.confirm_delete_unit_title({ name: unit.name }),
+                    text: m.confirm_delete_unit_text(),
+                    confirmLabel: m.action_delete_unit(),
+                    onConfirm: () => remove.mutate(),
+                  })
+                }
+                busy={remove.isPending}
+              >
                 {m.action_delete_unit()}
               </Button>
             ) : null}
@@ -240,6 +254,7 @@ function UnitForm({ unit, initial }: { unit: UnitJson | undefined; initial: Unit
       />
 
       {guard.dialog}
+      {confirm.dialog}
       <IssueBanner issues={form.unplaced} labels={unitLabels} />
       {writeError ? <Banner tone="conflict">{failureText(writeError)}</Banner> : null}
 
@@ -330,129 +345,6 @@ function UnitForm({ unit, initial }: { unit: UnitJson | undefined; initial: Unit
       </form>
     </div>
   );
-}
-
-function CandidateColumn({
-  place,
-  title,
-  required,
-  placeholder,
-  hint,
-  noneLabel,
-  options,
-  error,
-  chosen,
-  onChoose,
-}: {
-  place: Role;
-  title: string;
-  required?: boolean;
-  placeholder: string;
-  hint?: string;
-  noneLabel?: string;
-  options: UnitOptionsJson | undefined;
-  error?: string | undefined;
-  chosen: string | null;
-  onChoose: (id: string | null) => void;
-}) {
-  const errorId = `unit-${place}-error`;
-  const invalid = error
-    ? ({ 'aria-invalid': true, 'aria-describedby': errorId } as const)
-    : ({} as const);
-  const [query, setQuery] = useState('');
-  const words = query.trim().toLocaleLowerCase();
-  const candidates = (options?.candidates[place] ?? []).filter(
-    (c) =>
-      words === '' ||
-      [c.resource.name, c.resource.fullName, c.resource.makeModel ?? '']
-        .join(' ')
-        .toLocaleLowerCase()
-        .includes(words),
-  );
-  const name = `unit-${place}`;
-  return (
-    <fieldset className="t-panel candidate-column" data-invalid={error ? 'true' : undefined}>
-      <legend className="candidate-title">
-        {title}{' '}
-        {required ? (
-          <StatusBadge tone="petrol">{m.required_tag()}</StatusBadge>
-        ) : (
-          <span className="t-field-optional">{m.optional()}</span>
-        )}
-      </legend>
-      {error ? (
-        <p className="t-field-error" id={errorId}>
-          {error}
-        </p>
-      ) : null}
-      <label className="search">
-        <span className="t-visually-hidden">{placeholder}</span>
-        <input
-          type="search"
-          value={query}
-          placeholder={placeholder}
-          onChange={(e) => setQuery(e.target.value)}
-        />
-      </label>
-      <ul className="candidates">
-        {noneLabel ? (
-          <li>
-            <label className="candidate" data-chosen={chosen === null || undefined}>
-              <input
-                type="radio"
-                name={name}
-                checked={chosen === null}
-                {...invalid}
-                onChange={() => onChoose(null)}
-              />
-              <span className="candidate-name">{noneLabel}</span>
-            </label>
-          </li>
-        ) : null}
-        {candidates.map(({ resource, reason }) => {
-          const isChosen = chosen === resource.id;
-          return (
-            <li key={resource.id}>
-              <label
-                className="candidate"
-                data-chosen={isChosen || undefined}
-                data-disabled={(reason && !isChosen) || undefined}
-              >
-                <input
-                  type="radio"
-                  name={name}
-                  checked={isChosen}
-                  disabled={reason !== null && !isChosen}
-                  {...invalid}
-                  onChange={() => onChoose(resource.id)}
-                />
-                <span className="candidate-text">
-                  <span
-                    className={
-                      resource.kind === 'driver' ? 'candidate-name' : 'candidate-name t-nowrap'
-                    }
-                  >
-                    {resource.kind === 'driver' ? resource.fullName : resource.name}
-                  </span>
-                  <span className="t-secondary">{candidateDetails(resource)}</span>
-                  {reason ? <span className="candidate-reason">{reasonText(reason)}</span> : null}
-                </span>
-              </label>
-            </li>
-          );
-        })}
-      </ul>
-      {hint ? <p className="t-field-hint">{hint}</p> : null}
-    </fieldset>
-  );
-}
-
-/** "Tractor · Renault T 480 · 19,000 kg", "C · CE". */
-function candidateDetails(member: UnitMemberJson): string {
-  const weight = (kg: number | null) =>
-    kg === null ? '' : `${new Intl.NumberFormat().format(kg)} ${m.kg()}`;
-  if (member.kind === 'driver') return memberDetails(member);
-  return [memberDetails(member), member.category, weight(member.gvwKg)].filter(Boolean).join(' · ');
 }
 
 function LicencePanel({
