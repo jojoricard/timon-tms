@@ -6,6 +6,7 @@ All notable changes to this project are documented here. The format follows [Kee
 
 ### Added
 
+- ADR-005 concurrent edits: a version per record, sent in If-Match on every write, a stale save refused with 412 and a reload offered, no merge and no lock (#44)
 - Units (SPEC-003, #7): a power unit with a driver, a trailer or both, over a half-open period to the minute in Europe/Paris, open-ended or not; a resource in one unit at a time, enforced by an exclusion constraint on the members, on PostgreSQL and PGlite
 - Licence check: the category a unit needs from the gross vehicle weights (B, C1, C, C1E, CE), against the licence documents the driver holds, whatever their expiry
 - Composition rules: a semi-trailer behind a tractor only, a drawbar trailer behind a rigid truck only, a light van with a driver only; active members of one subsidiary
