@@ -24,3 +24,4 @@ gen docs/adr/0005-concurrent-edits.md TIMON-ADR-005-concurrent-edits.docx
 gen docs/specs/0001-resources.md TIMON-SPEC-001-resources.docx
 gen docs/specs/0002-customers-and-sites.md TIMON-SPEC-002-customers-and-sites.docx
 gen docs/specs/0003-units.md TIMON-SPEC-003-units.docx
+gen docs/specs/0004-orders.md TIMON-SPEC-004-orders.docx
