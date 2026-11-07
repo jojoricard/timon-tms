@@ -33,6 +33,7 @@ All notable changes to this project are documented here. The format follows [Kee
 
 ### Fixed
 
+- Concurrent edits (ADR-005, #44): a save from a record another page changed since it was opened is refused instead of overwriting it. Resources, documents, customers, sites and units carry a version (migration 0015); every write to an existing record sends it in If-Match and the database applies it in the same statement; a stale one answers 412 with the current version, a missing one 428. Contacts and usual sites are saved under the customer's version, a document under its own, a change of driver or trailer and an end under the unit's. One dialog, in the product's language, offers to reload the record or to stay on the page; reloading does not ask to leave
 - Layout: every screen works from 390 to 1,920 px, cards and columns aligned
 - Exploratory test of 5 November (#42): one request per submit or click; a visible focus ring; every form error under its field, with the text limits of the API; no input lost on leaving a changed form; filters kept in the address; plates found in the units search; a page for unknown addresses; long words wrapped in their cell; plurals, long dates and import messages; the language switched without reloading
 
