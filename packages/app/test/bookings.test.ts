@@ -20,6 +20,7 @@ const driver: StoredResource = {
   protectiveEquipmentIds: [],
   subsidiaryId: 'south',
   archived: false,
+  version: 1,
   createdAt: Temporal.Instant.from('2026-10-06T00:00:00Z'),
   updatedAt: Temporal.Instant.from('2026-10-06T00:00:00Z'),
   documents: [],

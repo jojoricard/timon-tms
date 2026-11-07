@@ -1,6 +1,7 @@
 import { Temporal } from '@timon/domain';
 import { DocumentTypeTakenError, type NewDocument, type Ports } from './ports.ts';
 import { type FieldIssue, getResource, type ResourceResult } from './resources.ts';
+import { guarded, type Stale, stale } from './versions.ts';
 
 export type DocumentResult =
   | ResourceResult
@@ -34,7 +35,7 @@ async function write(
   resourceId: string,
   input: NewDocument,
   run: (document: NewDocument) => Promise<unknown>,
-): Promise<DocumentResult> {
+): Promise<Exclude<DocumentResult, Stale>> {
   const document = { ...input, reference: input.reference?.trim() || null };
   const issues = await checkDocument(ports, resourceId, document);
   if (issues === 'not-found' || issues === 'archived') return { ok: false, reason: issues };
@@ -55,26 +56,36 @@ export function addDocument(ports: Ports, resourceId: string, input: NewDocument
   return write(ports, resourceId, input, (d) => ports.documents.add(resourceId, d));
 }
 
-/** A renewal: new dates, same document. */
+/** A renewal: new dates, same document. ADR-005: under the document's own version. */
 export async function updateDocument(
   ports: Ports,
   documentId: string,
+  version: number,
   input: NewDocument,
 ): Promise<DocumentResult> {
   const existing = await ports.documents.get(documentId);
   if (!existing) return { ok: false, reason: 'not-found' };
-  return write(ports, existing.resourceId, input, (d) => ports.documents.update(documentId, d));
+  if (existing.version !== version) return stale(existing.version);
+  return guarded(() =>
+    write(ports, existing.resourceId, input, (d) => ports.documents.update(documentId, version, d)),
+  );
 }
 
 /** Removing a document corrects an entry; resources themselves are only archived. */
-export async function removeDocument(ports: Ports, documentId: string): Promise<DocumentResult> {
+export async function removeDocument(
+  ports: Ports,
+  documentId: string,
+  version: number,
+): Promise<DocumentResult> {
   const existing = await ports.documents.get(documentId);
   if (!existing) return { ok: false, reason: 'not-found' };
+  if (existing.version !== version) return stale(existing.version);
   // Rule 5: the documents of an archived resource are read only too.
   if ((await ports.resources.get(existing.resourceId))?.archived) {
     return { ok: false, reason: 'archived' };
   }
-  await ports.documents.remove(documentId);
+  const removed = await guarded(() => ports.documents.remove(documentId, version));
+  if (removed !== true) return removed === false ? { ok: false, reason: 'not-found' } : removed;
   const resource = await getResource(ports, existing.resourceId);
   return resource ? { ok: true, resource } : { ok: false, reason: 'not-found' };
 }

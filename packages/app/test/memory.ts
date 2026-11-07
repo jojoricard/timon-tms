@@ -10,6 +10,7 @@ import {
   type ReferenceLists,
   SiretTakenError,
   type SiteRecord,
+  StaleVersionError,
   type StoredCustomer,
   type StoredDocument,
   type StoredResource,
@@ -83,6 +84,12 @@ export function memoryPorts(
   const id = (prefix: string) => `${prefix}-${++next}`;
   const at = Temporal.Instant.from(now);
 
+  /** ADR-005: a write names the version it read; the database refuses any other. */
+  const current = <T extends { version: number }>(record: T | undefined, version: number) => {
+    if (record && record.version !== version) throw new StaleVersionError(record.version);
+    return record;
+  };
+
   const plateTaken = (candidate: StoredResource) =>
     candidate.kind !== 'driver' &&
     !candidate.archived &&
@@ -101,9 +108,10 @@ export function memoryPorts(
       id: resourceId,
       subsidiaryId: 'south',
       archived: false,
+      version: 1,
       createdAt: at,
       updatedAt: at,
-      documents: documents.map((d) => ({ ...d, id: id('document'), resourceId })),
+      documents: documents.map((d) => ({ ...d, id: id('document'), resourceId, version: 1 })),
     };
   };
   const replace = (resource: StoredResource) => {
@@ -137,6 +145,7 @@ export function memoryPorts(
     ...input,
     id: existing?.id ?? id('customer'),
     archived: existing?.archived ?? false,
+    version: existing ? existing.version + 1 : 1,
     createdAt: existing?.createdAt ?? at,
     updatedAt: at,
     contacts: input.contacts.map((c) => ({ ...c, id: c.id ?? id('contact') })),
@@ -149,6 +158,7 @@ export function memoryPorts(
     ...record,
     id: existing?.id ?? id('site'),
     archived: existing?.archived ?? false,
+    version: existing ? existing.version + 1 : 1,
     createdAt: existing?.createdAt ?? at,
     updatedAt: at,
     customerIds: [],
@@ -185,42 +195,48 @@ export function memoryPorts(
           .filter((u) => membersOf(u).includes(resourceId))
           .sort((a, b) => Temporal.Instant.compare(b.period.start, a.period.start)),
       create: async (unit) => {
-        const created = { ...unit, id: id('unit') };
+        const created = { ...unit, id: id('unit'), version: 1 };
         assertFree(created, units);
         units.push(created);
         return created;
       },
-      replace: async (unitId, unit) => {
+      replace: async (unitId, version, unit) => {
         const index = unitIndex(unitId);
-        if (index < 0) return undefined;
-        const replaced = { ...unit, id: unitId };
+        if (!current(units[index], version)) return undefined;
+        const replaced = { ...unit, id: unitId, version: version + 1 };
         assertFree(replaced, units);
         units[index] = replaced;
         return replaced;
       },
-      remove: async (unitId) => {
+      remove: async (unitId, version) => {
         const index = unitIndex(unitId);
+        current(units[index], version);
         if (index >= 0) units.splice(index, 1);
         return index >= 0;
       },
-      setEnd: async (unitId, end) => {
+      setEnd: async (unitId, version, end) => {
         const index = unitIndex(unitId);
-        const existing = units[index];
+        const existing = current(units[index], version);
         if (!existing) return undefined;
-        const ended = { ...existing, period: { start: existing.period.start, end } };
+        const ended = {
+          ...existing,
+          period: { start: existing.period.start, end },
+          version: version + 1,
+        };
         assertFree(ended, units);
         units[index] = ended;
         return ended;
       },
-      change: async (unitId, next) => {
+      change: async (unitId, version, next) => {
         const index = unitIndex(unitId);
-        const existing = units[index];
+        const existing = current(units[index], version);
         if (!existing) throw new Error(`No unit ${unitId}`);
         const ended = {
           ...existing,
           period: { start: existing.period.start, end: next.period.start },
+          version: version + 1,
         };
-        const started = { ...next, id: id('unit') };
+        const started = { ...next, id: id('unit'), version: 1 };
         const after = units.map((u) => (u.id === unitId ? ended : u));
         assertFree(started, after);
         units[index] = ended;
@@ -256,9 +272,9 @@ export function memoryPorts(
         }
         return inputs.length;
       },
-      update: async (customerId, input) => {
+      update: async (customerId, version, input) => {
         const index = customers.findIndex((c) => c.id === customerId);
-        const existing = customers[index];
+        const existing = current(customers[index], version);
         if (!existing) return undefined;
         const updated = buildCustomer(input, existing);
         const conflict = customerConflict(updated);
@@ -266,11 +282,11 @@ export function memoryPorts(
         customers[index] = updated;
         return updated;
       },
-      setArchived: async (customerId, archived) => {
+      setArchived: async (customerId, version, archived) => {
         const index = customers.findIndex((c) => c.id === customerId);
-        const existing = customers[index];
+        const existing = current(customers[index], version);
         if (!existing) return undefined;
-        const updated = { ...existing, archived };
+        const updated = { ...existing, archived, version: version + 1 };
         const conflict = customerConflict(updated);
         if (conflict) throw conflict;
         customers[index] = updated;
@@ -293,18 +309,18 @@ export function memoryPorts(
         for (const record of records) sites.push(buildSite(record));
         return records.length;
       },
-      update: async (siteId, record) => {
+      update: async (siteId, version, record) => {
         const index = sites.findIndex((s) => s.id === siteId);
-        const existing = sites[index];
+        const existing = current(sites[index], version);
         if (!existing) return undefined;
         sites[index] = buildSite(record, existing);
         return withCustomerIds(sites[index]);
       },
-      setArchived: async (siteId, archived) => {
+      setArchived: async (siteId, version, archived) => {
         const index = sites.findIndex((s) => s.id === siteId);
-        const existing = sites[index];
+        const existing = current(sites[index], version);
         if (!existing) return undefined;
-        sites[index] = { ...existing, archived };
+        sites[index] = { ...existing, archived, version: version + 1 };
         return withCustomerIds(sites[index]);
       },
     },
@@ -343,17 +359,23 @@ export function memoryPorts(
         }
         return created.length;
       },
-      update: async (resourceId, details) => {
-        const existing = resources.find((r) => r.id === resourceId);
+      update: async (resourceId, version, details) => {
+        const existing = current(
+          resources.find((r) => r.id === resourceId),
+          version,
+        );
         if (!existing) return undefined;
-        const updated = { ...existing, ...details } as StoredResource;
+        const updated = { ...existing, ...details, version: version + 1 } as StoredResource;
         if (plateTaken(updated)) throw new PlateTakenError();
         return replace(updated);
       },
-      setArchived: async (resourceId, archived) => {
-        const existing = resources.find((r) => r.id === resourceId);
+      setArchived: async (resourceId, version, archived) => {
+        const existing = current(
+          resources.find((r) => r.id === resourceId),
+          version,
+        );
         if (!existing) return undefined;
-        const updated = { ...existing, archived };
+        const updated = { ...existing, archived, version: version + 1 };
         if (plateTaken(updated)) throw new PlateTakenError();
         return replace(updated);
       },
@@ -365,21 +387,27 @@ export function memoryPorts(
         if (resource?.documents.some((d) => d.documentTypeId === input.documentTypeId)) {
           throw new DocumentTypeTakenError();
         }
-        const created = { ...input, id: id('document'), resourceId };
+        const created = { ...input, id: id('document'), resourceId, version: 1 };
         withDocuments(resourceId, (docs) => [...docs, created]);
         return created;
       },
-      update: async (documentId, input) => {
-        const existing = allDocuments().find((d) => d.id === documentId);
+      update: async (documentId, version, input) => {
+        const existing = current(
+          allDocuments().find((d) => d.id === documentId),
+          version,
+        );
         if (!existing) return undefined;
-        const updated = { ...existing, ...input };
+        const updated = { ...existing, ...input, version: version + 1 };
         withDocuments(existing.resourceId, (docs) =>
           docs.map((d) => (d.id === documentId ? updated : d)),
         );
         return updated;
       },
-      remove: async (documentId) => {
-        const existing = allDocuments().find((d) => d.id === documentId);
+      remove: async (documentId, version) => {
+        const existing = current(
+          allDocuments().find((d) => d.id === documentId),
+          version,
+        );
         if (!existing) return false;
         withDocuments(existing.resourceId, (docs) => docs.filter((d) => d.id !== documentId));
         return true;

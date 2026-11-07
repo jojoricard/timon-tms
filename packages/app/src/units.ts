@@ -33,9 +33,11 @@ import {
   type ReferenceLists,
   type StoredResource,
   type StoredUnit,
+  type UnitMembers,
   UnitOverlapError,
 } from './ports.ts';
 import type { FieldIssue } from './resources.ts';
+import { guarded, type Stale, stale } from './versions.ts';
 
 /** What a dispatcher enters: the members, the period, a name if wanted. */
 export type UnitInput = {
@@ -106,6 +108,8 @@ export type UnitState = (typeof unitStates)[number];
 
 export type UnitView = UnitRef & {
   readonly customName: string | null;
+  /** ADR-005: a change of driver or trailer and an end are made under it too. */
+  readonly version: number;
   readonly state: UnitState;
   readonly powerUnit: MemberView;
   readonly trailer: MemberView | null;
@@ -120,6 +124,7 @@ export type UnitView = UnitRef & {
 export type UnitResult =
   | { readonly ok: true; readonly unit: UnitView }
   | { readonly ok: false; readonly reason: 'not-found' }
+  | Stale
   | { readonly ok: false; readonly reason: 'invalid'; readonly issues: readonly FieldIssue[] }
   | { readonly ok: false; readonly reason: 'overlap'; readonly conflicts: readonly UnitConflict[] }
   /** Rule 6: a started unit can only be given an end. */
@@ -194,7 +199,7 @@ function stateOf(period: OpenPeriod, now: Temporal.Instant): UnitState {
   return contains(period, now) ? 'running' : 'ended';
 }
 
-const memberId = (unit: StoredUnit, role: UnitRole) =>
+const memberId = (unit: UnitMembers, role: UnitRole) =>
   role === 'power-unit' ? unit.powerUnitId : role === 'trailer' ? unit.trailerId : unit.driverId;
 
 function find(ctx: Context, id: string | null): StoredResource | null {
@@ -284,6 +289,7 @@ function unitView(ctx: Context, unit: StoredUnit, previous?: StoredUnit): UnitVi
   return {
     ...unitRef(ctx, unit),
     customName: unit.name,
+    version: unit.version,
     state: stateOf(unit.period, ctx.now),
     powerUnit: memberView(powerUnit, ctx.lists),
     trailer: trailer ? memberView(trailer, ctx.lists) : null,
@@ -540,7 +546,7 @@ async function conflictsOf(
   unit: NewUnit,
   exceptUnitId?: string,
 ): Promise<UnitConflict[]> {
-  const ids = unitRoles.map((role) => memberId({ ...unit, id: '' }, role));
+  const ids = unitRoles.map((role) => memberId(unit, role));
   const overlapping = await ports.units.listOverlapping(unit.period, exceptUnitId);
   return overlapping.flatMap((other) =>
     unitRoles.flatMap((role): UnitConflict[] => {
@@ -569,12 +575,18 @@ async function write<T>(
   }
 }
 
-async function answer(ports: Ports, unit: StoredUnit | undefined): Promise<UnitResult> {
+async function answer(
+  ports: Ports,
+  unit: StoredUnit | undefined,
+): Promise<Exclude<UnitResult, Stale>> {
   if (!unit) return { ok: false, reason: 'not-found' };
   return { ok: true, unit: await viewOf(ports, await context(ports), unit) };
 }
 
-export async function createUnit(ports: Ports, input: UnitInput): Promise<UnitResult> {
+export async function createUnit(
+  ports: Ports,
+  input: UnitInput,
+): Promise<Exclude<UnitResult, Stale>> {
   const prepared = await prepare(ports, input, null);
   if (!prepared.ok) return prepared;
   const written = await write(ports, prepared.unit, undefined, () =>
@@ -589,14 +601,20 @@ const hasEnded = (unit: StoredUnit, now: Temporal.Instant) =>
   unit.period.end !== null && Temporal.Instant.compare(unit.period.end, now) <= 0;
 
 /** Rule 6: a unit that has not started yet can be edited. */
-export async function updateUnit(ports: Ports, id: string, input: UnitInput): Promise<UnitResult> {
+export async function updateUnit(
+  ports: Ports,
+  id: string,
+  version: number,
+  input: UnitInput,
+): Promise<UnitResult> {
   const existing = await ports.units.get(id);
   if (!existing) return { ok: false, reason: 'not-found' };
+  if (existing.version !== version) return stale(existing.version);
   if (hasStarted(existing, ports.clock.now())) return { ok: false, reason: 'started' };
   const prepared = await prepare(ports, input, existing.previousUnitId, id);
   if (!prepared.ok) return prepared;
-  const written = await write(ports, prepared.unit, id, () =>
-    ports.units.replace(id, prepared.unit),
+  const written = await guarded(() =>
+    write(ports, prepared.unit, id, () => ports.units.replace(id, version, prepared.unit)),
   );
   return written && 'reason' in written ? written : answer(ports, written);
 }
@@ -605,22 +623,27 @@ export async function updateUnit(ports: Ports, id: string, input: UnitInput): Pr
 export async function deleteUnit(
   ports: Ports,
   id: string,
-): Promise<{ ok: true } | Extract<UnitResult, { reason: 'not-found' | 'started' }>> {
+  version: number,
+): Promise<{ ok: true } | Extract<UnitResult, { reason: 'not-found' | 'started' | 'stale' }>> {
   const existing = await ports.units.get(id);
   if (!existing) return { ok: false, reason: 'not-found' };
+  if (existing.version !== version) return stale(existing.version);
   if (hasStarted(existing, ports.clock.now())) return { ok: false, reason: 'started' };
-  await ports.units.remove(id);
-  return { ok: true };
+  const removed = await guarded(() => ports.units.remove(id, version));
+  if (removed === true) return { ok: true };
+  return removed === false ? { ok: false, reason: 'not-found' } : removed;
 }
 
 /** Rule 6: any unit not yet ended can be given an end. */
 export async function endUnit(
   ports: Ports,
   id: string,
+  version: number,
   end: Temporal.Instant,
 ): Promise<UnitResult> {
   const existing = await ports.units.get(id);
   if (!existing) return { ok: false, reason: 'not-found' };
+  if (existing.version !== version) return stale(existing.version);
   if (hasEnded(existing, ports.clock.now())) return { ok: false, reason: 'ended' };
   const issues = checkUnitPeriod(existing.period.start, end).filter((i) => i.field === 'end');
   if (issues.length > 0) return { ok: false, reason: 'invalid', issues };
@@ -628,7 +651,9 @@ export async function endUnit(
   const ctx = await context(ports);
   const conflicts = await conflictsOf(ports, ctx, unit, id);
   if (conflicts.length > 0) return { ok: false, reason: 'overlap', conflicts };
-  const written = await write(ports, unit, id, () => ports.units.setEnd(id, end));
+  const written = await guarded(() =>
+    write(ports, unit, id, () => ports.units.setEnd(id, version, end)),
+  );
   return written && 'reason' in written ? written : answer(ports, written);
 }
 
@@ -646,10 +671,12 @@ export type ChangeInput = {
 export async function changeUnit(
   ports: Ports,
   id: string,
+  version: number,
   change: ChangeInput,
 ): Promise<ChangeResult> {
   const existing = await ports.units.get(id);
   if (!existing) return { ok: false, reason: 'not-found' };
+  if (existing.version !== version) return stale(existing.version);
   const now = ports.clock.now();
   if (!hasStarted(existing, now)) return { ok: false, reason: 'not-started' };
   if (hasEnded(existing, now)) return { ok: false, reason: 'ended' };
@@ -681,8 +708,8 @@ export async function changeUnit(
     existing.id,
   );
   if (!prepared.ok) return prepared;
-  const written = await write(ports, prepared.unit, id, () =>
-    ports.units.change(id, prepared.unit),
+  const written = await guarded(() =>
+    write(ports, prepared.unit, id, () => ports.units.change(id, version, prepared.unit)),
   );
   if ('reason' in written) return written;
   const ctx = await context(ports);

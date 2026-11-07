@@ -87,6 +87,7 @@ export {
   SiretTakenError,
   type SiteRecord,
   type SiteRepository,
+  StaleVersionError,
   type StoredContact,
   type StoredCustomer,
   type StoredDocument,
@@ -167,4 +168,5 @@ export {
   unitsOfResource,
   updateUnit,
 } from './units.ts';
+export { type Stale, stale } from './versions.ts';
 export type { DocumentView, ResourceView } from './views.ts';
