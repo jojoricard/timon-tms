@@ -19,7 +19,7 @@ import {
   TableFrame,
 } from '@timon/ui';
 import { type FormEvent, useState } from 'react';
-import { ApiError, api, ok } from '../api.ts';
+import { ApiError, api, ifMatch, ok } from '../api.ts';
 import { useConfirm } from '../confirm.tsx';
 import { errorText } from '../data.ts';
 import { bannerError, IssueBanner, useFormIssues } from '../form.tsx';
@@ -176,7 +176,11 @@ function UnitForm({ unit, initial }: { unit: UnitJson | undefined; initial: Unit
     mutationFn: async () =>
       ok(
         unit
-          ? await api.units[':id'].$put({ param: { id: unit.id }, json })
+          ? await api.units[':id'].$put({
+              param: { id: unit.id },
+              header: ifMatch(unit.version),
+              json,
+            })
           : await api.units.$post({ json }),
       ),
     onSuccess: async (saved) => {
@@ -190,7 +194,10 @@ function UnitForm({ unit, initial }: { unit: UnitJson | undefined; initial: Unit
   const confirm = useConfirm();
   const remove = useSubmit({
     mutationFn: async () => {
-      const response = await api.units[':id'].$delete({ param: { id: unit?.id ?? '' } });
+      const response = await api.units[':id'].$delete({
+        param: { id: unit?.id ?? '' },
+        header: ifMatch(unit?.version ?? 0),
+      });
       if (!response.ok) throw new ApiError(response.status, await response.json());
     },
     onSuccess: async () => {
@@ -454,6 +461,7 @@ function StartedUnit({ unit }: { unit: UnitJson }) {
       ok(
         await api.units[':id'].end.$post({
           param: { id: unit.id },
+          header: ifMatch(unit.version),
           json: { end: endInstant ?? '' },
         }),
       ),

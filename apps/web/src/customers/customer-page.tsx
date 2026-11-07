@@ -21,7 +21,7 @@ import type {
 } from '@timon/http';
 import { Banner, Button, CardRow, CardStack, Field, FormGrid, Plate, TableFrame } from '@timon/ui';
 import { type FormEvent, useId, useState } from 'react';
-import { ApiError, api, ok } from '../api.ts';
+import { ApiError, api, ifMatch, ok } from '../api.ts';
 import { useConfirm } from '../confirm.tsx';
 import { errorText, useReferenceLists } from '../data.ts';
 import { bannerError, IssueBanner, useFormIssues } from '../form.tsx';
@@ -245,7 +245,13 @@ function CustomerForm({
   const save = useSubmit({
     mutationFn: async (body: CustomerInputJson) =>
       customer
-        ? ok(await api.customers[':id'].$put({ param: { id: customer.id }, json: body }))
+        ? ok(
+            await api.customers[':id'].$put({
+              param: { id: customer.id },
+              header: ifMatch(customer.version),
+              json: body,
+            }),
+          )
         : ok(await api.customers.$post({ json: body })),
     onSuccess: async (saved) => {
       guard.release();
@@ -267,7 +273,10 @@ function CustomerForm({
   const confirm = useConfirm();
   const archive = useSubmit({
     mutationFn: async (archived: boolean) => {
-      const param = { param: { id: customer?.id ?? '' } };
+      const param = {
+        param: { id: customer?.id ?? '' },
+        header: ifMatch(customer?.version ?? 0),
+      };
       return ok(
         archived
           ? await api.customers[':id'].archive.$post(param)

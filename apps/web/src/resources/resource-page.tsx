@@ -35,7 +35,7 @@ import {
   TableFrame,
 } from '@timon/ui';
 import { type FormEvent, useEffect, useState } from 'react';
-import { ApiError, api, ok } from '../api.ts';
+import { ApiError, api, ifMatch, ok } from '../api.ts';
 import { useConfirm } from '../confirm.tsx';
 import { equipmentLabel } from '../customers/customer-labels.ts';
 import { errorText, keys, useReferenceLists, useRefreshResources, useResource } from '../data.ts';
@@ -232,7 +232,13 @@ function ResourceForm({
   const save = useSubmit({
     mutationFn: async (body: ResourceInputJson) =>
       resource
-        ? ok(await api.resources[':id'].$put({ param: { id: resource.id }, json: body }))
+        ? ok(
+            await api.resources[':id'].$put({
+              param: { id: resource.id },
+              header: ifMatch(resource.version),
+              json: body,
+            }),
+          )
         : ok(await api.resources.$post({ json: body })),
     onSuccess: async (saved) => {
       if (!documentChanged) guard.release();
@@ -261,7 +267,10 @@ function ResourceForm({
   const confirm = useConfirm();
   const archive = useSubmit({
     mutationFn: async (archived: boolean) => {
-      const param = { param: { id: resource?.id ?? '' } };
+      const param = {
+        param: { id: resource?.id ?? '' },
+        header: ifMatch(resource?.version ?? 0),
+      };
       return ok(
         archived
           ? await api.resources[':id'].archive.$post(param)
@@ -763,7 +772,13 @@ function Documents({
         expiresOn: draft.expiresOn,
       };
       return editing
-        ? ok(await api.documents[':id'].$put({ param: { id: editing.id }, json }))
+        ? ok(
+            await api.documents[':id'].$put({
+              param: { id: editing.id },
+              header: ifMatch(editing.version),
+              json,
+            }),
+          )
         : ok(await api.resources[':id'].documents.$post({ param: { id: resource.id }, json }));
     },
     onSuccess: done,
@@ -771,7 +786,13 @@ function Documents({
   });
 
   const remove = useSubmit({
-    mutationFn: async (id: string) => ok(await api.documents[':id'].$delete({ param: { id } })),
+    mutationFn: async (document: DocumentJson) =>
+      ok(
+        await api.documents[':id'].$delete({
+          param: { id: document.id },
+          header: ifMatch(document.version),
+        }),
+      ),
     onSuccess: done,
   });
   // Rule 11: deleting a document cannot be undone, so it asks first.
@@ -870,7 +891,7 @@ function Documents({
                               confirmLabel: m.action_remove(),
                               onConfirm: () => {
                                 onAction();
-                                remove.mutate(d.id);
+                                remove.mutate(d);
                               },
                             })
                           }

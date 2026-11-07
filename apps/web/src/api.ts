@@ -36,3 +36,13 @@ export async function ok<R extends JsonResponse>(response: R): Promise<SuccessBo
   }
   return (await response.json()) as SuccessBody<R>;
 }
+
+/**
+ * The If-Match header of a write to an existing record: the version of the record shown, so that
+ * the API refuses the write if someone changed it since (ADR-005).
+ */
+export const ifMatch = (version: number) => ({ 'if-match': `"${version}"` });
+
+/** The API refused a write because the record changed since it was read (ADR-005). */
+export const isStale = (error: unknown): boolean =>
+  error instanceof ApiError && error.status === 412;

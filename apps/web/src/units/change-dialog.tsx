@@ -1,7 +1,7 @@
 import type { UnitJson } from '@timon/http';
 import { Banner, Button, Dialog, Field, SegmentedControl } from '@timon/ui';
 import { type FormEvent, useState } from 'react';
-import { api, ok } from '../api.ts';
+import { api, ifMatch, ok } from '../api.ts';
 import { bannerError, IssueBanner, useFormIssues } from '../form.tsx';
 import { failureText } from '../issues.ts';
 import { m } from '../paraglide/messages.js';
@@ -66,6 +66,7 @@ export function ChangeDialog({
       ok(
         await api.units[':id'].change.$post({
           param: { id: unit.id },
+          header: ifMatch(unit.version),
           json: { role, resourceId: chosen === none ? null : chosen, from: fromInstant ?? '' },
         }),
       ),

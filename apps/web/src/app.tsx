@@ -41,6 +41,7 @@ import { ImportPage } from './resources/import-page.tsx';
 import { ListPage } from './resources/list-page.tsx';
 import { ResourcePage } from './resources/resource-page.tsx';
 import { followRowLinks } from './row-links.ts';
+import { Reloadable, StaleDialog } from './stale.tsx';
 import { UnitPage, type UnitStart } from './units/unit-page.tsx';
 import { UnitsPage } from './units/units-page.tsx';
 
@@ -87,8 +88,11 @@ const rootRoute = createRootRoute({
         <LanguageSwitch />
       </header>
       <main>
-        <Outlet />
+        <Reloadable>
+          <Outlet />
+        </Reloadable>
       </main>
+      <StaleDialog />
     </div>
   )),
   notFoundComponent: localised(() => (

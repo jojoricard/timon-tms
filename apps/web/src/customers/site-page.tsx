@@ -26,7 +26,7 @@ import {
   StatusBadge,
 } from '@timon/ui';
 import { type FormEvent, lazy, Suspense, useId, useState } from 'react';
-import { api, ok } from '../api.ts';
+import { api, ifMatch, ok } from '../api.ts';
 import { useConfirm } from '../confirm.tsx';
 import { errorText, useReferenceLists } from '../data.ts';
 import { bannerError, IssueBanner, useFormIssues } from '../form.tsx';
@@ -343,7 +343,13 @@ function SiteForm({
   const save = useSubmit({
     mutationFn: async (body: SiteInputJson) =>
       site
-        ? ok(await api.sites[':id'].$put({ param: { id: site.id }, json: body }))
+        ? ok(
+            await api.sites[':id'].$put({
+              param: { id: site.id },
+              header: ifMatch(site.version),
+              json: body,
+            }),
+          )
         : ok(await api.sites.$post({ json: body })),
     onSuccess: async (saved) => {
       guard.release();
@@ -364,7 +370,7 @@ function SiteForm({
   const confirm = useConfirm();
   const archive = useSubmit({
     mutationFn: async (archived: boolean) => {
-      const param = { param: { id: site?.id ?? '' } };
+      const param = { param: { id: site?.id ?? '' }, header: ifMatch(site?.version ?? 0) };
       return ok(
         archived
           ? await api.sites[':id'].archive.$post(param)
