@@ -23,10 +23,14 @@ const at = (iso: string) => {
   now = Temporal.Instant.from(iso);
 };
 
-async function call(method: string, path: string, body?: unknown) {
+/** `version`, for a write to an existing record, goes in If-Match (ADR-005). */
+async function call(method: string, path: string, body?: unknown, version?: number) {
   const response = await app.request(`/api${path}`, {
     method,
-    headers: { 'content-type': 'application/json' },
+    headers: {
+      'content-type': 'application/json',
+      ...(version === undefined ? {} : { 'if-match': `"${version}"` }),
+    },
     ...(body === undefined ? {} : { body: JSON.stringify(body) }),
   });
   return { status: response.status, body: (await response.json()) as any };
@@ -180,11 +184,12 @@ describe('drivers (rules 8 to 10)', () => {
     at('2026-10-06T10:00:00Z');
     const xavier = await driver("D'Artagnan", 'Xavier');
     const before = (await call('GET', '/resources?kind=driver')).body.resources;
-    const renamed = await call('PUT', `/resources/${xavier.id}`, {
-      kind: 'driver',
-      lastName: 'Zola',
-      firstName: 'Émile',
-    });
+    const renamed = await call(
+      'PUT',
+      `/resources/${xavier.id}`,
+      { kind: 'driver', lastName: 'Zola', firstName: 'Émile' },
+      1,
+    );
     expect([renamed.status, renamed.body.name, renamed.body.displayName]).toEqual([
       200,
       'É. Zola',
@@ -217,7 +222,7 @@ describe('drivers (rules 8 to 10)', () => {
       firstName: 'Paul',
       employeeNumber: 'E-9001',
     });
-    await call('POST', `/resources/${first.id}/archive`);
+    await call('POST', `/resources/${first.id}/archive`, undefined, 1);
     const second = await call('POST', '/resources', {
       kind: 'driver',
       lastName: 'Bernard',
@@ -252,15 +257,16 @@ describe('archived resources (rule 5)', () => {
     const roux = await driver('Roux', 'Julien');
     const cpc = await document(roux.id, 'cpc', '2030-01-15');
     const cpcId = cpc.documents[0].id;
-    await call('POST', `/resources/${roux.id}/archive`);
+    await call('POST', `/resources/${roux.id}/archive`, undefined, 1);
 
     const refused = { status: 409, body: { error: 'archived' } };
     expect(
-      await call('PUT', `/resources/${roux.id}`, {
-        kind: 'driver',
-        lastName: 'Roux',
-        firstName: 'Jules',
-      }),
+      await call(
+        'PUT',
+        `/resources/${roux.id}`,
+        { kind: 'driver', lastName: 'Roux', firstName: 'Jules' },
+        2,
+      ),
     ).toEqual(refused);
     expect(
       await call('POST', `/resources/${roux.id}/documents`, {
@@ -269,12 +275,14 @@ describe('archived resources (rule 5)', () => {
       }),
     ).toEqual(refused);
     expect(
-      await call('PUT', `/documents/${cpcId}`, {
-        documentTypeId: typeId('cpc'),
-        expiresOn: '2031-01-15',
-      }),
+      await call(
+        'PUT',
+        `/documents/${cpcId}`,
+        { documentTypeId: typeId('cpc'), expiresOn: '2031-01-15' },
+        1,
+      ),
     ).toEqual(refused);
-    expect(await call('DELETE', `/documents/${cpcId}`)).toEqual(refused);
+    expect(await call('DELETE', `/documents/${cpcId}`, undefined, 1)).toEqual(refused);
 
     const { body } = await call('GET', `/resources/${roux.id}`);
     expect([body.firstName, body.documents.length, body.documents[0].expiresOn]).toEqual([
@@ -283,12 +291,13 @@ describe('archived resources (rule 5)', () => {
       '2030-01-15',
     ]);
 
-    await call('POST', `/resources/${roux.id}/restore`);
-    const changed = await call('PUT', `/resources/${roux.id}`, {
-      kind: 'driver',
-      lastName: 'Roux',
-      firstName: 'Jules',
-    });
+    await call('POST', `/resources/${roux.id}/restore`, undefined, 2);
+    const changed = await call(
+      'PUT',
+      `/resources/${roux.id}`,
+      { kind: 'driver', lastName: 'Roux', firstName: 'Jules' },
+      3,
+    );
     expect([changed.status, changed.body.firstName]).toEqual([200, 'Jules']);
   });
 });
@@ -374,10 +383,12 @@ describe('archiving', () => {
     const ids = async (query: string) =>
       (await call('GET', `/resources?kind=driver${query}`)).body.resources.map((r: any) => r.id);
 
-    expect((await call('POST', `/resources/${girard.id}/archive`)).body.archived).toBe(true);
+    const archived = await call('POST', `/resources/${girard.id}/archive`, undefined, 1);
+    expect(archived.body.archived).toBe(true);
     expect(await ids('')).not.toContain(girard.id);
     expect(await ids('&archived=true')).toContain(girard.id);
-    expect((await call('POST', `/resources/${girard.id}/restore`)).body.archived).toBe(false);
+    const restored = await call('POST', `/resources/${girard.id}/restore`, undefined, 2);
+    expect(restored.body.archived).toBe(false);
     expect(await ids('')).toContain(girard.id);
   });
 

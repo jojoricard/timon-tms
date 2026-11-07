@@ -8,6 +8,7 @@ import {
   getUnit,
   type MemberView,
   type Ports,
+  type Stale,
   type UnitConflict,
   type UnitDocuments as UnitDocumentsView,
   type UnitDocument as UnitDocumentView,
@@ -36,6 +37,7 @@ import {
   UnitsAt,
 } from './unit-schemas.ts';
 import { validationHook } from './validation.ts';
+import { guardedAnswers, ifMatch, staleBody, versionOf } from './versions.ts';
 
 const json = <T extends z.ZodType>(schema: T, description: string) => ({
   content: { 'application/json': { schema } },
@@ -74,6 +76,7 @@ export function toUnit(u: UnitView): z.infer<typeof Unit> {
   return {
     ...toUnitRef(u),
     customName: u.customName,
+    version: u.version,
     state: u.state,
     powerUnit: toMember(u.powerUnit),
     trailer: u.trailer ? toMember(u.trailer) : null,
@@ -88,7 +91,7 @@ export function toUnit(u: UnitView): z.infer<typeof Unit> {
 const toConflict = (c: UnitConflict) => ({ unit: toUnitRef(c.unit), resource: { ...c.resource } });
 
 /** A refused write on a unit, as a status and a body the interface can translate. */
-function failure(result: Exclude<UnitResult | ChangeResult, { ok: true }>) {
+function failure(result: Exclude<UnitResult | ChangeResult, { ok: true } | Stale>) {
   switch (result.reason) {
     case 'not-found':
       return { status: 404, body: { error: 'not-found' } } as const;
@@ -153,31 +156,33 @@ const routes = {
   update: createRoute({
     method: 'put',
     path: '/units/{id}',
-    request: { params: id, ...body(UnitInput) },
-    responses: writeAnswers,
+    request: { params: id, headers: ifMatch, ...body(UnitInput) },
+    responses: { ...writeAnswers, ...guardedAnswers },
   }),
   remove: createRoute({
     method: 'delete',
     path: '/units/{id}',
-    request: { params: id },
+    request: { params: id, headers: ifMatch },
     responses: {
       204: { description: 'Unit deleted' },
       404: json(Problem, 'No such unit'),
       409: json(Problem, 'The unit has started: it can only be given an end'),
+      ...guardedAnswers,
     },
   }),
   end: createRoute({
     method: 'post',
     path: '/units/{id}/end',
-    request: { params: id, ...body(EndInput) },
-    responses: writeAnswers,
+    request: { params: id, headers: ifMatch, ...body(EndInput) },
+    responses: { ...writeAnswers, ...guardedAnswers },
   }),
   change: createRoute({
     method: 'post',
     path: '/units/{id}/change',
-    request: { params: id, ...body(ChangeInput) },
+    request: { params: id, headers: ifMatch, ...body(ChangeInput) },
     responses: {
       ...writeAnswers,
+      ...guardedAnswers,
       200: json(Changed, 'The unit ended at that minute, and the one that starts then'),
     },
   }),
@@ -265,15 +270,19 @@ export function unitApi(ports: Ports) {
       const result = await updateUnit(
         ports,
         c.req.valid('param').id,
+        versionOf(c.req.valid('header')),
         fromInput(c.req.valid('json')),
       );
       if (result.ok) return c.json(toUnit(result.unit), 200);
+      if (result.reason === 'stale') return c.json(staleBody(result.version), 412);
       const { status, body } = failure(result);
       return c.json(body, status);
     })
     .openapi(routes.remove, async (c) => {
-      const result = await deleteUnit(ports, c.req.valid('param').id);
+      const version = versionOf(c.req.valid('header'));
+      const result = await deleteUnit(ports, c.req.valid('param').id, version);
       if (result.ok) return c.body(null, 204);
+      if (result.reason === 'stale') return c.json(staleBody(result.version), 412);
       const { status, body } = failure(result);
       return c.json(body, status);
     })
@@ -281,20 +290,24 @@ export function unitApi(ports: Ports) {
       const result = await endUnit(
         ports,
         c.req.valid('param').id,
+        versionOf(c.req.valid('header')),
         instantOf(c.req.valid('json').end),
       );
       if (result.ok) return c.json(toUnit(result.unit), 200);
+      if (result.reason === 'stale') return c.json(staleBody(result.version), 412);
       const { status, body } = failure(result);
       return c.json(body, status);
     })
     .openapi(routes.change, async (c) => {
       const { role, resourceId, from } = c.req.valid('json');
-      const result = await changeUnit(ports, c.req.valid('param').id, {
+      const version = versionOf(c.req.valid('header'));
+      const result = await changeUnit(ports, c.req.valid('param').id, version, {
         role,
         resourceId,
         from: instantOf(from),
       });
       if (result.ok) return c.json({ ended: toUnit(result.ended), unit: toUnit(result.unit) }, 200);
+      if (result.reason === 'stale') return c.json(staleBody(result.version), 412);
       const { status, body } = failure(result);
       return c.json(body, status);
     })

@@ -52,6 +52,7 @@ import {
 import { ImportGuide, ImportInput, Invalid, Problem } from './schemas.ts';
 import { toImportGuide } from './to-json.ts';
 import { validationHook } from './validation.ts';
+import { guardedAnswers, ifMatch, staleBody, versionOf } from './versions.ts';
 
 const json = <T extends z.ZodType>(schema: T, description: string) => ({
   content: { 'application/json': { schema } },
@@ -200,20 +201,20 @@ const routes = {
   updateCustomer: createRoute({
     method: 'put',
     path: '/customers/{id}',
-    request: { params: id, ...body(CustomerInput) },
-    responses: customerAnswers,
+    request: { params: id, headers: ifMatch, ...body(CustomerInput) },
+    responses: { ...customerAnswers, ...guardedAnswers },
   }),
   archiveCustomer: createRoute({
     method: 'post',
     path: '/customers/{id}/archive',
-    request: { params: id },
-    responses: customerAnswers,
+    request: { params: id, headers: ifMatch },
+    responses: { ...customerAnswers, ...guardedAnswers },
   }),
   restoreCustomer: createRoute({
     method: 'post',
     path: '/customers/{id}/restore',
-    request: { params: id },
-    responses: customerAnswers,
+    request: { params: id, headers: ifMatch },
+    responses: { ...customerAnswers, ...guardedAnswers },
   }),
   listSites: createRoute({
     method: 'get',
@@ -248,20 +249,20 @@ const routes = {
   updateSite: createRoute({
     method: 'put',
     path: '/sites/{id}',
-    request: { params: id, ...body(SiteInput) },
-    responses: siteAnswers,
+    request: { params: id, headers: ifMatch, ...body(SiteInput) },
+    responses: { ...siteAnswers, ...guardedAnswers },
   }),
   archiveSite: createRoute({
     method: 'post',
     path: '/sites/{id}/archive',
-    request: { params: id },
-    responses: siteAnswers,
+    request: { params: id, headers: ifMatch },
+    responses: { ...siteAnswers, ...guardedAnswers },
   }),
   restoreSite: createRoute({
     method: 'post',
     path: '/sites/{id}/restore',
-    request: { params: id },
-    responses: siteAnswers,
+    request: { params: id, headers: ifMatch },
+    responses: { ...siteAnswers, ...guardedAnswers },
   }),
   suggestAddresses: createRoute({
     method: 'get',
@@ -388,9 +389,11 @@ export function customerApi(ports: Ports) {
       const result = await updateCustomer(
         ports,
         c.req.valid('param').id,
+        versionOf(c.req.valid('header')),
         fromCustomerInput(c.req.valid('json')),
       );
       if (result.ok) return c.json(withSites(result.customer), 200);
+      if (result.reason === 'stale') return c.json(staleBody(result.version), 412);
       if (result.reason === 'not-found') return c.json({ error: 'not-found' as const }, 404);
       if (result.reason === 'invalid') {
         return c.json(
@@ -401,8 +404,10 @@ export function customerApi(ports: Ports) {
       return c.json({ error: result.reason, owner: result.owner }, 409);
     })
     .openapi(routes.archiveCustomer, async (c) => {
-      const result = await setCustomerArchived(ports, c.req.valid('param').id, true);
+      const version = versionOf(c.req.valid('header'));
+      const result = await setCustomerArchived(ports, c.req.valid('param').id, version, true);
       if (result.ok) return c.json(withSites(result.customer), 200);
+      if (result.reason === 'stale') return c.json(staleBody(result.version), 412);
       if (result.reason === 'not-found') return c.json({ error: 'not-found' as const }, 404);
       if (result.reason === 'invalid') {
         return c.json(
@@ -413,8 +418,10 @@ export function customerApi(ports: Ports) {
       return c.json({ error: result.reason, owner: result.owner }, 409);
     })
     .openapi(routes.restoreCustomer, async (c) => {
-      const result = await setCustomerArchived(ports, c.req.valid('param').id, false);
+      const version = versionOf(c.req.valid('header'));
+      const result = await setCustomerArchived(ports, c.req.valid('param').id, version, false);
       if (result.ok) return c.json(withSites(result.customer), 200);
+      if (result.reason === 'stale') return c.json(staleBody(result.version), 412);
       if (result.reason === 'not-found') return c.json({ error: 'not-found' as const }, 404);
       if (result.reason === 'invalid') {
         return c.json(
@@ -463,9 +470,11 @@ export function customerApi(ports: Ports) {
       const result = await updateSite(
         ports,
         c.req.valid('param').id,
+        versionOf(c.req.valid('header')),
         fromSiteInput(c.req.valid('json')),
       );
       if (result.ok) return c.json({ site: toSite(result.site), nearby: [...result.nearby] }, 200);
+      if (result.reason === 'stale') return c.json(staleBody(result.version), 412);
       if (result.reason === 'not-found') return c.json({ error: 'not-found' as const }, 404);
       return c.json(
         { error: 'invalid' as const, issues: result.issues.map((i) => ({ ...i })) },
@@ -473,8 +482,10 @@ export function customerApi(ports: Ports) {
       );
     })
     .openapi(routes.archiveSite, async (c) => {
-      const result = await setSiteArchived(ports, c.req.valid('param').id, true);
+      const version = versionOf(c.req.valid('header'));
+      const result = await setSiteArchived(ports, c.req.valid('param').id, version, true);
       if (result.ok) return c.json({ site: toSite(result.site), nearby: [] }, 200);
+      if (result.reason === 'stale') return c.json(staleBody(result.version), 412);
       if (result.reason === 'not-found') return c.json({ error: 'not-found' as const }, 404);
       return c.json(
         { error: 'invalid' as const, issues: result.issues.map((i) => ({ ...i })) },
@@ -482,8 +493,10 @@ export function customerApi(ports: Ports) {
       );
     })
     .openapi(routes.restoreSite, async (c) => {
-      const result = await setSiteArchived(ports, c.req.valid('param').id, false);
+      const version = versionOf(c.req.valid('header'));
+      const result = await setSiteArchived(ports, c.req.valid('param').id, version, false);
       if (result.ok) return c.json({ site: toSite(result.site), nearby: [] }, 200);
+      if (result.reason === 'stale') return c.json(staleBody(result.version), 412);
       if (result.reason === 'not-found') return c.json({ error: 'not-found' as const }, 404);
       return c.json(
         { error: 'invalid' as const, issues: result.issues.map((i) => ({ ...i })) },

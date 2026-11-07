@@ -21,11 +21,19 @@ export function fieldIssues(error: z.ZodError): FieldIssue[] {
 /**
  * A request the schemas refuse answers 400, on every route. A body answers `invalid` with an
  * issue per field, the shape the rules use; only an issue with no field, or a refused query or
- * path, keeps the readable message alone.
+ * path, keeps the readable message alone. The one exception is an If-Match missing, or `*`,
+ * which names no version: 428 (ADR-005).
  */
 // biome-ignore lint/suspicious/noExplicitAny: the hook serves routes of any shape.
 export const validationHook: Hook<unknown, any, any, unknown> = (result, c) => {
   if (result.success) return;
+  if (result.target === 'header') {
+    const sent = c.req.header('if-match')?.trim();
+    if (!sent || sent === '*') {
+      const message = 'Send If-Match with the version of the record read, e.g. "4"';
+      return c.json({ error: 'precondition-required' as const, message }, 428);
+    }
+  }
   if (result.target === 'json') {
     const issues = fieldIssues(result.error);
     if (issues.every((issue) => issue.field !== '')) {

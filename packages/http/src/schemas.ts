@@ -117,6 +117,8 @@ export const Document = z
     reference: z.string().nullable(),
     issuedOn: day.nullable(),
     expiresOn: day,
+    /** ADR-005: its own, apart from the resource's. */
+    version: z.number().int(),
     status: z.enum(documentStatuses),
     blocking: z.boolean(),
     severity: Severity,
@@ -132,6 +134,7 @@ export const Resource = z
     kind: ResourceKind,
     name: z.string(),
     archived: z.boolean(),
+    version: z.number().int(),
     createdAt: instant,
     updatedAt: instant,
     lastName: z.string().nullable(),
