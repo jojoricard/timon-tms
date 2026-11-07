@@ -15,10 +15,12 @@ import {
   PlateTakenError,
   type Ports,
   type ReferenceLists,
+  StaleVersionError,
   type StoredResource,
 } from './ports.ts';
 import { searchable } from './search.ts';
 import { currentUnitOf, type UnitRef } from './units.ts';
+import { guarded, type Stale, stale } from './versions.ts';
 import { type ResourceView, resourceView, statusDay } from './views.ts';
 
 /** An issue with one input: the rules of the domain, plus what only the application knows. */
@@ -55,6 +57,7 @@ export type EmployeeNumberOwner = {
 export type ResourceResult =
   | { readonly ok: true; readonly resource: ResourceView }
   | { readonly ok: false; readonly reason: 'not-found' }
+  | Stale
   /** Rule 5: an archived resource is read only, its documents included, until restored. */
   | { readonly ok: false; readonly reason: 'archived' }
   | { readonly ok: false; readonly reason: 'invalid'; readonly issues: readonly FieldIssue[] }
@@ -143,12 +146,12 @@ async function save(
   input: ResourceDetails,
   write: (details: ResourceDetails) => Promise<StoredResource | undefined>,
   exceptId?: string,
-): Promise<ResourceResult> {
+): Promise<Exclude<ResourceResult, Stale>> {
   const details = normalise(input);
   const issues = checkDetails(details, await ports.referenceLists.get());
   if (issues.length > 0) return { ok: false, reason: 'invalid', issues };
 
-  const taken = async (): Promise<ResourceResult | undefined> => {
+  const taken = async (): Promise<Exclude<ResourceResult, Stale> | undefined> => {
     if (details.kind !== 'driver') {
       const owner = await ports.resources.findActiveByPlate(plateKey(details.plate), exceptId);
       return owner && { ok: false, reason: 'plate-taken', owner: plateOwner(owner) };
@@ -184,13 +187,16 @@ export function createResource(ports: Ports, details: ResourceDetails) {
   return save(ports, details, (d) => ports.resources.create({ details: d, documents: [] }));
 }
 
+/** ADR-005: a stale version is answered before any other rule. */
 export async function updateResource(
   ports: Ports,
   id: string,
+  version: number,
   details: ResourceDetails,
 ): Promise<ResourceResult> {
   const existing = await ports.resources.get(id);
   if (!existing || existing.kind !== details.kind) return { ok: false, reason: 'not-found' };
+  if (existing.version !== version) return stale(existing.version);
   if (existing.archived) return { ok: false, reason: 'archived' };
   // A vehicle in a running or future unit keeps its kind: the unit was composed for it.
   if (existing.kind !== 'driver' && details.kind !== 'driver') {
@@ -199,7 +205,7 @@ export async function updateResource(
       if (unit) return { ok: false, reason: 'in-unit', unit };
     }
   }
-  return save(ports, details, (d) => ports.resources.update(id, d), id);
+  return guarded(() => save(ports, details, (d) => ports.resources.update(id, version, d), id));
 }
 
 export async function getResource(ports: Ports, id: string): Promise<ResourceView | undefined> {
@@ -214,10 +220,12 @@ export async function getResource(ports: Ports, id: string): Promise<ResourceVie
 export async function setArchived(
   ports: Ports,
   id: string,
+  version: number,
   archived: boolean,
 ): Promise<ResourceResult> {
   const existing = await ports.resources.get(id);
   if (!existing) return { ok: false, reason: 'not-found' };
+  if (existing.version !== version) return stale(existing.version);
   if (archived) {
     const unit = await currentUnitOf(ports, id);
     if (unit) return { ok: false, reason: 'in-unit', unit };
@@ -227,11 +235,12 @@ export async function setArchived(
     if (owner) return { ok: false, reason: 'plate-taken', owner: plateOwner(owner) };
   }
   try {
-    const saved = await ports.resources.setArchived(id, archived);
+    const saved = await ports.resources.setArchived(id, version, archived);
     return saved
       ? { ok: true, resource: await view(ports, saved) }
       : { ok: false, reason: 'not-found' };
   } catch (error) {
+    if (error instanceof StaleVersionError) return stale(error.version);
     if (!(error instanceof PlateTakenError) || existing.kind === 'driver') throw error;
     const owner = await ports.resources.findActiveByPlate(plateKey(existing.plate), id);
     if (owner) return { ok: false, reason: 'plate-taken', owner: plateOwner(owner) };

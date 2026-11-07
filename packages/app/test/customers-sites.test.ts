@@ -89,7 +89,7 @@ describe('customers', () => {
     const { customer: first } = await ok(
       createCustomer(ports, customer({ code: 'DUPONT-IDF', siret: null })),
     );
-    await setCustomerArchived(ports, first.id, true);
+    await setCustomerArchived(ports, first.id, 1, true);
     expect(
       await createCustomer(ports, customer({ code: 'dupont-idf', siret: null })),
     ).toMatchObject({
@@ -113,7 +113,7 @@ describe('customers', () => {
     const { ports } = memoryPorts();
     const { customer: saved } = await ok(createCustomer(ports, customer()));
     const [kept] = saved.contacts;
-    await ok(updateCustomer(ports, saved.id, customer({ contacts: kept ? [kept] : [] })));
+    await ok(updateCustomer(ports, saved.id, 1, customer({ contacts: kept ? [kept] : [] })));
     const all = await listCustomers(ports, { includeArchived: true });
     const contacts = all.customers.flatMap((c) => c.contacts.map((x) => x.name));
     expect(contacts).toEqual(['Sandrine Dupont']);
@@ -128,7 +128,7 @@ describe('customers', () => {
     const { customer: lumiere } = await ok(
       createCustomer(ports, customer({ code: 'LUMIERE-EM', siret: null, siteIds: [shared.id] })),
     );
-    await ok(setCustomerArchived(ports, dupont.id, true));
+    await ok(setCustomerArchived(ports, dupont.id, 1, true));
     const { sites } = await listSites(ports);
     expect(sites.map((s) => [s.name, s.archived])).toEqual([[shared.name, false]]);
     expect((await getCustomer(ports, lumiere.id))?.sites.map((s) => s.id)).toEqual([shared.id]);
@@ -240,7 +240,7 @@ describe('sites', () => {
       { id: dockB.id, name: dockB.name, distanceMetres: 30, sameStreet: false },
     ]);
     // Editing dock B does not warn about dock B itself.
-    const again = await ok(updateSite(ports, dockB.id, site({ instructions: 'Gate 3' })));
+    const again = await ok(updateSite(ports, dockB.id, 1, site({ instructions: 'Gate 3' })));
     expect(again.nearby.map((n) => n.name)).toEqual(['Saint-Priest platform — dock C']);
   });
 

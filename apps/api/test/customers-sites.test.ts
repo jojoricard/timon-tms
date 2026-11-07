@@ -46,10 +46,14 @@ beforeAll(async () => {
 
 afterAll(() => database.close());
 
-async function call(method: string, path: string, body?: unknown) {
+/** `version`, for a write to an existing record, goes in If-Match (ADR-005). */
+async function call(method: string, path: string, body?: unknown, version?: number) {
   const response = await app.request(`/api${path}`, {
     method,
-    headers: { 'content-type': 'application/json' },
+    headers: {
+      'content-type': 'application/json',
+      ...(version === undefined ? {} : { 'if-match': `"${version}"` }),
+    },
     ...(body === undefined ? {} : { body: JSON.stringify(body) }),
   });
   const text = await response.text();
@@ -125,7 +129,7 @@ describe('customers', () => {
 
   it('criterion 3: the code of an archived customer is refused, whatever its case', async () => {
     const first = await call('POST', '/customers', customer({ code: 'DUPONT-IDF', siret: null }));
-    await call('POST', `/customers/${first.body.id}/archive`);
+    await call('POST', `/customers/${first.body.id}/archive`, undefined, 1);
     const again = await call('POST', '/customers', customer({ code: 'dupont-idf', siret: null }));
     expect(again).toMatchObject({
       status: 409,
@@ -159,11 +163,13 @@ describe('customers', () => {
       }),
     );
     const [kept] = created.body.contacts;
-    await call(
+    const updated = await call(
       'PUT',
       `/customers/${created.body.id}`,
       customer({ code: 'C11', siret: null, contacts: [kept] }),
+      created.body.version,
     );
+    expect(updated.status).toBe(200);
     const all = await call('GET', '/customers?archived=true');
     const names = all.body.customers.flatMap((c: any) => c.contacts.map((x: any) => x.name));
     expect(names).toContain('Gardé');
@@ -337,7 +343,7 @@ describe('sites', () => {
       '/customers',
       customer({ code: 'B10', siret: null, siteIds: [shared.id] }),
     );
-    await call('POST', `/customers/${a.body.id}/archive`);
+    await call('POST', `/customers/${a.body.id}/archive`, undefined, 1);
     const after = await call('GET', `/sites/${shared.id}`);
     expect(after.body.site).toMatchObject({ archived: false });
     expect((await call('GET', `/customers/${b.body.id}`)).body.sites.map((s: any) => s.id)).toEqual(

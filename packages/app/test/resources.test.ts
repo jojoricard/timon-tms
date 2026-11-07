@@ -91,7 +91,7 @@ describe('createResource', () => {
   it('lets a resource keep its own plate when edited', async () => {
     const { ports } = memoryPorts();
     const resource = await created(createResource(ports, tractor('CD-456-EF')));
-    const result = await updateResource(ports, resource.id, {
+    const result = await updateResource(ports, resource.id, 1, {
       ...tractor('cd 456 ef'),
       makeModel: 'Renault T 480',
     });
@@ -114,7 +114,7 @@ describe('drivers (rules 8 and 9)', () => {
       (await listResources(ports, { kind: 'driver' })).resources.map(resourceName);
     expect(await order()).toEqual(["X. D'Artagnan", 'A. Dupuis', 'T. Girard', 'Y. Morel']);
 
-    const renamed = await created(updateResource(ports, xavier.id, driver('Zola', 'Émile')));
+    const renamed = await created(updateResource(ports, xavier.id, 1, driver('Zola', 'Émile')));
     expect(renamed).toMatchObject({ displayName: null });
     expect(resourceName(renamed)).toBe('É. Zola');
     expect(await order()).toEqual(['A. Dupuis', 'T. Girard', 'Y. Morel', 'É. Zola']);
@@ -126,7 +126,7 @@ describe('drivers (rules 8 and 9)', () => {
       createResource(ports, { ...driver('Benali', 'Karim'), displayName: 'Kader' }),
     );
     const renamed = await created(
-      updateResource(ports, kader.id, { ...driver('Benali', 'Kamel'), displayName: 'Kader' }),
+      updateResource(ports, kader.id, 1, { ...driver('Benali', 'Kamel'), displayName: 'Kader' }),
     );
     expect(resourceName(renamed)).toBe('Kader');
   });
@@ -136,7 +136,7 @@ describe('drivers (rules 8 and 9)', () => {
     const first = await created(
       createResource(ports, { ...driver('Benali', 'Karim'), employeeNumber: 'E-1001' }),
     );
-    await setArchived(ports, first.id, true);
+    await setArchived(ports, first.id, 1, true);
     expect(
       await createResource(ports, { ...driver('Morel', 'Yanis'), employeeNumber: ' e-1001 ' }),
     ).toEqual({
@@ -149,7 +149,7 @@ describe('drivers (rules 8 and 9)', () => {
       createResource(ports, { ...driver('Morel', 'Yanis'), employeeNumber: 'E-2002' }),
     );
     expect(
-      await updateResource(ports, morel.id, {
+      await updateResource(ports, morel.id, 1, {
         ...driver('Morel', 'Yanis'),
         employeeNumber: 'e-2002',
       }),
@@ -161,12 +161,12 @@ describe('archiving', () => {
   it('criterion 11: hides an archived driver unless asked, and restores it', async () => {
     const { ports } = memoryPorts();
     const girard = await created(createResource(ports, driver('Girard', 'Thomas')));
-    await setArchived(ports, girard.id, true);
+    await setArchived(ports, girard.id, 1, true);
     const names = async (includeArchived: boolean) =>
       (await listResources(ports, { kind: 'driver', includeArchived })).resources.map((r) => r.id);
     expect(await names(false)).toEqual([]);
     expect(await names(true)).toEqual([girard.id]);
-    expect(await setArchived(ports, girard.id, false)).toMatchObject({
+    expect(await setArchived(ports, girard.id, 2, false)).toMatchObject({
       ok: true,
       resource: { archived: false },
     });
@@ -176,9 +176,9 @@ describe('archiving', () => {
   it('frees the plate of an archived vehicle, and refuses to restore it once reused', async () => {
     const { ports } = memoryPorts();
     const old = await created(createResource(ports, trailer('SR-4480')));
-    await setArchived(ports, old.id, true);
+    await setArchived(ports, old.id, 1, true);
     await created(createResource(ports, trailer('SR 4480')));
-    expect(await setArchived(ports, old.id, false)).toMatchObject({
+    expect(await setArchived(ports, old.id, 2, false)).toMatchObject({
       ok: false,
       reason: 'plate-taken',
     });
@@ -202,7 +202,7 @@ describe('documents', () => {
     });
     const [document] = added.documents;
     const renewed = await created(
-      updateDocument(ports, document?.id ?? '', { ...cpc, expiresOn: date('2031-12-12') }),
+      updateDocument(ports, document?.id ?? '', 1, { ...cpc, expiresOn: date('2031-12-12') }),
     );
     expect(renewed.documents.map((d) => d.status)).toEqual(['valid']);
   });
@@ -317,7 +317,7 @@ describe('listExpiries', () => {
     expect((await listExpiries(ports)).expiries).toHaveLength(1);
     expect((await listExpiries(ports, { blockingOnly: true })).expiries).toHaveLength(0);
     expect((await listExpiries(ports, { kind: 'trailer' })).expiries).toHaveLength(0);
-    await setArchived(ports, benali.id, true);
+    await setArchived(ports, benali.id, 1, true);
     expect((await listExpiries(ports)).expiries).toHaveLength(0);
   });
 });

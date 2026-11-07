@@ -27,10 +27,14 @@ const paris = (local: string) =>
     .toInstant()
     .toString();
 
-async function call(method: string, path: string, body?: unknown) {
+/** `version`, for a write to an existing record, goes in If-Match (ADR-005). */
+async function call(method: string, path: string, body?: unknown, version?: number) {
   const response = await app.request(`/api${path}`, {
     method,
-    headers: { 'content-type': 'application/json' },
+    headers: {
+      'content-type': 'application/json',
+      ...(version === undefined ? {} : { 'if-match': `"${version}"` }),
+    },
     ...(body === undefined ? {} : { body: JSON.stringify(body) }),
   });
   const text = await response.text();
@@ -270,11 +274,12 @@ describe('changing, ending and deleting units', () => {
     const running = (await call('GET', '/units')).body.units.find(
       (u: any) => u.name === 'M. Laurent',
     );
-    const { status, body } = await call('POST', `/units/${running.id}/change`, {
-      role: 'driver',
-      resourceId: fleet.perrin,
-      from: paris('2026-10-26 06:00'),
-    });
+    const { status, body } = await call(
+      'POST',
+      `/units/${running.id}/change`,
+      { role: 'driver', resourceId: fleet.perrin, from: paris('2026-10-26 06:00') },
+      running.version,
+    );
     expect(status).toBe(200);
     expect(body.ended).toMatchObject({ name: 'M. Laurent', end: '2026-10-26T05:00:00Z' });
     expect(body.unit).toMatchObject({
@@ -305,19 +310,28 @@ describe('changing, ending and deleting units', () => {
       start: paris('2026-11-02 07:00'),
     });
     expect(future.status).toBe(201);
-    expect((await call('DELETE', `/units/${future.body.id}`)).status).toBe(204);
+    const deleted = await call(
+      'DELETE',
+      `/units/${future.body.id}`,
+      undefined,
+      future.body.version,
+    );
+    expect(deleted.status).toBe(204);
     expect((await call('GET', `/units/${future.body.id}`)).status).toBe(404);
 
     const running = (await call('GET', '/units')).body.units.find(
       (u: any) => u.name === 'H. Perrin',
     );
-    expect(await call('DELETE', `/units/${running.id}`)).toMatchObject({
+    expect(await call('DELETE', `/units/${running.id}`, undefined, running.version)).toMatchObject({
       status: 409,
       body: { error: 'started' },
     });
-    const ended = await call('POST', `/units/${running.id}/end`, {
-      end: paris('2026-10-30 18:00'),
-    });
+    const ended = await call(
+      'POST',
+      `/units/${running.id}/end`,
+      { end: paris('2026-10-30 18:00') },
+      running.version,
+    );
     expect(ended).toMatchObject({ status: 200, body: { end: '2026-10-30T17:00:00Z' } });
   });
 
@@ -327,20 +341,27 @@ describe('changing, ending and deleting units', () => {
       driverId: fleet.marchand,
       start: paris('2026-11-09 07:00'),
     });
-    const edited = await call('PUT', `/units/${future.body.id}`, {
-      name: 'Van',
-      powerUnitId: fleet.van,
-      driverId: fleet.marchand,
-      start: paris('2026-11-09 08:00'),
-    });
+    const edited = await call(
+      'PUT',
+      `/units/${future.body.id}`,
+      {
+        name: 'Van',
+        powerUnitId: fleet.van,
+        driverId: fleet.marchand,
+        start: paris('2026-11-09 08:00'),
+      },
+      future.body.version,
+    );
     expect(edited).toMatchObject({ status: 200, body: { name: 'Van', customName: 'Van' } });
     const history = (await call('GET', `/resources/${fleet.cd}/units`)).body;
     expect(
       (
-        await call('PUT', `/units/${history[0].id}`, {
-          powerUnitId: fleet.cd,
-          start: paris('2026-11-09 08:00'),
-        })
+        await call(
+          'PUT',
+          `/units/${history[0].id}`,
+          { powerUnitId: fleet.cd, start: paris('2026-11-09 08:00') },
+          history[0].version,
+        )
       ).body,
     ).toEqual({ error: 'started' });
   });
@@ -368,7 +389,7 @@ describe('documents and archiving', () => {
   });
 
   it('criterion 11: a trailer in a running unit cannot be archived; the unit is named', async () => {
-    const { status, body } = await call('POST', `/resources/${fleet.sr4471}/archive`);
+    const { status, body } = await call('POST', `/resources/${fleet.sr4471}/archive`, undefined, 1);
     expect(status).toBe(409);
     expect(body).toMatchObject({
       error: 'in-unit',
@@ -377,13 +398,18 @@ describe('documents and archiving', () => {
   });
 
   it('keeps the kind of a vehicle that belongs to a running or future unit', async () => {
-    const { status, body } = await call('PUT', `/resources/${fleet.cd}`, {
-      kind: 'power-unit',
-      vehicleKind: 'rigid-truck',
-      plate: 'CD-456-EF',
-      category: 'N3',
-      gvwKg: 19_000,
-    });
+    const { status, body } = await call(
+      'PUT',
+      `/resources/${fleet.cd}`,
+      {
+        kind: 'power-unit',
+        vehicleKind: 'rigid-truck',
+        plate: 'CD-456-EF',
+        category: 'N3',
+        gvwKg: 19_000,
+      },
+      1,
+    );
     expect(status).toBe(409);
     expect(body.error).toBe('in-unit');
   });

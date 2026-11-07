@@ -49,6 +49,20 @@ export class OpeningOverlapError extends Error {
   override readonly name = 'OpeningOverlapError';
 }
 
+/**
+ * Raised by a repository when a write names a version that is no longer current (ADR-005):
+ * someone else changed the record since it was read. Carries the current version.
+ */
+export class StaleVersionError extends Error {
+  override readonly name = 'StaleVersionError';
+  readonly version: number;
+
+  constructor(version: number) {
+    super(`The record is at version ${version}`);
+    this.version = version;
+  }
+}
+
 /** Raised by a repository when the resource already holds a document of that type. */
 export class DocumentTypeTakenError extends Error {
   override readonly name = 'DocumentTypeTakenError';
@@ -88,11 +102,14 @@ export type NewDocument = {
 export type StoredDocument = NewDocument & {
   readonly id: string;
   readonly resourceId: string;
+  /** ADR-005: its own, apart from the resource's. */
+  readonly version: number;
 };
 
 export type StoredResource = Resource & {
   /** Rule 7 of SPEC-001; one subsidiary for now (#14). */
   readonly subsidiaryId: string;
+  readonly version: number;
   readonly createdAt: Temporal.Instant;
   readonly updatedAt: Temporal.Instant;
   readonly documents: readonly StoredDocument[];
@@ -120,19 +137,27 @@ export interface ResourceRepository {
   create(resource: NewResource): Promise<StoredResource>;
   /** All or nothing, in one transaction. @throws PlateTakenError, EmployeeNumberTakenError */
   createMany(resources: readonly NewResource[]): Promise<number>;
-  /** @throws PlateTakenError, EmployeeNumberTakenError */
-  update(id: string, details: ResourceDetails): Promise<StoredResource | undefined>;
-  /** @throws PlateTakenError when restoring a plate another active resource now uses. */
-  setArchived(id: string, archived: boolean): Promise<StoredResource | undefined>;
+  /** @throws StaleVersionError, PlateTakenError, EmployeeNumberTakenError */
+  update(
+    id: string,
+    version: number,
+    details: ResourceDetails,
+  ): Promise<StoredResource | undefined>;
+  /**
+   * @throws StaleVersionError; PlateTakenError when restoring a plate another active resource
+   * now uses.
+   */
+  setArchived(id: string, version: number, archived: boolean): Promise<StoredResource | undefined>;
 }
 
 export interface DocumentRepository {
   get(id: string): Promise<StoredDocument | undefined>;
   /** @throws DocumentTypeTakenError */
   add(resourceId: string, document: NewDocument): Promise<StoredDocument>;
-  /** @throws DocumentTypeTakenError */
-  update(id: string, document: NewDocument): Promise<StoredDocument | undefined>;
-  remove(id: string): Promise<boolean>;
+  /** @throws StaleVersionError, DocumentTypeTakenError */
+  update(id: string, version: number, document: NewDocument): Promise<StoredDocument | undefined>;
+  /** @throws StaleVersionError */
+  remove(id: string, version: number): Promise<boolean>;
 }
 
 export interface ReferenceListRepository {
@@ -161,7 +186,7 @@ export type NewUnit = UnitMembers & {
   readonly previousUnitId: string | null;
 };
 
-export type StoredUnit = NewUnit & { readonly id: string };
+export type StoredUnit = NewUnit & { readonly id: string; readonly version: number };
 
 export interface UnitRepository {
   get(id: string): Promise<StoredUnit | undefined>;
@@ -173,16 +198,22 @@ export interface UnitRepository {
   listByResource(resourceId: string): Promise<StoredUnit[]>;
   /** @throws UnitOverlapError */
   create(unit: NewUnit): Promise<StoredUnit>;
-  /** Members, name and period replaced. @throws UnitOverlapError */
-  replace(id: string, unit: NewUnit): Promise<StoredUnit | undefined>;
-  remove(id: string): Promise<boolean>;
-  /** @throws UnitOverlapError */
-  setEnd(id: string, end: Temporal.Instant): Promise<StoredUnit | undefined>;
+  /** Members, name and period replaced. @throws StaleVersionError, UnitOverlapError */
+  replace(id: string, version: number, unit: NewUnit): Promise<StoredUnit | undefined>;
+  /** @throws StaleVersionError */
+  remove(id: string, version: number): Promise<boolean>;
+  /** @throws StaleVersionError, UnitOverlapError */
+  setEnd(id: string, version: number, end: Temporal.Instant): Promise<StoredUnit | undefined>;
   /**
-   * In one transaction, ends the unit when `next` starts, then creates `next` (rule 6).
-   * @throws UnitOverlapError
+   * In one transaction, ends the unit when `next` starts, then creates `next` (rule 6). The
+   * version is the ended unit's.
+   * @throws StaleVersionError, UnitOverlapError
    */
-  change(id: string, next: NewUnit): Promise<{ ended: StoredUnit; started: StoredUnit }>;
+  change(
+    id: string,
+    version: number,
+    next: NewUnit,
+  ): Promise<{ ended: StoredUnit; started: StoredUnit }>;
 }
 
 export type ContactInput = ContactDetails & { readonly id?: string | undefined };
@@ -195,6 +226,8 @@ export type CustomerInput = Omit<CustomerDetails, 'contacts'> & {
 export type StoredCustomer = Omit<CustomerDetails, 'contacts'> & {
   readonly id: string;
   readonly archived: boolean;
+  /** ADR-005: contacts and usual sites are saved under it. */
+  readonly version: number;
   readonly createdAt: Temporal.Instant;
   readonly updatedAt: Temporal.Instant;
   readonly contacts: readonly StoredContact[];
@@ -212,11 +245,14 @@ export interface CustomerRepository {
   createMany(customers: readonly CustomerInput[]): Promise<number>;
   /**
    * Contacts left out of `customer.contacts` are deleted (rule 3); the usual sites are replaced.
-   * @throws CustomerCodeTakenError, SiretTakenError
+   * @throws StaleVersionError, CustomerCodeTakenError, SiretTakenError
    */
-  update(id: string, customer: CustomerInput): Promise<StoredCustomer | undefined>;
-  /** @throws SiretTakenError when restoring a SIRET another active customer now has. */
-  setArchived(id: string, archived: boolean): Promise<StoredCustomer | undefined>;
+  update(id: string, version: number, customer: CustomerInput): Promise<StoredCustomer | undefined>;
+  /**
+   * @throws StaleVersionError; SiretTakenError when restoring a SIRET another active customer
+   * now has.
+   */
+  setArchived(id: string, version: number, archived: boolean): Promise<StoredCustomer | undefined>;
 }
 
 export type SiteRecord = SiteDetails & { readonly timeZone: string };
@@ -224,6 +260,7 @@ export type SiteRecord = SiteDetails & { readonly timeZone: string };
 export type StoredSite = SiteRecord & {
   readonly id: string;
   readonly archived: boolean;
+  readonly version: number;
   readonly createdAt: Temporal.Instant;
   readonly updatedAt: Temporal.Instant;
   /** The customers, archived or not, that list it among their usual sites. */
@@ -237,9 +274,10 @@ export interface SiteRepository {
   create(site: SiteRecord): Promise<StoredSite>;
   /** All or nothing, in one transaction. */
   createMany(sites: readonly SiteRecord[]): Promise<number>;
-  /** @throws OpeningOverlapError */
-  update(id: string, site: SiteRecord): Promise<StoredSite | undefined>;
-  setArchived(id: string, archived: boolean): Promise<StoredSite | undefined>;
+  /** @throws StaleVersionError, OpeningOverlapError */
+  update(id: string, version: number, site: SiteRecord): Promise<StoredSite | undefined>;
+  /** @throws StaleVersionError */
+  setArchived(id: string, version: number, archived: boolean): Promise<StoredSite | undefined>;
 }
 
 /** The current time; tests fix it. */

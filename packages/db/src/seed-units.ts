@@ -173,7 +173,7 @@ export async function seedUnits(repositories: Repositories, today: Temporal.Plai
         period: { start: instant(change.at), end: current.period.end },
         previousUnitId: current.id,
       };
-      current = (await repositories.units.change(current.id, next)).started;
+      current = (await repositories.units.change(current.id, current.version, next)).started;
     }
   }
 }

@@ -161,7 +161,7 @@ describe('archiving and changing a member', () => {
 
   it('criterion 11: a trailer in a running unit cannot be archived; the unit is named', async () => {
     const { ports, trailer, saved } = await running();
-    const result = await setArchived(ports, trailer.id, true);
+    const result = await setArchived(ports, trailer.id, 1, true);
     expect(result).toMatchObject({
       ok: false,
       reason: 'in-unit',
@@ -174,6 +174,7 @@ describe('archiving and changing a member', () => {
     const result = await updateResource(
       ports,
       tractor.id,
+      1,
       vehicle('CD-456-EF', 'rigid-truck', 'N3', 19_000),
     );
     expect(result).toMatchObject({ ok: false, reason: 'in-unit' });
@@ -187,13 +188,13 @@ describe('archiving and changing a member', () => {
       start: instant('2026-10-01T04:00:00Z'),
       end: instant('2026-10-02T04:00:00Z'),
     });
-    expect((await setArchived(ports, trailer.id, true)).ok).toBe(true);
+    expect((await setArchived(ports, trailer.id, 1, true)).ok).toBe(true);
   });
 
   it('criterion 8: a change of driver ends the unit and starts another', async () => {
     const { ports, tractor, trailer, saved } = await running();
     const perrin = await resource(ports, driver('Hugo', 'Perrin'), [['licence-ce', '2030-06-15']]);
-    const result = await changeUnit(ports, saved.id, {
+    const result = await changeUnit(ports, saved.id, saved.version, {
       role: 'driver',
       resourceId: perrin.id,
       from: instant('2026-10-26T05:00:00Z'),
@@ -214,7 +215,11 @@ describe('archiving and changing a member', () => {
   it('refuses a change outside the running period, or to the same driver', async () => {
     const { ports, laurent, saved } = await running();
     const change = (from: string, resourceId = laurent.id) =>
-      changeUnit(ports, saved.id, { role: 'driver', resourceId, from: instant(from) });
+      changeUnit(ports, saved.id, saved.version, {
+        role: 'driver',
+        resourceId,
+        from: instant(from),
+      });
     expect(await change('2026-10-06T04:00:00Z')).toMatchObject({
       reason: 'invalid',
       issues: expect.arrayContaining([{ field: 'from', code: 'outside-unit' }]),

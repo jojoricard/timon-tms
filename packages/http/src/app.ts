@@ -16,6 +16,7 @@ import {
   removeDocument,
   resourceImportGuide,
   resourceSummary,
+  type Stale,
   setArchived,
   statusFilters,
   updateDocument,
@@ -56,6 +57,7 @@ import {
 } from './to-json.ts';
 import { toUnitRef, unitApi } from './unit-routes.ts';
 import { validationHook } from './validation.ts';
+import { guardedAnswers, ifMatch, staleBody, versionOf } from './versions.ts';
 
 const json = <T extends z.ZodType>(schema: T, description: string) => ({
   content: { 'application/json': { schema } },
@@ -125,20 +127,20 @@ const routes = {
   update: createRoute({
     method: 'put',
     path: '/resources/{id}',
-    request: { params: id, ...body(ResourceInput) },
-    responses: resourceAnswers,
+    request: { params: id, headers: ifMatch, ...body(ResourceInput) },
+    responses: { ...resourceAnswers, ...guardedAnswers },
   }),
   archive: createRoute({
     method: 'post',
     path: '/resources/{id}/archive',
-    request: { params: id },
-    responses: resourceAnswers,
+    request: { params: id, headers: ifMatch },
+    responses: { ...resourceAnswers, ...guardedAnswers },
   }),
   restore: createRoute({
     method: 'post',
     path: '/resources/{id}/restore',
-    request: { params: id },
-    responses: resourceAnswers,
+    request: { params: id, headers: ifMatch },
+    responses: { ...resourceAnswers, ...guardedAnswers },
   }),
   addDocument: createRoute({
     method: 'post',
@@ -149,14 +151,14 @@ const routes = {
   updateDocument: createRoute({
     method: 'put',
     path: '/documents/{id}',
-    request: { params: id, ...body(DocumentInput) },
-    responses: resourceAnswers,
+    request: { params: id, headers: ifMatch, ...body(DocumentInput) },
+    responses: { ...resourceAnswers, ...guardedAnswers },
   }),
   removeDocument: createRoute({
     method: 'delete',
     path: '/documents/{id}',
-    request: { params: id },
-    responses: resourceAnswers,
+    request: { params: id, headers: ifMatch },
+    responses: { ...resourceAnswers, ...guardedAnswers },
   }),
   expiries: createRoute({
     method: 'get',
@@ -230,7 +232,7 @@ const routes = {
 };
 
 /** A failed write, as a status and a body the interface can translate. */
-function failure(result: Exclude<DocumentResult, { ok: true }>) {
+function failure(result: Exclude<DocumentResult, { ok: true } | Stale>) {
   switch (result.reason) {
     case 'not-found':
       return { status: 404, body: { error: 'not-found' } } as const;
@@ -315,21 +317,27 @@ export function createApp(ports: Ports) {
       const result = await updateResource(
         ports,
         c.req.valid('param').id,
+        versionOf(c.req.valid('header')),
         fromInput(c.req.valid('json')),
       );
       if (result.ok) return c.json(toResource(result.resource), 200);
+      if (result.reason === 'stale') return c.json(staleBody(result.version), 412);
       const { status, body } = failure(result);
       return c.json(body, status);
     })
     .openapi(routes.archive, async (c) => {
-      const result = await setArchived(ports, c.req.valid('param').id, true);
+      const version = versionOf(c.req.valid('header'));
+      const result = await setArchived(ports, c.req.valid('param').id, version, true);
       if (result.ok) return c.json(toResource(result.resource), 200);
+      if (result.reason === 'stale') return c.json(staleBody(result.version), 412);
       const { status, body } = failure(result);
       return c.json(body, status);
     })
     .openapi(routes.restore, async (c) => {
-      const result = await setArchived(ports, c.req.valid('param').id, false);
+      const version = versionOf(c.req.valid('header'));
+      const result = await setArchived(ports, c.req.valid('param').id, version, false);
       if (result.ok) return c.json(toResource(result.resource), 200);
+      if (result.reason === 'stale') return c.json(staleBody(result.version), 412);
       const { status, body } = failure(result);
       return c.json(body, status);
     })
@@ -342,14 +350,18 @@ export function createApp(ports: Ports) {
     })
     .openapi(routes.updateDocument, async (c) => {
       const document = fromDocumentInput(c.req.valid('json'));
-      const result = await updateDocument(ports, c.req.valid('param').id, document);
+      const version = versionOf(c.req.valid('header'));
+      const result = await updateDocument(ports, c.req.valid('param').id, version, document);
       if (result.ok) return c.json(toResource(result.resource), 200);
+      if (result.reason === 'stale') return c.json(staleBody(result.version), 412);
       const { status, body } = failure(result);
       return c.json(body, status);
     })
     .openapi(routes.removeDocument, async (c) => {
-      const result = await removeDocument(ports, c.req.valid('param').id);
+      const version = versionOf(c.req.valid('header'));
+      const result = await removeDocument(ports, c.req.valid('param').id, version);
       if (result.ok) return c.json(toResource(result.resource), 200);
+      if (result.reason === 'stale') return c.json(staleBody(result.version), 412);
       const { status, body } = failure(result);
       return c.json(body, status);
     })

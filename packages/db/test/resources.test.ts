@@ -114,9 +114,9 @@ describe('resources', () => {
 
   it('frees the plate of an archived vehicle and refuses to restore it once reused', async () => {
     const old = await ports.resources.create(vehicle('EF-789-GH'));
-    await ports.resources.setArchived(old.id, true);
+    await ports.resources.setArchived(old.id, 1, true);
     await ports.resources.create(vehicle('EF 789 GH'));
-    await expect(ports.resources.setArchived(old.id, false)).rejects.toBeInstanceOf(
+    await expect(ports.resources.setArchived(old.id, 2, false)).rejects.toBeInstanceOf(
       PlateTakenError,
     );
   });
@@ -167,7 +167,7 @@ describe('drivers', () => {
 
   it('criterion 17: an employee number is unique without case, archived drivers included', async () => {
     const first = await ports.resources.create(driver('Premier', 'E-7001'));
-    await ports.resources.setArchived(first.id, true);
+    await ports.resources.setArchived(first.id, 1, true);
     await expect(ports.resources.create(driver('Second', 'e-7001'))).rejects.toBeInstanceOf(
       EmployeeNumberTakenError,
     );
@@ -191,12 +191,12 @@ describe('documents', () => {
     await expect(ports.documents.add(tractor.id, tachograph)).rejects.toBeInstanceOf(
       DocumentTypeTakenError,
     );
-    const renewed = await ports.documents.update(added.id, {
+    const renewed = await ports.documents.update(added.id, 1, {
       ...tachograph,
       expiresOn: Temporal.PlainDate.from('2028-10-22'),
     });
     expect(renewed?.expiresOn.toString()).toBe('2028-10-22');
-    expect(await ports.documents.remove(added.id)).toBe(true);
+    expect(await ports.documents.remove(added.id, 2)).toBe(true);
     expect((await ports.resources.get(tractor.id))?.documents).toEqual([]);
   });
 });

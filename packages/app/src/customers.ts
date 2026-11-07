@@ -11,11 +11,13 @@ import {
   type CustomerInput,
   type Ports,
   SiretTakenError,
+  StaleVersionError,
   type StoredCustomer,
 } from './ports.ts';
 import type { FieldIssue } from './resources.ts';
 import { searchable } from './search.ts';
 import { type SiteView, siteView } from './sites.ts';
+import { guarded, type Stale, stale } from './versions.ts';
 
 /** The customer that already has a code or a SIRET (rule 1). */
 export type CustomerOwner = {
@@ -33,6 +35,7 @@ export type CustomerView = StoredCustomer & {
 export type CustomerResult =
   | { readonly ok: true; readonly customer: CustomerView }
   | { readonly ok: false; readonly reason: 'not-found' }
+  | Stale
   | { readonly ok: false; readonly reason: 'invalid'; readonly issues: readonly FieldIssue[] }
   | {
       readonly ok: false;
@@ -120,7 +123,7 @@ async function save(
   input: CustomerInput,
   write: (customer: CustomerInput) => Promise<StoredCustomer | undefined>,
   exceptId?: string,
-): Promise<CustomerResult> {
+): Promise<Exclude<CustomerResult, Stale>> {
   const customer = normaliseCustomer(input);
   const issues = await checkCustomerInput(ports, customer);
   if (issues.length > 0) return { ok: false, reason: 'invalid', issues };
@@ -145,14 +148,20 @@ export function createCustomer(ports: Ports, input: CustomerInput) {
   return save(ports, input, (c) => ports.customers.create(c));
 }
 
-/** Contacts left out are deleted (rule 3); the usual sites are replaced. */
+/**
+ * Contacts left out are deleted (rule 3); the usual sites are replaced. ADR-005: contacts and
+ * usual sites are saved under the customer's version.
+ */
 export async function updateCustomer(
   ports: Ports,
   id: string,
+  version: number,
   input: CustomerInput,
 ): Promise<CustomerResult> {
-  if (!(await ports.customers.get(id))) return { ok: false, reason: 'not-found' };
-  return save(ports, input, (c) => ports.customers.update(id, c), id);
+  const existing = await ports.customers.get(id);
+  if (!existing) return { ok: false, reason: 'not-found' };
+  if (existing.version !== version) return stale(existing.version);
+  return guarded(() => save(ports, input, (c) => ports.customers.update(id, version, c), id));
 }
 
 export async function getCustomer(ports: Ports, id: string) {
@@ -167,20 +176,23 @@ export async function getCustomer(ports: Ports, id: string) {
 export async function setCustomerArchived(
   ports: Ports,
   id: string,
+  version: number,
   archived: boolean,
 ): Promise<CustomerResult> {
   const existing = await ports.customers.get(id);
   if (!existing) return { ok: false, reason: 'not-found' };
+  if (existing.version !== version) return stale(existing.version);
   if (!archived && existing.siret) {
     const other = await ports.customers.findActiveBySiret(existing.siret, id);
     if (other) return { ok: false, reason: 'siret-taken', owner: owner(other) };
   }
   try {
-    const saved = await ports.customers.setArchived(id, archived);
+    const saved = await ports.customers.setArchived(id, version, archived);
     return saved
       ? { ok: true, customer: await view(ports, saved) }
       : { ok: false, reason: 'not-found' };
   } catch (error) {
+    if (error instanceof StaleVersionError) return stale(error.version);
     if (!(error instanceof SiretTakenError) || !existing.siret) throw error;
     const other = await ports.customers.findActiveBySiret(existing.siret, id);
     if (other) return { ok: false, reason: 'siret-taken', owner: owner(other) };

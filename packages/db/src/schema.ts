@@ -98,6 +98,8 @@ export const resource = pgTable(
       .references(() => subsidiary.id),
     kind: text({ enum: resourceKinds }).notNull(),
     archivedAt: timestamp('archived_at', { withTimezone: true }),
+    // ADR-005: 1 at creation, plus one at every write; a write names the version it read.
+    version: integer().notNull().default(1),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
     // Driver
@@ -182,6 +184,8 @@ export const document = pgTable(
     reference: text(),
     issuedOn: date('issued_on', { mode: 'string' }),
     expiresOn: date('expires_on', { mode: 'string' }).notNull(),
+    // ADR-005: 1 at creation, plus one at every write; a write names the version it read.
+    version: integer().notNull().default(1),
   },
   (t) => [
     unique('document_resource_type').on(t.resourceId, t.documentTypeId),
@@ -235,6 +239,8 @@ export const customer = pgTable(
     billingCity: text('billing_city'),
     notes: text(),
     archivedAt: timestamp('archived_at', { withTimezone: true }),
+    // ADR-005: 1 at creation, plus one at every write; a write names the version it read.
+    version: integer().notNull().default(1),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
   },
@@ -298,6 +304,8 @@ export const site = pgTable(
     gatePhone: text('gate_phone'),
     instructions: text(),
     archivedAt: timestamp('archived_at', { withTimezone: true }),
+    // ADR-005: 1 at creation, plus one at every write; a write names the version it read.
+    version: integer().notNull().default(1),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
   },
@@ -408,6 +416,8 @@ export const unit = pgTable(
     previousUnitId: uuid('previous_unit_id').references((): AnyPgColumn => unit.id, {
       onDelete: 'set null',
     }),
+    // ADR-005: 1 at creation, plus one at every write; a write names the version it read.
+    version: integer().notNull().default(1),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   },
   (t) => [

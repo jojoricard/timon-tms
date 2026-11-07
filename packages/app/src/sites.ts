@@ -14,6 +14,7 @@ import type { Ports, ReferenceLists, SiteRecord, StoredSite } from './ports.ts';
 import { OpeningOverlapError } from './ports.ts';
 import type { FieldIssue } from './resources.ts';
 import { searchable } from './search.ts';
+import { guarded, type Stale, stale } from './versions.ts';
 
 /** A site near the one being saved (rule 5): a warning, never a refusal. */
 export type NearbySite = {
@@ -31,6 +32,7 @@ export type SiteView = StoredSite & {
 export type SiteResult =
   | { readonly ok: true; readonly site: SiteView; readonly nearby: readonly NearbySite[] }
   | { readonly ok: false; readonly reason: 'not-found' }
+  | Stale
   | { readonly ok: false; readonly reason: 'invalid'; readonly issues: readonly FieldIssue[] };
 
 const clean = (value: string | null | undefined) => {
@@ -130,7 +132,7 @@ async function save(
   ports: Ports,
   input: SiteDetails,
   write: (site: SiteRecord) => Promise<StoredSite | undefined>,
-): Promise<SiteResult> {
+): Promise<Exclude<SiteResult, Stale>> {
   let site = normaliseSite(input);
   const issues = checkSiteRecord(site, await ports.referenceLists.get());
   if (issues.length > 0) return { ok: false, reason: 'invalid', issues };
@@ -161,8 +163,17 @@ export function createSite(ports: Ports, input: SiteDetails) {
   return save(ports, input, (s) => ports.sites.create(s));
 }
 
-export function updateSite(ports: Ports, id: string, input: SiteDetails) {
-  return save(ports, input, (s) => ports.sites.update(id, s));
+/** ADR-005: a stale version is answered before any other rule. */
+export async function updateSite(
+  ports: Ports,
+  id: string,
+  version: number,
+  input: SiteDetails,
+): Promise<SiteResult> {
+  const existing = await ports.sites.get(id);
+  if (!existing) return { ok: false, reason: 'not-found' };
+  if (existing.version !== version) return stale(existing.version);
+  return guarded(() => save(ports, input, (s) => ports.sites.update(id, version, s)));
 }
 
 export async function getSite(ports: Ports, id: string) {
@@ -178,10 +189,12 @@ export async function getSite(ports: Ports, id: string) {
 export async function setSiteArchived(
   ports: Ports,
   id: string,
+  version: number,
   archived: boolean,
 ): Promise<SiteResult> {
-  const saved = await ports.sites.setArchived(id, archived);
+  const saved = await guarded(() => ports.sites.setArchived(id, version, archived));
   if (!saved) return { ok: false, reason: 'not-found' };
+  if ('reason' in saved) return saved;
   return { ok: true, site: siteView(saved, ports.clock.now()), nearby: [] };
 }
 

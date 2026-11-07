@@ -56,6 +56,8 @@ const RequiredLicence = z.union([LicenceCategory, z.literal('unsupported')]);
 
 export const Unit = UnitRef.extend({
   customName: z.string().nullable(),
+  /** ADR-005: an edit, a deletion, an end and a change of driver or trailer are made under it. */
+  version: z.number().int(),
   state: z.enum(['future', 'running', 'ended']),
   powerUnit: Member,
   trailer: Member.nullable(),

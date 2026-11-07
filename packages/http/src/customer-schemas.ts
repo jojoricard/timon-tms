@@ -30,6 +30,7 @@ export const Contact = z
 export const Site = z
   .object({
     id: z.uuid(),
+    version: z.number().int(),
     name: z.string(),
     street1: z.string(),
     street2: z.string().nullable(),
@@ -124,6 +125,8 @@ export const NearbyQuery = z
 export const Customer = z
   .object({
     id: z.uuid(),
+    /** ADR-005: contacts and usual sites are saved under it. */
+    version: z.number().int(),
     code: z.string(),
     name: z.string(),
     country: z.string(),

@@ -13,7 +13,7 @@ import {
   TableFrame,
 } from '@timon/ui';
 import type { ReactNode } from 'react';
-import { api, ok } from '../api.ts';
+import { api, ifMatch, ok } from '../api.ts';
 import { EquipmentTags } from '../customers/section.tsx';
 import {
   errorText,
@@ -321,7 +321,12 @@ function RestoreButton({ resource }: { resource: ResourceJson }) {
   const refresh = useRefreshResources();
   const restore = useSubmit({
     mutationFn: async () =>
-      ok(await api.resources[':id'].restore.$post({ param: { id: resource.id } })),
+      ok(
+        await api.resources[':id'].restore.$post({
+          param: { id: resource.id },
+          header: ifMatch(resource.version),
+        }),
+      ),
     onSuccess: refresh,
   });
   return (
