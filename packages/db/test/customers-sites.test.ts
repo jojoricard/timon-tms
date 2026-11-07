@@ -84,6 +84,7 @@ describe('customers', () => {
     const [kept] = created.contacts;
     const updated = await ports.customers.update(
       created.id,
+      1,
       customer({ code: 'C11', siret: null, contacts: kept ? [kept] : [] }),
     );
     expect(updated?.contacts).toEqual([kept]);
@@ -95,7 +96,7 @@ describe('customers', () => {
 
   it('criterion 3: a code is unique, archived customers included, even without the check', async () => {
     const first = await ports.customers.create(customer({ code: 'DUPONT-IDF', siret: null }));
-    await ports.customers.setArchived(first.id, true);
+    await ports.customers.setArchived(first.id, 1, true);
     await expect(
       ports.customers.create(customer({ code: 'DUPONT-IDF', siret: null })),
     ).rejects.toBeInstanceOf(CustomerCodeTakenError);
@@ -108,9 +109,9 @@ describe('customers', () => {
     await expect(
       ports.customers.create(customer({ code: 'SECOND', siret })),
     ).rejects.toBeInstanceOf(SiretTakenError);
-    await ports.customers.setArchived(first.id, true);
+    await ports.customers.setArchived(first.id, 1, true);
     await ports.customers.create(customer({ code: 'SECOND', siret }));
-    await expect(ports.customers.setArchived(first.id, false)).rejects.toBeInstanceOf(
+    await expect(ports.customers.setArchived(first.id, 2, false)).rejects.toBeInstanceOf(
       SiretTakenError,
     );
   });
@@ -171,7 +172,7 @@ describe('sites', () => {
       customer({ code: 'A10', siret: null, siteIds: [dock.id] }),
     );
     await ports.customers.create(customer({ code: 'B10', siret: null, siteIds: [dock.id] }));
-    await ports.customers.setArchived(a.id, true);
+    await ports.customers.setArchived(a.id, 1, true);
     const shared = await ports.sites.get(dock.id);
     expect(shared?.archived).toBe(false);
     expect(shared?.customerIds).toHaveLength(2);

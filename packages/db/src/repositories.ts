@@ -36,6 +36,7 @@ import {
 } from './schema.ts';
 import { formatRange } from './tstzrange.ts';
 import { unitRepository } from './unit-repository.ts';
+import { atVersion, missingOrStale, nextVersion } from './versions.ts';
 
 /** The single subsidiary created by migration 0004, until subsidiaries have screens (#14). */
 export const defaultSubsidiaryId = '10000000-0000-4000-8000-000000000002';
@@ -69,6 +70,7 @@ function toDocument(row: DocumentRow): StoredDocument {
     reference: row.reference,
     issuedOn: row.issuedOn ? Temporal.PlainDate.from(row.issuedOn) : null,
     expiresOn: Temporal.PlainDate.from(row.expiresOn),
+    version: row.version,
   };
 }
 
@@ -92,6 +94,7 @@ function toResource(
     id: row.id,
     subsidiaryId: row.subsidiaryId,
     archived: row.archivedAt !== null,
+    version: row.version,
     createdAt: Temporal.Instant.fromEpochMilliseconds(row.createdAt.getTime()),
     updatedAt: Temporal.Instant.fromEpochMilliseconds(row.updatedAt.getTime()),
     documents,
@@ -281,30 +284,39 @@ function resourceRepository(db: Database): ResourceRepository {
           return inputs.length;
         }),
       ),
-    update: async (id, details) => {
+    update: async (id, version, details) => {
       const updated = await translateErrors(() =>
         db.transaction(async (tx) => {
           const rows = await tx
             .update(resource)
-            .set({ ...resourceValues(details), updatedAt: sql`now()` })
-            .where(and(eq(resource.id, id), eq(resource.kind, details.kind)))
+            .set({
+              ...resourceValues(details),
+              version: nextVersion(resource),
+              updatedAt: sql`now()`,
+            })
+            .where(and(atVersion(resource, id, version), eq(resource.kind, details.kind)))
             .returning({ id: resource.id });
-          if (rows.length === 0) return false;
+          if (rows.length === 0) return missingOrStale(tx, resource, id);
           await replaceLinks(tx, id, details);
           return true;
         }),
       );
       return updated ? get(id) : undefined;
     },
-    setArchived: async (id, archived) => {
+    setArchived: async (id, version, archived) => {
       const rows = await translateErrors(() =>
         db
           .update(resource)
-          .set({ archivedAt: archived ? sql`now()` : null, updatedAt: sql`now()` })
-          .where(eq(resource.id, id))
+          .set({
+            archivedAt: archived ? sql`now()` : null,
+            version: nextVersion(resource),
+            updatedAt: sql`now()`,
+          })
+          .where(atVersion(resource, id, version))
           .returning({ id: resource.id }),
       );
-      return rows.length > 0 ? get(id) : undefined;
+      if (rows.length === 0) return missingOrStale(db, resource, id);
+      return get(id);
     },
   };
 }
@@ -323,21 +335,26 @@ function documentRepository(db: Database): DocumentRepository {
       if (!row) throw new Error('Insert returned no row');
       return toDocument(row);
     },
-    update: async (id, input) => {
-      const existing = await get(id);
-      if (!existing) return undefined;
+    // A document stays on its resource: only its type, reference and dates change.
+    update: async (id, version, input) => {
+      const { resourceId: _, ...values } = documentValues('', input);
       const [row] = await translateErrors(() =>
         db
           .update(document)
-          .set(documentValues(existing.resourceId, input))
-          .where(eq(document.id, id))
+          .set({ ...values, version: nextVersion(document) })
+          .where(atVersion(document, id, version))
           .returning(),
       );
-      return row ? toDocument(row) : undefined;
+      return row ? toDocument(row) : missingOrStale(db, document, id);
     },
-    remove: async (id) => {
-      const rows = await db.delete(document).where(eq(document.id, id)).returning();
-      return rows.length > 0;
+    remove: async (id, version) => {
+      const rows = await db
+        .delete(document)
+        .where(atVersion(document, id, version))
+        .returning({ id: document.id });
+      if (rows.length > 0) return true;
+      await missingOrStale(db, document, id);
+      return false;
     },
   };
 }

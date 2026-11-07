@@ -56,7 +56,7 @@ describe('unit_member', () => {
     const created = await units.create(unit('first', '22:00', null));
     expect(created.period.start.toString()).toBe(at('22:00'));
     expect(created.period.end).toBeNull();
-    expect(await units.remove(created.id)).toBe(true);
+    expect(await units.remove(created.id, created.version)).toBe(true);
   });
 
   it('refuses a resource in two units over overlapping periods, without any check', async () => {
@@ -71,10 +71,14 @@ describe('unit_member', () => {
     const { units } = createRepositories(database.db);
     const [morning] = await units.listAt(Temporal.Instant.from(at('09:00')));
     if (!morning) throw new Error('No unit at 09:00');
-    await expect(units.setEnd(morning.id, Temporal.Instant.from(at('21:00')))).rejects.toThrow(
-      UnitOverlapError,
+    await expect(
+      units.setEnd(morning.id, morning.version, Temporal.Instant.from(at('21:00'))),
+    ).rejects.toThrow(UnitOverlapError);
+    const shorter = await units.setEnd(
+      morning.id,
+      morning.version,
+      Temporal.Instant.from(at('19:00')),
     );
-    const shorter = await units.setEnd(morning.id, Temporal.Instant.from(at('19:00')));
     expect(shorter?.period.end?.toString()).toBe(at('19:00'));
     const members = await database.db
       .select({ period: unitMember.period })
@@ -93,7 +97,7 @@ describe('unit_member', () => {
       trailerId: null,
       driverId: null,
     });
-    const { ended, started } = await units.change(open.id, {
+    const { ended, started } = await units.change(open.id, open.version, {
       ...unit('first', '23:30', null),
       previousUnitId: open.id,
     });

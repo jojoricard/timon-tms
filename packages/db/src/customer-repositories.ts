@@ -19,6 +19,7 @@ import {
   siteOpening,
   siteProtectiveEquipment,
 } from './schema.ts';
+import { atVersion, missingOrStale, nextVersion } from './versions.ts';
 
 /** The company created by migration 0004; customers and sites belong to it (SPEC-002). */
 export const defaultCompanyId = '10000000-0000-4000-8000-000000000001';
@@ -68,6 +69,7 @@ export function customerRepository(db: Database): CustomerRepository {
       billingCity: row.billingCity,
       notes: row.notes,
       archived: row.archivedAt !== null,
+      version: row.version,
       createdAt: instant(row.createdAt),
       updatedAt: instant(row.updatedAt),
       contacts: contacts
@@ -172,30 +174,41 @@ export function customerRepository(db: Database): CustomerRepository {
           return inputs.length;
         }),
       ),
-    update: async (id, input) => {
+    // Contacts and usual sites are written after the customer row, in the same transaction:
+    // a stale version refuses them too.
+    update: async (id, version, input) => {
       const updated = await translateErrors(() =>
         db.transaction(async (tx) => {
           const rows = await tx
             .update(customer)
-            .set({ ...customerValues(input), updatedAt: sql`now()` })
-            .where(eq(customer.id, id))
+            .set({
+              ...customerValues(input),
+              version: nextVersion(customer),
+              updatedAt: sql`now()`,
+            })
+            .where(atVersion(customer, id, version))
             .returning({ id: customer.id });
-          if (rows.length === 0) return false;
+          if (rows.length === 0) return missingOrStale(tx, customer, id);
           await writeChildren(tx, id, input);
           return true;
         }),
       );
       return updated ? get(id) : undefined;
     },
-    setArchived: async (id, archived) => {
+    setArchived: async (id, version, archived) => {
       const rows = await translateErrors(() =>
         db
           .update(customer)
-          .set({ archivedAt: archived ? sql`now()` : null, updatedAt: sql`now()` })
-          .where(eq(customer.id, id))
+          .set({
+            archivedAt: archived ? sql`now()` : null,
+            version: nextVersion(customer),
+            updatedAt: sql`now()`,
+          })
+          .where(atVersion(customer, id, version))
           .returning({ id: customer.id }),
       );
-      return rows.length > 0 ? get(id) : undefined;
+      if (rows.length === 0) return missingOrStale(db, customer, id);
+      return get(id);
     },
   };
 }
@@ -268,6 +281,7 @@ export function siteRepository(db: Database): SiteRepository {
       gatePhone: row.gatePhone,
       instructions: row.instructions,
       archived: row.archivedAt !== null,
+      version: row.version,
       createdAt: instant(row.createdAt),
       updatedAt: instant(row.updatedAt),
       customerIds: links.filter((l) => l.siteId === row.id).map((l) => l.customerId),
@@ -330,28 +344,33 @@ export function siteRepository(db: Database): SiteRepository {
           return records.length;
         }),
       ),
-    update: async (id, record) => {
+    update: async (id, version, record) => {
       const updated = await translateErrors(() =>
         db.transaction(async (tx) => {
           const rows = await tx
             .update(site)
-            .set({ ...siteValues(record), updatedAt: sql`now()` })
-            .where(eq(site.id, id))
+            .set({ ...siteValues(record), version: nextVersion(site), updatedAt: sql`now()` })
+            .where(atVersion(site, id, version))
             .returning({ id: site.id });
-          if (rows.length === 0) return false;
+          if (rows.length === 0) return missingOrStale(tx, site, id);
           await writeChildren(tx, id, record);
           return true;
         }),
       );
       return updated ? get(id) : undefined;
     },
-    setArchived: async (id, archived) => {
+    setArchived: async (id, version, archived) => {
       const rows = await db
         .update(site)
-        .set({ archivedAt: archived ? sql`now()` : null, updatedAt: sql`now()` })
-        .where(eq(site.id, id))
+        .set({
+          archivedAt: archived ? sql`now()` : null,
+          version: nextVersion(site),
+          updatedAt: sql`now()`,
+        })
+        .where(atVersion(site, id, version))
         .returning({ id: site.id });
-      return rows.length > 0 ? get(id) : undefined;
+      if (rows.length === 0) return missingOrStale(db, site, id);
+      return get(id);
     },
   };
 }
