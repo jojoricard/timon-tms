@@ -115,6 +115,7 @@ export {
   slotOfStop,
   slotPeriod,
   slotText,
+  splitOrder,
   stopKinds,
   temperatureLimits,
 } from './order.ts';

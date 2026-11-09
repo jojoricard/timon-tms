@@ -58,9 +58,21 @@ export {
   type AcceptedValues,
   customerImportGuide,
   type GuideColumn,
+  orderImportGuide,
   resourceImportGuide,
   siteImportGuide,
 } from './import-guide.ts';
+export {
+  checkOrderImport,
+  type ImportWarning,
+  importOrders,
+  type OrderImportCheck,
+  type OrderImportGroup,
+  type OrderImportResult,
+  type OrderImportRow,
+  orderColumns,
+  orderTemplate,
+} from './order-import.ts';
 export {
   cancelOrder,
   createOrder,
@@ -79,7 +91,9 @@ export {
   orderHistory,
   orderRecord,
   orderStatusFilters,
+  type SplitResult,
   type StopSummary,
+  splitOrder,
   updateOrder,
 } from './orders.ts';
 export {
@@ -95,6 +109,7 @@ export {
   type DocumentType,
   DocumentTypeTakenError,
   EmployeeNumberTakenError,
+  familyOf,
   InUseError,
   type ListItem,
   type NewBooking,

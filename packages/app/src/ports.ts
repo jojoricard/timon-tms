@@ -336,10 +336,20 @@ export type StoredOrder = Omit<OrderRecord, 'status'> & {
   readonly createdAt: Temporal.Instant;
   readonly updatedAt: Temporal.Instant;
   readonly historyCount: number;
+  /**
+   * The order its family was split from, the same for every order of the family however many
+   * times it is split; null for an order never split. The family's orders share the customer's
+   * reference without a warning.
+   */
+  readonly splitRootId: string | null;
 };
 
+/** The orders an order counts as its own when it looks for its reference: its split family. */
+export const familyOf = (order: Pick<StoredOrder, 'id' | 'splitRootId'>) =>
+  order.splitRootId ?? order.id;
+
 /** How an order came to exist. */
-export const orderOrigins = ['hand', 'import', 'demo', 'duplicate'] as const;
+export const orderOrigins = ['hand', 'import', 'demo', 'duplicate', 'split'] as const;
 export type OrderOrigin = (typeof orderOrigins)[number];
 
 /** What the history of an order records (SPEC-004, Numbering and history). */
@@ -348,12 +358,21 @@ export type OrderEventDetails =
       readonly kind: 'created';
       readonly origin: OrderOrigin;
       readonly status: OrderStatus;
-      /** The order it was duplicated from. */
+      /** The number of the order it was duplicated or split from. */
       readonly source: string | null;
+      /** Its id; absent from entries written before it was recorded. */
+      readonly sourceId?: string | null;
       readonly fileName: string | null;
       readonly fileLines: readonly number[];
     }
   | { readonly kind: 'changed'; readonly changes: readonly OrderChange[] }
+  /** Lines of this order, numbered from 1 as they were, moved to the order `other`. */
+  | {
+      readonly kind: 'split';
+      readonly other: string;
+      readonly otherId: string;
+      readonly lines: readonly number[];
+    }
   | {
       readonly kind: 'status';
       readonly from: OrderStatus;
@@ -376,8 +395,15 @@ export interface OrderRepository {
     customerId?: string | undefined;
   }): Promise<StoredOrder[]>;
   get(id: string): Promise<StoredOrder | undefined>;
-  /** The customer's orders, not cancelled, with this reference, other than `exceptId`. */
-  findByReference(customerId: string, reference: string, exceptId?: string): Promise<OrderRef[]>;
+  /**
+   * The customer's orders, not cancelled, with this reference, other than those of the split
+   * family `exceptFamily` (see `familyOf`).
+   */
+  findByReference(
+    customerId: string,
+    reference: string,
+    exceptFamily?: string,
+  ): Promise<OrderRef[]>;
   /**
    * Gives the order the next number of the company for `year`, never reused, safe under
    * concurrent creation. @throws ArchivedReferenceError
@@ -395,6 +421,23 @@ export interface OrderRepository {
     order: OrderRecord,
     events: readonly NewOrderEvent[],
   ): Promise<StoredOrder | undefined>;
+  /**
+   * SPEC-004, Splitting an order: in one transaction, the order keeps `kept` under its version
+   * and `moved` becomes a new order with the next number of `year`; both join the family of the
+   * order. `events` gets both orders' ids and numbers and gives the entries of each history.
+   * @throws StaleVersionError, ArchivedReferenceError
+   */
+  split(
+    id: string,
+    version: number,
+    kept: OrderRecord,
+    moved: OrderRecord,
+    year: number,
+    events: (orders: { readonly kept: OrderRef; readonly moved: OrderRef }) => {
+      readonly kept: readonly NewOrderEvent[];
+      readonly moved: readonly NewOrderEvent[];
+    },
+  ): Promise<{ readonly kept: StoredOrder; readonly moved: StoredOrder } | undefined>;
   /** @throws StaleVersionError */
   cancel(
     id: string,

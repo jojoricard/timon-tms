@@ -19,10 +19,12 @@ import {
   slotOf,
   slotOfStop,
   slotPeriod,
+  splitOrder as splitDetails,
   Temporal,
 } from '@timon/domain';
 import {
   ArchivedReferenceError,
+  familyOf,
   type NewOrderEvent,
   type OrderEvent,
   type OrderRecord,
@@ -258,13 +260,14 @@ function view(order: StoredOrder, context: Context, sameReference: readonly Orde
   };
 }
 
+/** The customer's other orders with the reference, its split family left out. */
 async function sameReferenceOf(
   ports: Ports,
   order: Pick<OrderDetails, 'customerId' | 'customerReference'>,
-  exceptId?: string,
+  family?: string,
 ) {
   return order.customerReference
-    ? ports.orders.findByReference(order.customerId, order.customerReference, exceptId)
+    ? ports.orders.findByReference(order.customerId, order.customerReference, family)
     : [];
 }
 
@@ -272,7 +275,7 @@ export async function getOrder(ports: Ports, id: string): Promise<OrderView | un
   const order = await ports.orders.get(id);
   if (!order) return undefined;
   const context = await contextOf(ports, order.customerId);
-  return view(order, context, await sameReferenceOf(ports, order, order.id));
+  return view(order, context, await sameReferenceOf(ports, order, familyOf(order)));
 }
 
 /** The issues that keep an order from being saved, and its status otherwise. */
@@ -345,13 +348,14 @@ export async function createOrder(
         origin: source ? 'duplicate' : 'hand',
         status: prepared.status,
         source: source?.number ?? null,
+        sourceId: source?.id ?? null,
         fileName: null,
         fileLines: [],
       },
     );
     return {
       ok: true,
-      order: view(created, context, await sameReferenceOf(ports, order, created.id)),
+      order: view(created, context, await sameReferenceOf(ports, order, familyOf(created))),
     };
   });
 }
@@ -395,7 +399,10 @@ export async function updateOrder(
         events,
       );
       if (!saved) return { ok: false, reason: 'not-found' };
-      return { ok: true, order: view(saved, context, await sameReferenceOf(ports, order, id)) };
+      return {
+        ok: true,
+        order: view(saved, context, await sameReferenceOf(ports, order, familyOf(saved))),
+      };
     }),
   );
 }
@@ -425,6 +432,101 @@ export async function cancelOrder(
     if (!saved) return { ok: false, reason: 'not-found' } as const;
     return { ok: true, order: view(saved, await contextOf(ports, saved.customerId), []) } as const;
   });
+}
+
+export type SplitResult =
+  | { readonly ok: true; readonly kept: OrderView; readonly moved: OrderView }
+  | Exclude<OrderResult, { ok: true }>
+  /** Only an order to review with several pickups and several deliveries is split. */
+  | { readonly ok: false; readonly reason: 'not-splittable' };
+
+/**
+ * SPEC-004, Splitting an order (criterion 12), under the order's version. The lines named go to
+ * a new order with the next number; the others stay in the order, which keeps its number. Each
+ * group is to plan once nothing is left to fix, and stays to review otherwise, to be split
+ * again. Both histories record the split with the other number.
+ */
+export async function splitOrder(
+  ports: Ports,
+  id: string,
+  version: number,
+  movedLineIds: readonly string[],
+): Promise<SplitResult> {
+  const existing = await ports.orders.get(id);
+  if (!existing) return { ok: false, reason: 'not-found' };
+  if (existing.version !== version) return stale(existing.version);
+  if (existing.status === 'cancelled') return { ok: false, reason: 'cancelled' };
+  const context = await contextOf(ports, existing.customerId);
+  const details = detailsOf(existing, context.sites);
+  if (existing.status !== 'to-review' || orderShape(details) !== 'several-both') {
+    return { ok: false, reason: 'not-splittable' };
+  }
+  const groups = splitDetails(details, movedLineIds);
+  if (!groups.ok) return { ok: false, reason: 'invalid', issues: groups.issues };
+  const kept = normaliseOrder(groups.kept, existing);
+  const moved = normaliseOrder(groups.moved);
+  const keptStatus = await prepare(ports, kept, context, true);
+  if (!keptStatus.ok) return keptStatus;
+  const movedStatus = await prepare(ports, moved, context, true);
+  if (!movedStatus.ok) return movedStatus;
+
+  const at = ports.clock.now();
+  const movedLines = details.lines.flatMap((line, index) =>
+    movedLineIds.includes(line.id) ? [index + 1] : [],
+  );
+  return guarded(() =>
+    whenArchived(ports, kept, async (): Promise<SplitResult> => {
+      const written = await ports.orders.split(
+        id,
+        version,
+        orderRecord(kept, keptStatus.status, context.sites),
+        orderRecord(moved, movedStatus.status, context.sites),
+        yearOf(at),
+        (orders) => ({
+          // Newest first in the history: the split, then the change of status it brought.
+          kept: [
+            ...(keptStatus.status === existing.status
+              ? []
+              : [
+                  {
+                    at,
+                    kind: 'status',
+                    from: existing.status,
+                    to: keptStatus.status,
+                    reason: null,
+                  } as const,
+                ]),
+            {
+              at,
+              kind: 'split',
+              other: orders.moved.number,
+              otherId: orders.moved.id,
+              lines: movedLines,
+            },
+          ],
+          moved: [
+            {
+              at,
+              kind: 'created',
+              origin: 'split',
+              status: movedStatus.status,
+              source: orders.kept.number,
+              sourceId: orders.kept.id,
+              fileName: null,
+              fileLines: [],
+            },
+          ],
+        }),
+      );
+      if (!written) return { ok: false, reason: 'not-found' };
+      const others = (order: StoredOrder) => sameReferenceOf(ports, order, familyOf(order));
+      return {
+        ok: true,
+        kept: view(written.kept, context, await others(written.kept)),
+        moved: view(written.moved, context, await others(written.moved)),
+      };
+    }),
+  );
 }
 
 export async function orderHistory(ports: Ports, id: string): Promise<OrderEvent[] | undefined> {
@@ -549,7 +651,7 @@ export async function listOrders(ports: Ports, options: OrderListOptions = {}): 
           : stored
               .filter(
                 (o) =>
-                  o.id !== order.id &&
+                  familyOf(o) !== familyOf(order) &&
                   o.status !== 'cancelled' &&
                   o.customerId === order.customerId &&
                   o.customerReference === order.customerReference,

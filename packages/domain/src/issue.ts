@@ -45,7 +45,9 @@ export type Issue = {
     | 'site-not-located'
     | 'un-number-invalid'
     | 'temperature-out-of-range'
-    | 'temperature-range-invalid';
+    | 'temperature-range-invalid'
+    | 'split-group-empty'
+    | 'unknown-value';
   readonly params?: Readonly<Record<string, string | number>>;
 };
 

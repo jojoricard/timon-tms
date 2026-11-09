@@ -168,6 +168,40 @@ export function orderShape(order: Pick<OrderDetails, 'stops'>): OrderShape {
   return 'several-both';
 }
 
+/**
+ * SPEC-004, Splitting an order: the lines named go to a new order, the others stay. Each group
+ * takes the stops its lines use, in their order; a stop both use goes to both, keeping its id,
+ * so the new order gives its own a new one when it is stored. The header goes to both.
+ */
+export function splitOrder(
+  order: OrderDetails,
+  movedLineIds: readonly string[],
+):
+  | { readonly ok: true; readonly kept: OrderDetails; readonly moved: OrderDetails }
+  | { readonly ok: false; readonly issues: readonly Issue[] } {
+  const unknown = movedLineIds.find((id) => !order.lines.some((line) => line.id === id));
+  if (unknown !== undefined) {
+    return {
+      ok: false,
+      issues: [{ field: 'lines', code: 'unknown-value', params: { value: unknown } }],
+    };
+  }
+  const moving = new Set(movedLineIds);
+  const group = (lines: readonly GoodsLine[]): OrderDetails => ({
+    ...order,
+    stops: order.stops.filter((stop) =>
+      lines.some((line) => line.fromStopId === stop.id || line.toStopId === stop.id),
+    ),
+    lines,
+  });
+  const kept = order.lines.filter((line) => !moving.has(line.id));
+  const moved = order.lines.filter((line) => moving.has(line.id));
+  if (kept.length === 0 || moved.length === 0) {
+    return { ok: false, issues: [{ field: 'lines', code: 'split-group-empty' }] };
+  }
+  return { ok: true, kept: group(kept), moved: group(moved) };
+}
+
 export type OrderCheck = {
   /** The order cannot be saved: a missing field, a delivery before its pickup. */
   readonly blocking: readonly Issue[];

@@ -85,7 +85,7 @@ export function importTemplate(kind: ResourceKind, language: 'en' | 'fr'): strin
   return csvTemplate(importColumns[kind], language);
 }
 
-function findItem(items: readonly ListItem[], value: string): ListItem | undefined {
+export function findItem(items: readonly ListItem[], value: string): ListItem | undefined {
   const wanted = simplify(value);
   return items.find(
     (item) =>
@@ -96,7 +96,7 @@ function findItem(items: readonly ListItem[], value: string): ListItem | undefin
   );
 }
 
-function parseDate(value: string): Temporal.PlainDate | undefined {
+export function parseDate(value: string): Temporal.PlainDate | undefined {
   const french = /^(\d{1,2})\/(\d{1,2})\/(\d{4})$/.exec(value);
   try {
     if (french) {

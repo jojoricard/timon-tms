@@ -34,6 +34,10 @@ export type FieldIssue =
         | 'opening-unreadable'
         | 'invalid-date'
         | 'invalid-number'
+        | 'invalid-time'
+        | 'site-ambiguous'
+        | 'header-disagrees'
+        | 'too-long'
         | 'issued-after-expiry'
         | 'outside-unit'
         | 'unchanged';
