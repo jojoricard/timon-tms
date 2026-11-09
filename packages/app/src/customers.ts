@@ -9,6 +9,8 @@ import {
   type ContactInput,
   CustomerCodeTakenError,
   type CustomerInput,
+  InUseError,
+  type OrderRef,
   type Ports,
   SiretTakenError,
   StaleVersionError,
@@ -41,7 +43,9 @@ export type CustomerResult =
       readonly ok: false;
       readonly reason: 'code-taken' | 'siret-taken';
       readonly owner: CustomerOwner;
-    };
+    }
+  /** SPEC-004 rule 8: orders to plan or to review use it. */
+  | { readonly ok: false; readonly reason: 'in-use'; readonly orders: readonly OrderRef[] };
 
 export const owner = (c: StoredCustomer): CustomerOwner => ({
   id: c.id,
@@ -171,7 +175,8 @@ export async function getCustomer(ports: Ports, id: string) {
 
 /**
  * Rule 6: never deleted, only archived. Archiving a customer leaves its usual sites active:
- * other customers may use them.
+ * other customers may use them. SPEC-004 rule 8: archiving is refused while an order to plan or
+ * to review uses the customer; the repository checks it under a lock.
  */
 export async function setCustomerArchived(
   ports: Ports,
@@ -193,6 +198,7 @@ export async function setCustomerArchived(
       : { ok: false, reason: 'not-found' };
   } catch (error) {
     if (error instanceof StaleVersionError) return stale(error.version);
+    if (error instanceof InUseError) return { ok: false, reason: 'in-use', orders: error.orders };
     if (!(error instanceof SiretTakenError) || !existing.siret) throw error;
     const other = await ports.customers.findActiveBySiret(existing.siret, id);
     if (other) return { ok: false, reason: 'siret-taken', owner: owner(other) };

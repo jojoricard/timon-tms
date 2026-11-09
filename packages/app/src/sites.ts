@@ -10,8 +10,8 @@ import {
   type Weekday,
 } from '@timon/domain';
 import { locateAddress } from './geocoding.ts';
-import type { Ports, ReferenceLists, SiteRecord, StoredSite } from './ports.ts';
-import { OpeningOverlapError } from './ports.ts';
+import type { OrderRef, Ports, ReferenceLists, SiteRecord, StoredSite } from './ports.ts';
+import { InUseError, OpeningOverlapError } from './ports.ts';
 import type { FieldIssue } from './resources.ts';
 import { searchable } from './search.ts';
 import { guarded, type Stale, stale } from './versions.ts';
@@ -34,6 +34,11 @@ export type SiteResult =
   | { readonly ok: false; readonly reason: 'not-found' }
   | Stale
   | { readonly ok: false; readonly reason: 'invalid'; readonly issues: readonly FieldIssue[] };
+
+export type SiteArchiveResult =
+  | SiteResult
+  /** SPEC-004 rule 8: orders to plan or to review use it. */
+  | { readonly ok: false; readonly reason: 'in-use'; readonly orders: readonly OrderRef[] };
 
 const clean = (value: string | null | undefined) => {
   const trimmed = value?.trim() ?? '';
@@ -185,14 +190,24 @@ export async function getSite(ports: Ports, id: string) {
   };
 }
 
-/** Rule 6: never deleted, only archived. Archiving a site leaves the customers using it alone. */
+/**
+ * Rule 6: never deleted, only archived. Archiving a site leaves the customers using it alone.
+ * SPEC-004 rule 8: archiving is refused while an order to plan or to review uses the site; the
+ * repository checks it under a lock.
+ */
 export async function setSiteArchived(
   ports: Ports,
   id: string,
   version: number,
   archived: boolean,
-): Promise<SiteResult> {
-  const saved = await guarded(() => ports.sites.setArchived(id, version, archived));
+): Promise<SiteArchiveResult> {
+  let saved: Awaited<ReturnType<typeof ports.sites.setArchived>> | Stale;
+  try {
+    saved = await guarded(() => ports.sites.setArchived(id, version, archived));
+  } catch (error) {
+    if (error instanceof InUseError) return { ok: false, reason: 'in-use', orders: error.orders };
+    throw error;
+  }
   if (!saved) return { ok: false, reason: 'not-found' };
   if ('reason' in saved) return saved;
   return { ok: true, site: siteView(saved, ports.clock.now()), nearby: [] };
