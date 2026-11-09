@@ -16,6 +16,7 @@ import {
   importSites,
   listCustomers,
   listSites,
+  type OrderRef,
   type Ports,
   type SiteImportCheck as SiteImportCheckView,
   type SiteView,
@@ -49,7 +50,7 @@ import {
   SiteWithNearby,
   SuggestionQuery,
 } from './customer-schemas.ts';
-import { ImportGuide, ImportInput, Invalid, Problem } from './schemas.ts';
+import { ImportGuide, ImportInput, InUse, Invalid, Problem } from './schemas.ts';
 import { toImportGuide } from './to-json.ts';
 import { validationHook } from './validation.ts';
 import { guardedAnswers, ifMatch, staleBody, versionOf } from './versions.ts';
@@ -159,7 +160,10 @@ const customerAnswers = {
   200: json(CustomerWithSites, 'The customer, with its contacts and usual sites'),
   400: json(z.union([Invalid, Problem]), 'A rule is broken; each issue names its field'),
   404: json(Problem, 'No such customer'),
-  409: json(CustomerTaken, 'Code or SIRET of another customer (rule 1)'),
+  409: json(
+    z.union([CustomerTaken, InUse]),
+    'Code or SIRET of another customer (rule 1), or orders use the customer (SPEC-004 rule 8)',
+  ),
 };
 
 const siteAnswers = {
@@ -167,6 +171,16 @@ const siteAnswers = {
   400: json(z.union([Invalid, Problem]), 'A rule is broken; each issue names its field'),
   404: json(Problem, 'No such site'),
 };
+
+const archiveSiteAnswers = {
+  ...siteAnswers,
+  409: json(InUse, 'Orders to plan or to review use the site (SPEC-004 rule 8)'),
+};
+
+const inUse = (orders: readonly OrderRef[]) => ({
+  error: 'in-use' as const,
+  orders: orders.map((o) => ({ ...o })),
+});
 
 const routes = {
   customerSummary: createRoute({
@@ -256,13 +270,13 @@ const routes = {
     method: 'post',
     path: '/sites/{id}/archive',
     request: { params: id, headers: ifMatch },
-    responses: { ...siteAnswers, ...guardedAnswers },
+    responses: { ...archiveSiteAnswers, ...guardedAnswers },
   }),
   restoreSite: createRoute({
     method: 'post',
     path: '/sites/{id}/restore',
     request: { params: id, headers: ifMatch },
-    responses: { ...siteAnswers, ...guardedAnswers },
+    responses: { ...archiveSiteAnswers, ...guardedAnswers },
   }),
   suggestAddresses: createRoute({
     method: 'get',
@@ -383,6 +397,7 @@ export function customerApi(ports: Ports) {
           400,
         );
       }
+      if (result.reason === 'in-use') return c.json(inUse(result.orders), 409);
       return c.json({ error: result.reason, owner: result.owner }, 409);
     })
     .openapi(routes.updateCustomer, async (c) => {
@@ -401,6 +416,7 @@ export function customerApi(ports: Ports) {
           400,
         );
       }
+      if (result.reason === 'in-use') return c.json(inUse(result.orders), 409);
       return c.json({ error: result.reason, owner: result.owner }, 409);
     })
     .openapi(routes.archiveCustomer, async (c) => {
@@ -415,6 +431,7 @@ export function customerApi(ports: Ports) {
           400,
         );
       }
+      if (result.reason === 'in-use') return c.json(inUse(result.orders), 409);
       return c.json({ error: result.reason, owner: result.owner }, 409);
     })
     .openapi(routes.restoreCustomer, async (c) => {
@@ -429,6 +446,7 @@ export function customerApi(ports: Ports) {
           400,
         );
       }
+      if (result.reason === 'in-use') return c.json(inUse(result.orders), 409);
       return c.json({ error: result.reason, owner: result.owner }, 409);
     })
     .openapi(routes.listSites, async (c) => {
@@ -487,6 +505,7 @@ export function customerApi(ports: Ports) {
       if (result.ok) return c.json({ site: toSite(result.site), nearby: [] }, 200);
       if (result.reason === 'stale') return c.json(staleBody(result.version), 412);
       if (result.reason === 'not-found') return c.json({ error: 'not-found' as const }, 404);
+      if (result.reason === 'in-use') return c.json(inUse(result.orders), 409);
       return c.json(
         { error: 'invalid' as const, issues: result.issues.map((i) => ({ ...i })) },
         400,
@@ -498,6 +517,7 @@ export function customerApi(ports: Ports) {
       if (result.ok) return c.json({ site: toSite(result.site), nearby: [] }, 200);
       if (result.reason === 'stale') return c.json(staleBody(result.version), 412);
       if (result.reason === 'not-found') return c.json({ error: 'not-found' as const }, 404);
+      if (result.reason === 'in-use') return c.json(inUse(result.orders), 409);
       return c.json(
         { error: 'invalid' as const, issues: result.issues.map((i) => ({ ...i })) },
         400,

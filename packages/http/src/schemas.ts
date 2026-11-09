@@ -63,11 +63,19 @@ export const Problem = z
       'started',
       'not-started',
       'ended',
+      'cancelled',
     ]),
     message: z.string().optional(),
     params: Params.optional(),
   })
   .openapi('Problem');
+
+export const OrderRef = z.object({ id: z.uuid(), number: z.string() }).openapi('OrderRef');
+
+/** SPEC-004 rule 8: the orders to plan or to review that keep a customer or a site active. */
+export const InUse = z
+  .object({ error: z.literal('in-use'), orders: z.array(OrderRef) })
+  .openapi('InUse');
 
 export const Invalid = z
   .object({ error: z.literal('invalid'), issues: z.array(Issue) })

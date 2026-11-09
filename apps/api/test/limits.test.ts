@@ -21,7 +21,8 @@ afterAll(() => database.close());
 async function call(method: string, path: string, body: unknown) {
   const response = await app.request(`/api${path}`, {
     method,
-    headers: { 'content-type': 'application/json' },
+    // A cancelling names a version; the schemas check the body all the same.
+    headers: { 'content-type': 'application/json', 'if-match': '"1"' },
     body: JSON.stringify(body),
   });
   return { status: response.status, body: (await response.json()) as any };
@@ -55,6 +56,18 @@ const site = {
   loadingDock: false,
   semiTrailersAccepted: false,
 };
+
+const stop = { id: 'p', kind: 'pickup', siteId: id };
+const goods = {
+  id: 'l',
+  description: 'Yaourts',
+  quantity: 1,
+  packaging: 'pallet',
+  weightKg: 100,
+  fromStopId: 'p',
+  toStopId: 'd',
+};
+const order = { customerId: id, stops: [stop], lines: [goods] };
 
 /** For each limited text: the request that carries it, and the field the issue names. */
 const requests: Record<
@@ -99,6 +112,22 @@ const requests: Record<
     path: '/units',
     body: { powerUnitId: id, start, [field]: value },
     field,
+  }),
+  order: (field, value) =>
+    field === 'cancelReason'
+      ? { method: 'POST', path: `/orders/${id}/cancel`, body: { reason: value }, field: 'reason' }
+      : { method: 'POST', path: '/orders', body: { ...order, [field]: value }, field },
+  stop: (field, value) => ({
+    method: 'POST',
+    path: '/orders',
+    body: { ...order, stops: [{ ...stop, [field]: value }] },
+    field: `stops.0.${field}`,
+  }),
+  goods: (field, value) => ({
+    method: 'POST',
+    path: '/orders',
+    body: { ...order, lines: [{ ...goods, [field]: value }] },
+    field: `lines.0.${field}`,
   }),
 };
 

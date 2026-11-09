@@ -1,5 +1,6 @@
 import type { z } from '@hono/zod-openapi';
 import type * as customerSchemas from './customer-schemas.ts';
+import type * as orderSchemas from './order-schemas.ts';
 import type * as schemas from './schemas.ts';
 import type * as unitSchemas from './unit-schemas.ts';
 
@@ -45,3 +46,16 @@ export type UnitsAtJson = z.infer<typeof unitSchemas.UnitsAt>;
 export type UnitOptionsJson = z.infer<typeof unitSchemas.UnitOptions>;
 export type UnitInputJson = z.infer<typeof unitSchemas.UnitInput>;
 export type UnitOverlapJson = z.infer<typeof unitSchemas.UnitOverlap>;
+export type InUseJson = z.infer<typeof schemas.InUse>;
+export type OrderRefJson = z.infer<typeof schemas.OrderRef>;
+export type OrderJson = z.infer<typeof orderSchemas.Order>;
+export type OrderStopJson = OrderJson['stops'][number];
+export type OrderLineJson = OrderJson['lines'][number];
+export type OrderInputJson = z.infer<typeof orderSchemas.OrderInput>;
+export type NewOrderInputJson = z.infer<typeof orderSchemas.NewOrderInput>;
+export type OrderListJson = z.infer<typeof orderSchemas.OrderList>;
+export type OrderSummaryJson = z.infer<typeof orderSchemas.OrderSummary>;
+export type OrderRequirementJson = z.infer<typeof orderSchemas.Requirement>;
+export type OrderWarningJson = z.infer<typeof orderSchemas.Warning>;
+export type OrderEventJson = z.infer<typeof orderSchemas.OrderEvent>;
+export type OrderHistoryJson = z.infer<typeof orderSchemas.OrderHistory>;
