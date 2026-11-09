@@ -6,6 +6,7 @@ All notable changes to this project are documented here. The format follows [Kee
 
 ### Added
 
+- SPEC-004 orders, with the mockups of its five screens: stops, goods and requirements, the shape rule, statuses to plan, to review and cancelled, checks and warnings on saving, splitting a merged order, numbering and history, CSV import and demo data (#8)
 - ADR-005 concurrent edits: a version per record, sent in If-Match on every write, a stale save refused with 412 and a reload offered, no merge and no lock (#44)
 - Units (SPEC-003, #7): a power unit with a driver, a trailer or both, over a half-open period to the minute in Europe/Paris, open-ended or not; a resource in one unit at a time, enforced by an exclusion constraint on the members, on PostgreSQL and PGlite
 - Licence check: the category a unit needs from the gross vehicle weights (B, C1, C, C1E, CE), against the licence documents the driver holds, whatever their expiry
