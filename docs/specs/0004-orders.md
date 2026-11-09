@@ -2,9 +2,9 @@
 title: "Orders"
 subtitle: "Functional specification"
 reference: TIMON-SPEC-004
-version: "0.1"
-date: "November 7, 2026"
-status: "Draft"
+version: "1.0"
+date: "November 9, 2026"
+status: "Accepted"
 ---
 
 # TIMON-SPEC-004: Orders
@@ -149,7 +149,7 @@ The generator creates about 60 orders over the next seven days from the demo cus
 - **Split**: the goods lines of a to-review order in two columns, the stops each column uses, and whether each has a valid shape.
 - **Import**: as for resources, with the order preview grouped by reference.
 
-French and English from the first screen. Mockups follow in version 1.0.
+The screens follow the design system and are in French and English from the first screen. Mockups: [orders](../design/mockups/orders.png), [order form](../design/mockups/order-form.png), [order history](../design/mockups/order-history.png), [split](../design/mockups/order-split.png), [import](../design/mockups/order-import.png).
 
 ## Acceptance criteria
 
