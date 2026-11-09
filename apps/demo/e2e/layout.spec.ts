@@ -13,6 +13,8 @@ type Screen = {
   open?: { url: RegExp };
   /** Opens the change dialog of the unit. */
   dialog?: boolean;
+  /** Opens this tab of the record. */
+  tab?: RegExp;
   /** A list whose table is wider than a phone. */
   table?: boolean;
   /** A main list: its table fits its frame at 1,280 px. */
@@ -22,6 +24,15 @@ type Screen = {
 };
 
 const screens: Screen[] = [
+  { name: 'orders', main: true, path: '/orders', table: true },
+  { name: 'order form', path: '/orders', open: { url: /\/orders\/[0-9a-f-]{36}$/ } },
+  {
+    name: 'order history',
+    path: '/orders',
+    open: { url: /\/orders\/[0-9a-f-]{36}$/ },
+    tab: /^(History|Historique)/,
+  },
+  { name: 'new order', path: '/orders/new' },
   { name: 'drivers', main: true, path: '/resources/drivers', table: true },
   { name: 'power units', main: true, path: '/resources/power-units', table: true },
   { name: 'trailers', main: true, path: '/resources/trailers', table: true },
@@ -74,6 +85,10 @@ async function visit(page: Page, screen: Screen) {
     await page.locator('main table tbody .row-link').first().click();
     await expect(page).toHaveURL(screen.open.url);
     await settle(page);
+  }
+  if (screen.tab) {
+    await page.getByRole('link', { name: screen.tab }).click();
+    await expect(page.locator('main .history-entry').first()).toBeVisible();
   }
   if (screen.dialog) {
     await page.getByRole('button', { name: 'Change driver or trailer' }).click();
@@ -146,7 +161,7 @@ for (const width of [1280, 390]) {
     test.use({ viewport: { width, height: width < 640 ? 844 : 900 } });
 
     test('no screen scrolls sideways; wide tables scroll in their frame', async ({ page }) => {
-      // Seventeen screens in a row: more than the time one screen is given.
+      // Twenty-one screens in a row: more than the time one screen is given.
       test.setTimeout(180_000);
       await start(page);
 
