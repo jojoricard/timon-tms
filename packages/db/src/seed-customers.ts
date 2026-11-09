@@ -221,6 +221,11 @@ const sites: SiteRow[] = [
   },
 ];
 
+/** The demo sites by their key, as orders name them. */
+export const demoSiteNames: Readonly<Record<string, string>> = Object.fromEntries(
+  sites.map((row) => [row.key, row.name]),
+);
+
 const contact = (
   name: string,
   role: string,

@@ -1,7 +1,11 @@
 import {
+  adrClasses,
   bookingMethods,
   locatedByValues,
+  orderStatuses,
+  packagings,
   resourceKinds,
+  stopKinds,
   unitRoles,
   vehicleCategories,
   vehicleKinds,
@@ -9,6 +13,7 @@ import {
 import { sql } from 'drizzle-orm';
 import {
   type AnyPgColumn,
+  bigint,
   boolean,
   check,
   date,
@@ -16,6 +21,7 @@ import {
   foreignKey,
   index,
   integer,
+  jsonb,
   pgTable,
   primaryKey,
   smallint,
@@ -452,4 +458,160 @@ export const unitMember = pgTable(
       foreignColumns: [resource.id, resource.kind],
     }),
   ],
+);
+
+// SPEC-004. Numbers are CMD-<year>-<sequence>, a sequence per company and year. Taking one
+// updates the counter row, which locks it until the order is written: two creations at once get
+// two numbers, in turn, and a number is never given twice.
+export const orderCounter = pgTable(
+  'order_counter',
+  {
+    companyId: uuid('company_id')
+      .notNull()
+      .references(() => company.id),
+    year: integer().notNull(),
+    lastValue: integer('last_value').notNull(),
+  },
+  (t) => [
+    primaryKey({ columns: [t.companyId, t.year] }),
+    check('order_counter_positive', sql`${t.lastValue} > 0`),
+  ],
+);
+
+// `order` is a reserved word in SQL.
+export const transportOrder = pgTable(
+  'transport_order',
+  {
+    id: uuid().primaryKey().defaultRandom(),
+    companyId: uuid('company_id')
+      .notNull()
+      .references(() => company.id),
+    number: text().notNull(),
+    customerId: uuid('customer_id')
+      .notNull()
+      .references(() => customer.id),
+    customerReference: text('customer_reference'),
+    notes: text(),
+    bodyTypeId: uuid('body_type_id').references(() => bodyType.id),
+    sideLoading: boolean('side_loading').notNull().default(false),
+    tailLift: boolean('tail_lift').notNull().default(false),
+    status: text({ enum: orderStatuses }).notNull(),
+    cancelReason: text('cancel_reason'),
+    // ADR-005: 1 at creation, plus one at every write; a write names the version it read.
+    version: integer().notNull().default(1),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    unique('transport_order_company_number').on(t.companyId, t.number),
+    index('transport_order_customer_reference_idx').on(t.customerId, t.customerReference),
+    check('transport_order_status', sql`${t.status} in ('to-plan', 'to-review', 'cancelled')`),
+    // Rule 6: a cancelled order keeps its reason.
+    check(
+      'transport_order_cancel_reason',
+      sql`(${t.status} = 'cancelled') = (${t.cancelReason} is not null)`,
+    ),
+  ],
+);
+
+// The stops of an order: stored again whole at every change, under the order's version. The
+// slot is a half-open period; the form reads it in the site's time zone.
+export const orderStop = pgTable(
+  'order_stop',
+  {
+    id: uuid().primaryKey().defaultRandom(),
+    orderId: uuid('order_id')
+      .notNull()
+      .references(() => transportOrder.id),
+    kind: text({ enum: stopKinds }).notNull(),
+    siteId: uuid('site_id')
+      .notNull()
+      .references(() => site.id),
+    slot: tstzrange().notNull(),
+    bookingMade: boolean('booking_made').notNull().default(false),
+    bookingReference: text('booking_reference'),
+    sortOrder: integer('sort_order').notNull().default(0),
+  },
+  (t) => [
+    // The target of the goods lines' foreign keys, which name the kind of stop they expect.
+    unique('order_stop_order_id_kind').on(t.orderId, t.id, t.kind),
+    index('order_stop_site_idx').on(t.siteId),
+    check('order_stop_kind', sql`${t.kind} in ('pickup', 'delivery')`),
+    check(
+      'order_stop_slot_bounded',
+      sql`not isempty(${t.slot}) and lower_inc(${t.slot}) and not upper_inc(${t.slot}) and not lower_inf(${t.slot}) and not upper_inf(${t.slot})`,
+    ),
+    check('order_stop_booking', sql`${t.bookingReference} is null or ${t.bookingMade}`),
+  ],
+);
+
+// Rule 2: a goods line leaves from a pickup of its order and goes to a delivery of its order.
+// The kinds are columns fixed by a check, so that the foreign keys refuse a line leaving from a
+// delivery or going to a pickup.
+export const orderGoods = pgTable(
+  'order_goods',
+  {
+    id: uuid().primaryKey().defaultRandom(),
+    orderId: uuid('order_id')
+      .notNull()
+      .references(() => transportOrder.id),
+    sortOrder: integer('sort_order').notNull().default(0),
+    description: text().notNull(),
+    quantity: integer().notNull(),
+    packaging: text({ enum: packagings }).notNull(),
+    weightKg: integer('weight_kg').notNull(),
+    floorDm: integer('floor_dm'),
+    unNumber: text('un_number'),
+    adrClass: text('adr_class', { enum: adrClasses }),
+    temperatureMin: smallint('temperature_min'),
+    temperatureMax: smallint('temperature_max'),
+    fromStopId: uuid('from_stop_id').notNull(),
+    fromKind: text('from_kind', { enum: stopKinds }).notNull().default('pickup'),
+    toStopId: uuid('to_stop_id').notNull(),
+    toKind: text('to_kind', { enum: stopKinds }).notNull().default('delivery'),
+  },
+  (t) => [
+    index('order_goods_order_idx').on(t.orderId),
+    foreignKey({
+      name: 'order_goods_from_pickup_fk',
+      columns: [t.orderId, t.fromStopId, t.fromKind],
+      foreignColumns: [orderStop.orderId, orderStop.id, orderStop.kind],
+    }),
+    foreignKey({
+      name: 'order_goods_to_delivery_fk',
+      columns: [t.orderId, t.toStopId, t.toKind],
+      foreignColumns: [orderStop.orderId, orderStop.id, orderStop.kind],
+    }),
+    check('order_goods_from_pickup', sql`${t.fromKind} = 'pickup'`),
+    check('order_goods_to_delivery', sql`${t.toKind} = 'delivery'`),
+    check(
+      'order_goods_quantities',
+      sql`${t.quantity} > 0 and ${t.weightKg} > 0 and (${t.floorDm} is null or ${t.floorDm} > 0)`,
+    ),
+    check('order_goods_un_number', sql`${t.unNumber} is null or ${t.unNumber} ~ '^[0-9]{4}$'`),
+    check('order_goods_adr', sql`(${t.unNumber} is null) = (${t.adrClass} is null)`),
+    check(
+      'order_goods_temperature',
+      sql`(${t.temperatureMin} is null) = (${t.temperatureMax} is null) and (${t.temperatureMin} is null or (${t.temperatureMin} between -30 and 30 and ${t.temperatureMax} between -30 and 30 and ${t.temperatureMin} <= ${t.temperatureMax}))`,
+    ),
+  ],
+);
+
+// The history of an order. `details` holds what the entry says, as the application wrote it;
+// the author stays empty until people sign in. `sequence` keeps the order in which entries were
+// written, for two entries of the same instant.
+export const orderEvent = pgTable(
+  'order_event',
+  {
+    id: uuid().primaryKey().defaultRandom(),
+    sequence: bigint({ mode: 'number' }).generatedAlwaysAsIdentity(),
+    orderId: uuid('order_id')
+      .notNull()
+      .references(() => transportOrder.id),
+    at: timestamp({ withTimezone: true }).notNull(),
+    kind: text({ enum: ['created', 'changed', 'status'] }).notNull(),
+    authorId: uuid('author_id'),
+    details: jsonb().notNull(),
+  },
+  (t) => [index('order_event_order_idx').on(t.orderId, t.sequence)],
 );

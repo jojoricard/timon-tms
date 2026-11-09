@@ -1,13 +1,19 @@
 import { StaleVersionError } from '@timon/app';
 import { and, eq, type SQL, sql } from 'drizzle-orm';
 import type { Database } from './database.ts';
-import type { customer, document, resource, site, unit } from './schema.ts';
+import type { customer, document, resource, site, transportOrder, unit } from './schema.ts';
 
 // ADR-005: a write to an existing record applies only if the version it names is still the
 // current one, and moves it on by one, in the same statement:
 // UPDATE … SET …, version = version + 1 WHERE id = $1 AND version = $2 RETURNING version.
 
-type Versioned = typeof resource | typeof document | typeof customer | typeof site | typeof unit;
+type Versioned =
+  | typeof resource
+  | typeof document
+  | typeof customer
+  | typeof site
+  | typeof unit
+  | typeof transportOrder;
 
 /** The WHERE of a versioned write. */
 export const atVersion = (table: Versioned, id: string, version: number): SQL | undefined =>

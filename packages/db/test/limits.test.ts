@@ -15,6 +15,13 @@ beforeAll(async () => {
 
 afterAll(() => database.close());
 
+/** The tables whose name is not the key of their limits. */
+const tables: Record<string, string> = {
+  order: 'transport_order',
+  stop: 'order_stop',
+  goods: 'order_goods',
+};
+
 const snake = (name: string) => name.replace(/[A-Z]+/g, (part) => `_${part.toLowerCase()}`);
 
 type Column = { data_type: string; character_maximum_length: number | null };
@@ -25,7 +32,7 @@ describe('text limits', () => {
       it(`${table}.${field} holds ${limit} characters`, async () => {
         const result = (await database.db.execute(sql`
           select data_type, character_maximum_length from information_schema.columns
-          where table_schema = 'public' and table_name = ${table} and column_name = ${snake(field)}`)) as {
+          where table_schema = 'public' and table_name = ${tables[table] ?? table} and column_name = ${snake(field)}`)) as {
           rows: Column[];
         };
         const [column] = result.rows;
