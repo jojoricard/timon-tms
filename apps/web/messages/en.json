@@ -886,5 +886,137 @@
   "warnings_empty": "None.",
   "warnings_hint": "never blocking",
   "warning_temperature": "No common temperature range: these lines need a multi-temperature body or two orders.",
-  "warning_temperature_short": "No common temperature"
+  "warning_temperature_short": "No common temperature",
+  "accepts_time": "A time: hh:mm, 24-hour",
+  "action_import_orders": [
+    {
+      "declarations": ["input count", "local countPlural = count: plural"],
+      "selectors": ["countPlural"],
+      "match": {
+        "countPlural=one": "Import {count} order",
+        "countPlural=*": "Import {count} orders"
+      }
+    }
+  ],
+  "action_split": "Split",
+  "action_split_into_two": "Split into two orders",
+  "col_goods_lines": "Goods lines",
+  "col_lines": "Lines",
+  "col_result": "Result",
+  "col_shape": "Shape",
+  "confirm_split_title": "Split {number} into two orders?",
+  "confirm_split_text": [
+    {
+      "declarations": ["input count", "local countPlural = count: plural"],
+      "selectors": ["countPlural"],
+      "match": {
+        "countPlural=one": "The line on the right becomes a new order, with the next number. Both histories record the split.",
+        "countPlural=*": "The {count} lines on the right become a new order, with the next number. Both histories record the split."
+      }
+    }
+  ],
+  "count_errors": [
+    {
+      "declarations": ["input count", "local countPlural = count: plural"],
+      "selectors": ["countPlural"],
+      "match": {
+        "countPlural=one": "{count} error",
+        "countPlural=*": "{count} errors"
+      }
+    }
+  ],
+  "count_goods_lines": [
+    {
+      "declarations": ["input count", "local countPlural = count: plural"],
+      "selectors": ["countPlural"],
+      "match": {
+        "countPlural=one": "{count} goods line",
+        "countPlural=*": "{count} goods lines"
+      }
+    }
+  ],
+  "download_order_template": "Download the order template",
+  "event_created_split": "Split from {number}",
+  "event_split": [
+    {
+      "declarations": ["input count", "local countPlural = count: plural"],
+      "selectors": ["countPlural"],
+      "match": {
+        "countPlural=one": "Split: line {lines} moved to {number}",
+        "countPlural=*": "Split: lines {lines} moved to {number}"
+      }
+    }
+  ],
+  "field_customer_code": "Customer code",
+  "field_delivery_date": "Delivery date",
+  "field_delivery_from": "Delivery from",
+  "field_delivery_site": "Delivery site",
+  "field_delivery_to": "Delivery to",
+  "field_floor_m": "Floor metres",
+  "field_pickup_date": "Pickup date",
+  "field_pickup_from": "Pickup from",
+  "field_pickup_site": "Pickup site",
+  "field_pickup_to": "Pickup to",
+  "field_side_loading": "Side loading",
+  "field_tail_lift": "Tail lift",
+  "import_title_orders": "Import orders",
+  "imported_from": "imported from {file}",
+  "issue_header_disagrees": "{field} differs from line {line}, which starts the same order",
+  "issue_invalid_time": "{field}: “{value}” is not a time as hh:mm",
+  "issue_site_ambiguous": "{field}: {count} active sites are named “{value}”; rename one of them",
+  "issue_split_group_empty": "each group needs at least one goods line",
+  "order_import_caption": "Orders of {file}",
+  "order_import_errors_text": "Nothing is imported until the file is free of errors. Add the missing customers or sites, or correct the file, then choose it again.",
+  "order_import_ready": "Every line is valid. Orders with several pickups and several deliveries, or a site not located, are imported to review.",
+  "orders_imported": [
+    {
+      "declarations": ["input count", "local countPlural = count: plural"],
+      "selectors": ["countPlural"],
+      "match": {
+        "countPlural=one": "{count} order imported.",
+        "countPlural=*": "{count} orders imported."
+      }
+    }
+  ],
+  "orders_imported_review": [
+    {
+      "declarations": ["input count", "local countPlural = count: plural"],
+      "selectors": ["countPlural"],
+      "match": {
+        "countPlural=one": "{count} order imported, {toReview} to review.",
+        "countPlural=*": "{count} orders imported, {toReview} to review."
+      }
+    }
+  ],
+  "rule_order_grouping": "One line per goods line; lines with the same customer code and reference form one order and must agree on body type, side loading, tail lift and notes",
+  "rule_order_references": "Customers by their code, sites by their exact name in the address book; a line without a reference is an order of its own",
+  "rule_order_review": "An order with several pickups and several deliveries, or a site not located, is imported to review",
+  "split_banner": "This request has {shape}: an order needs a single pickup or a single delivery. Sort its goods lines into two groups; each group takes the stops its lines use. Nothing is split until you confirm.",
+  "split_cancelled": "This order is cancelled: it cannot be split.",
+  "split_done": "Split: the new order is {number}.",
+  "split_from": "From",
+  "split_move_left": "← Move back",
+  "split_move_left_label": "Move {line} back to {number}",
+  "split_move_right": "Move →",
+  "split_move_right_label": "Move {line} to the new order",
+  "split_new_hint": "gets the next number when split",
+  "split_new_order": "New order",
+  "split_no_line": "No line yet",
+  "split_not_splittable": "Only an order to review with several pickups and several deliveries can be split.",
+  "split_note": "Both orders become to plan if nothing else is left to fix. Both histories record the split, with the other order's number. A group that still has the wrong shape can be split again.",
+  "split_shape_one_delivery": "{pickups} pickups, one delivery",
+  "split_shape_one_one": "One pickup, one delivery",
+  "split_shape_one_pickup": "One pickup, {deliveries} deliveries",
+  "split_stays_hint": "keeps its number and its history",
+  "split_stays_in": "Stays in {number}",
+  "split_title": "Split {number}",
+  "split_to": "To",
+  "split_valid_shape": "Valid shape",
+  "split_wrong_shape": "Wrong shape",
+  "summary_orders": "Orders",
+  "summary_ready": "Ready",
+  "summary_to_review": "To review",
+  "summary_with_errors": "With errors",
+  "template_text_orders": "One line per goods line; column names in English or French. Dates as dd/mm/yyyy or yyyy-mm-dd, times as hh:mm.",
+  "warning_no_reference": "No reference: one order per line"
 }

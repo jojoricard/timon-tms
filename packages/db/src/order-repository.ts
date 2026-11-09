@@ -9,7 +9,7 @@ import {
   type StoredOrder,
 } from '@timon/app';
 import { Temporal } from '@timon/domain';
-import { and, asc, count, desc, eq, inArray, ne, sql } from 'drizzle-orm';
+import { and, asc, count, desc, eq, inArray, sql } from 'drizzle-orm';
 import { defaultCompanyId } from './customer-repositories.ts';
 import type { Database } from './database.ts';
 import { translateErrors } from './errors.ts';
@@ -132,6 +132,7 @@ export function orderRepository(db: Database): OrderRepository {
       createdAt: instant(row.createdAt),
       updatedAt: instant(row.updatedAt),
       historyCount: events.find((e) => e.orderId === row.id)?.n ?? 0,
+      splitRootId: row.splitRootId,
       customerId: row.customerId,
       customerReference: row.customerReference,
       notes: row.notes,
@@ -228,9 +229,13 @@ export function orderRepository(db: Database): OrderRepository {
    */
   async function insert(
     tx: Database,
-    orders: readonly { order: OrderRecord; event: NewOrderEvent }[],
+    orders: readonly {
+      order: OrderRecord;
+      events: readonly NewOrderEvent[];
+      splitRootId?: string;
+    }[],
     year: number,
-  ): Promise<string[]> {
+  ): Promise<{ id: string; number: string }[]> {
     if (orders.length === 0) return [];
     await lockActive(
       tx,
@@ -247,12 +252,14 @@ export function orderRepository(db: Database): OrderRepository {
     if (!counter) throw new Error('No order number');
     const first = counter.lastValue - orders.length + 1;
     const ids = orders.map(() => globalThis.crypto.randomUUID());
+    const numbers = orders.map((_, i) => formatNumber(year, first + i));
     await insertRows(
-      orders.map(({ order }, i) => ({
+      orders.map(({ order, splitRootId }, i) => ({
         ...headerValues(order),
         id: ids[i] ?? '',
         companyId: defaultCompanyId,
-        number: formatNumber(year, first + i),
+        number: numbers[i] ?? '',
+        splitRootId: splitRootId ?? null,
       })),
       (rows) => tx.insert(transportOrder).values(rows),
     );
@@ -265,10 +272,10 @@ export function orderRepository(db: Database): OrderRepository {
       (rows) => tx.insert(orderGoods).values(rows),
     );
     await insertRows(
-      orders.flatMap(({ event }, i) => eventRows(ids[i] ?? '', [event])),
+      orders.flatMap(({ events }, i) => eventRows(ids[i] ?? '', events)),
       (rows) => tx.insert(orderEvent).values(rows),
     );
-    return ids;
+    return ids.map((id, i) => ({ id, number: numbers[i] ?? '' }));
   }
 
   return {
@@ -288,7 +295,7 @@ export function orderRepository(db: Database): OrderRepository {
               .orderBy(asc(transportOrder.number)),
           ),
     get,
-    findByReference: (customerId, reference, exceptId) =>
+    findByReference: (customerId, reference, exceptFamily) =>
       db
         .select({ id: transportOrder.id, number: transportOrder.number })
         .from(transportOrder)
@@ -297,20 +304,69 @@ export function orderRepository(db: Database): OrderRepository {
             eq(transportOrder.customerId, customerId),
             eq(transportOrder.customerReference, reference),
             active,
-            exceptId ? ne(transportOrder.id, exceptId) : undefined,
+            exceptFamily
+              ? sql`coalesce(${transportOrder.splitRootId}, ${transportOrder.id}) <> ${exceptFamily}`
+              : undefined,
           ),
         )
         .orderBy(asc(transportOrder.number)),
     create: async (order, year, event) => {
-      const [id = ''] = await translateErrors(() =>
-        db.transaction((tx) => insert(tx, [{ order, event }], year)),
+      const [{ id } = { id: '' }] = await translateErrors(() =>
+        db.transaction((tx) => insert(tx, [{ order, events: [event] }], year)),
       );
       const created = await get(id);
       if (!created) throw new Error(`Order ${id} vanished`);
       return created;
     },
     createMany: (orders, year) =>
-      translateErrors(() => db.transaction(async (tx) => (await insert(tx, orders, year)).length)),
+      translateErrors(() =>
+        db.transaction(
+          async (tx) =>
+            (
+              await insert(
+                tx,
+                orders.map(({ order, event }) => ({ order, events: [event] })),
+                year,
+              )
+            ).length,
+        ),
+      ),
+    split: async (id, version, kept, moved, year, events) => {
+      const ids = await translateErrors(() =>
+        db.transaction(async (tx) => {
+          await lockActive(tx, [kept, moved]);
+          // The order joins its family, or starts one: its own id when never split before.
+          const rows = await tx
+            .update(transportOrder)
+            .set({
+              ...headerValues(kept),
+              splitRootId: sql`coalesce(${transportOrder.splitRootId}, ${transportOrder.id})`,
+              version: nextVersion(transportOrder),
+              updatedAt: sql`now()`,
+            })
+            .where(and(atVersion(transportOrder, id, version), active))
+            .returning({ number: transportOrder.number, splitRootId: transportOrder.splitRootId });
+          const [row] = rows;
+          if (!row) return missingOrStale(tx, transportOrder, id);
+          await writeChildren(tx, id, kept);
+          const [created] = await insert(
+            tx,
+            [{ order: moved, events: [], splitRootId: row.splitRootId ?? id }],
+            year,
+          );
+          if (!created) throw new Error('No order created');
+          const entries = events({ kept: { id, number: row.number }, moved: created });
+          await tx
+            .insert(orderEvent)
+            .values([...eventRows(id, entries.kept), ...eventRows(created.id, entries.moved)]);
+          return { kept: id, moved: created.id };
+        }),
+      );
+      if (!ids) return undefined;
+      const [keptOrder, movedOrder] = await Promise.all([get(ids.kept), get(ids.moved)]);
+      if (!keptOrder || !movedOrder) throw new Error(`Order ${id} vanished`);
+      return { kept: keptOrder, moved: movedOrder };
+    },
     update: async (id, version, order, events) => {
       const updated = await translateErrors(() =>
         db.transaction(async (tx) => {

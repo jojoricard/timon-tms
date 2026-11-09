@@ -93,6 +93,8 @@ export function ImportScreen<Row extends ImportRowLike, Check extends ImportChec
   readyText = m.import_ready(),
   errorsText = m.import_errors_text(),
   rowNote,
+  preview,
+  importLabel,
 }: {
   breadcrumb: ReactNode;
   title: string;
@@ -102,7 +104,7 @@ export function ImportScreen<Row extends ImportRowLike, Check extends ImportChec
   lists?: ReferenceListsJson | undefined;
   check: (csv: string) => Promise<Check>;
   /** Imports; a refusal throws an ApiError whose body holds a fresh check. */
-  run: (csv: string, check: Check) => Promise<void>;
+  run: (csv: string, check: Check, fileName: string) => Promise<void>;
   columns: readonly PreviewColumn<Row>[];
   /** Filters besides "all lines" and "with errors". */
   filters?: readonly { label: string; test: (row: Row) => boolean }[];
@@ -116,6 +118,10 @@ export function ImportScreen<Row extends ImportRowLike, Check extends ImportChec
   errorsText?: string;
   /** What the check column says of a valid line, when there is more than "ready". */
   rowNote?: (row: Row) => ReactNode;
+  /** Shown instead of the table of lines and its filters, such as the orders of a file. */
+  preview?: (check: Check, fileName: string) => ReactNode;
+  /** The import button, when it counts something other than lines. */
+  importLabel?: (check: Check | undefined) => string;
 }) {
   const [file, setFile] = useState<{ name: string; csv: string }>();
   const [problem, setProblem] = useState<Problem>();
@@ -126,7 +132,8 @@ export function ImportScreen<Row extends ImportRowLike, Check extends ImportChec
     onSuccess: (result) => setProblem(result.problem ?? undefined),
   });
   const run = useSubmit({
-    mutationFn: ({ csv, check: current }: { csv: string; check: Check }) => runImport(csv, current),
+    mutationFn: ({ csv, check: current, name }: { csv: string; check: Check; name: string }) =>
+      runImport(csv, current, name),
   });
 
   const choose = async (chosen: File | undefined) => {
@@ -181,9 +188,13 @@ export function ImportScreen<Row extends ImportRowLike, Check extends ImportChec
               variant="primary"
               disabled={!ready || !file || !result}
               busy={run.isPending}
-              onClick={() => file && result && run.mutate({ csv: file.csv, check: result })}
+              onClick={() =>
+                file && result && run.mutate({ csv: file.csv, check: result, name: file.name })
+              }
             >
-              {m.action_import_all({ count: result?.summary.lines ?? 0 })}
+              {importLabel
+                ? importLabel(result)
+                : m.action_import_all({ count: result?.summary.lines ?? 0 })}
             </Button>
           </>
         }
@@ -233,7 +244,8 @@ export function ImportScreen<Row extends ImportRowLike, Check extends ImportChec
             )
           ) : null}
 
-          {result && allRows.length > 0 ? (
+          {result && !problem && preview ? preview(result, file?.name ?? '') : null}
+          {result && allRows.length > 0 && !preview ? (
             <>
               <ChipGroup label={m.lines_label()}>
                 <Chip
@@ -364,6 +376,8 @@ function acceptsText(accepts: Accepts): string {
       return m.accepts_text();
     case 'date':
       return m.accepts_date();
+    case 'time':
+      return m.accepts_time();
     case 'weight':
       return m.accepts_weight();
     case 'number':

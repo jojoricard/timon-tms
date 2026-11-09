@@ -9,8 +9,12 @@ import { expect, type Page, test } from '@playwright/test';
 type Screen = {
   name: string;
   path: string;
-  /** Opens the first record of the list, for a form. */
-  open?: { url: RegExp };
+  /** Opens the first record of the list, or of its rows that match `row`, for a form. */
+  open?: { url: RegExp; row?: RegExp };
+  /** Opens the split screen of the order. */
+  split?: boolean;
+  /** Chooses this file on an import screen, for its preview. */
+  upload?: { name: string; csv: string };
   /** Opens the change dialog of the unit. */
   dialog?: boolean;
   /** Opens this tab of the record. */
@@ -23,6 +27,38 @@ type Screen = {
   cells?: boolean;
 };
 
+/**
+ * An order file whose preview holds the long names of the demo customers, an order to review with
+ * its reason, an order with an error and orders with warnings.
+ */
+function orderFile(): string {
+  const line = (customer: string, ref: string, pickup: string, delivery: string, kg = '4200') =>
+    [
+      customer,
+      ref,
+      pickup,
+      '16/11/2026',
+      '07:00',
+      '08:00',
+      delivery,
+      '16/11/2026',
+      '14:00',
+      '16:00',
+    ]
+      .concat(['Disques de frein', '8', 'pallet', kg])
+      .join(';');
+  return [
+    'customer_code;customer_reference;pickup_site;pickup_date;pickup_from;pickup_to;' +
+      'delivery_site;delivery_date;delivery_from;delivery_to;description;quantity;packaging;weight_kg',
+    line('TRANSALP-IT', 'TR-77/11', 'Hub de Corbas — cross-dock', 'Transalpina magazzino'),
+    line('TRANSALP-IT', 'TR-77/11', 'Dépôt de Vénissieux', 'Bricolage Chassieu'),
+    line('PHARMALP', 'PH-20931', 'Hub de Corbas — cross-dock', 'Entrepôt pharma Meyzieu'),
+    line('PHARMALP', 'PH-20931', 'Hub de Corbas — cross-dock', 'Bricolage Chassieu'),
+    line('PHARMALP', 'PH-20932', 'Pharmalp, quai froid', 'Bricolage Chassieu'),
+    line('LUMIERE-EM', 'LE-20933', 'Dépôt de Vénissieux', 'Silo de Vienne', '26000'),
+  ].join('\n');
+}
+
 const screens: Screen[] = [
   { name: 'orders', main: true, path: '/orders', table: true },
   { name: 'order form', path: '/orders', open: { url: /\/orders\/[0-9a-f-]{36}$/ } },
@@ -33,6 +69,19 @@ const screens: Screen[] = [
     tab: /^(History|Historique)/,
   },
   { name: 'new order', path: '/orders/new' },
+  { name: 'order import', path: '/orders/import' },
+  {
+    name: 'order import preview',
+    cells: true,
+    path: '/orders/import',
+    upload: { name: 'pharmalp-transalpina.csv', csv: orderFile() },
+  },
+  {
+    name: 'order split',
+    path: '/orders?status=to-review',
+    open: { url: /\/orders\/[0-9a-f-]{36}$/, row: /Transalpina/ },
+    split: true,
+  },
   { name: 'drivers', main: true, path: '/resources/drivers', table: true },
   { name: 'power units', main: true, path: '/resources/power-units', table: true },
   { name: 'trailers', main: true, path: '/resources/trailers', table: true },
@@ -75,15 +124,34 @@ const screens: Screen[] = [
 /** Waits until the screen shows its data: a table row, or a form field. */
 async function settle(page: Page) {
   await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
-  await expect(page.locator('main :is(tbody tr, input, select)').first()).toBeVisible();
+  await expect(
+    page.locator('main :is(tbody tr, input, select, .split-line)').first(),
+  ).toBeVisible();
 }
 
 async function visit(page: Page, screen: Screen) {
   await page.goto(screen.path);
   await settle(page);
   if (screen.open) {
-    await page.locator('main table tbody .row-link').first().click();
+    const rows = page.locator('main table tbody tr');
+    await (screen.open.row ? rows.filter({ hasText: screen.open.row }) : rows)
+      .locator('.row-link')
+      .first()
+      .click();
     await expect(page).toHaveURL(screen.open.url);
+    await settle(page);
+  }
+  if (screen.upload) {
+    await page.locator('main input[type=file]').setInputFiles({
+      name: screen.upload.name,
+      mimeType: 'text/csv',
+      buffer: Buffer.from(screen.upload.csv),
+    });
+    await expect(page.locator('main .order-import-table tbody tr').first()).toBeVisible();
+  }
+  if (screen.split) {
+    await page.getByRole('link', { name: /^(Split|Scinder)$/ }).click();
+    await expect(page).toHaveURL(/\/split$/);
     await settle(page);
   }
   if (screen.tab) {
@@ -134,6 +202,35 @@ const overrunningText = (page: Page) =>
         range.selectNodeContents(node);
         const right = Math.max(...[...range.getClientRects()].map((r) => r.right));
         if (right > limit + 0.5) found.push(`"${text}" by ${Math.ceil(right - limit)} px`);
+      }
+    }
+    return found;
+  });
+
+/**
+ * Ordinary words of the screen's tables, letters only and up to 20 of them, that are split across
+ * two lines: each word is measured with a range, and its boxes on two lines give it away. Visually
+ * hidden text is left out.
+ */
+const splitWords = (page: Page) =>
+  page.evaluate(() => {
+    const found: string[] = [];
+    for (const table of document.querySelectorAll('main .t-table')) {
+      const walker = document.createTreeWalker(table, NodeFilter.SHOW_TEXT);
+      for (let node = walker.nextNode(); node; node = walker.nextNode()) {
+        const text = node.textContent ?? '';
+        if (node.parentElement?.closest('.t-visually-hidden, caption')) continue;
+        for (const word of text.matchAll(/\p{L}{2,20}/gu)) {
+          const before = text[(word.index ?? 0) - 1] ?? '';
+          const after = text[(word.index ?? 0) + word[0].length] ?? '';
+          // Part of a longer run of letters: not an ordinary word.
+          if (/\p{L}/u.test(before) || /\p{L}/u.test(after)) continue;
+          const range = document.createRange();
+          range.setStart(node, word.index ?? 0);
+          range.setEnd(node, (word.index ?? 0) + word[0].length);
+          const tops = [...range.getClientRects()].filter((r) => r.width > 0).map((r) => r.top);
+          if (tops.length > 1 && Math.max(...tops) - Math.min(...tops) > 2) found.push(word[0]);
+        }
       }
     }
     return found;
@@ -196,7 +293,7 @@ for (const width of [1280, 390]) {
     test.use({ viewport: { width, height: width < 640 ? 844 : 900 } });
 
     test('no screen scrolls sideways; wide tables scroll in their frame', async ({ page }) => {
-      // Twenty-one screens in a row: more than the time one screen is given.
+      // Twenty-three screens in a row: more than the time one screen is given.
       test.setTimeout(180_000);
       await start(page);
 
@@ -267,6 +364,27 @@ for (const width of [1024, 390]) {
           await test.step(screen.name, async () => {
             await visit(page, screen);
             expect(await overrunningText(page), `${screen.name}: text past its cell`).toEqual([]);
+          });
+        }
+      });
+    });
+  }
+}
+
+// Words break only when a single word is longer than its column: never "Distributio n" or
+// "pick ups", on any screen with a table, in either language.
+for (const width of [1280, 390]) {
+  for (const locale of ['en-GB', 'fr-FR']) {
+    test.describe(`at ${width} px, ${locale}, words`, () => {
+      test.use({ viewport: { width, height: width < 640 ? 844 : 900 }, locale });
+
+      test('no word in a table is split across two lines', async ({ page }) => {
+        test.setTimeout(150_000);
+        await start(page);
+        for (const screen of screens.filter((s) => s.table || s.cells)) {
+          await test.step(screen.name, async () => {
+            await visit(page, screen);
+            expect(await splitWords(page), `${screen.name}: words split`).toEqual([]);
           });
         }
       });

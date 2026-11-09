@@ -1,4 +1,6 @@
 import {
+  adrClasses,
+  packagings,
   type ResourceKind,
   type VehicleCategory,
   vehicleCategories,
@@ -13,6 +15,7 @@ import {
   noBookingAliases,
   valueAliases,
 } from './import-format.ts';
+import { orderColumns, packagingAliases } from './order-import.ts';
 import type { ListItem, ReferenceLists } from './ports.ts';
 import { siteColumns } from './site-import.ts';
 
@@ -25,6 +28,7 @@ export type AcceptedValues =
       readonly kind:
         | 'text'
         | 'date'
+        | 'time'
         | 'weight'
         | 'number'
         | 'metres'
@@ -125,4 +129,27 @@ export function siteImportGuide(language: 'en' | 'fr', lists: ReferenceLists): G
   return guide(siteColumns, language, (field) =>
     field.startsWith('openings.') ? { kind: 'hours' } : (byField[field] ?? { kind: 'text' }),
   );
+}
+
+/** SPEC-004, Import: what each column of an order file accepts. */
+export function orderImportGuide(language: 'en' | 'fr', lists: ReferenceLists): GuideColumn[] {
+  const byField: Record<string, AcceptedValues> = {
+    pickupDate: { kind: 'date' },
+    deliveryDate: { kind: 'date' },
+    pickupFrom: { kind: 'time' },
+    pickupTo: { kind: 'time' },
+    deliveryFrom: { kind: 'time' },
+    deliveryTo: { kind: 'time' },
+    quantity: { kind: 'number' },
+    packaging: { kind: 'one-of', values: packagings.map((p) => packagingAliases[p]) },
+    weightKg: { kind: 'weight' },
+    floorM: { kind: 'metres' },
+    adrClass: { kind: 'one-of', values: adrClasses.map((c) => [c]) },
+    temperatureMin: { kind: 'number' },
+    temperatureMax: { kind: 'number' },
+    bodyType: { kind: 'one-of', values: entries(lists.bodyTypes) },
+    sideLoading: { kind: 'yes-no' },
+    tailLift: { kind: 'yes-no' },
+  };
+  return guide(orderColumns, language, (field) => byField[field] ?? { kind: 'text' });
 }

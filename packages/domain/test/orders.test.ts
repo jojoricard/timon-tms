@@ -13,6 +13,7 @@ import {
   parseTime,
   slotOf,
   slotPeriod,
+  splitOrder,
   Temporal,
 } from '../src/index.ts';
 
@@ -582,5 +583,66 @@ describe('the changes of an order, for its history (criterion 14)', () => {
 
   it('nothing changed, no entry', () => {
     expect(orderChanges(before, before, name)).toEqual([]);
+  });
+});
+
+describe('splitting an order', () => {
+  // Two pickups and two deliveries, as in the order-split mockup: Corbas sends to Turin and to
+  // Vienne, Vénissieux sends to Turin.
+  const merged = order(
+    [
+      stop('corbas', 'pickup', 'Hub de Corbas', '2026-11-10', '07:00', '08:00'),
+      stop('venissieux', 'pickup', 'Hub de Corbas', '2026-11-10', '09:00', '10:00'),
+      stop('torino', 'delivery', 'Transalpina magazzino', '2026-11-11', '08:00', '12:00'),
+      stop('vienne', 'delivery', 'Silo de Vienne', '2026-11-10', '14:00', '15:00'),
+    ],
+    [
+      line('brakes', 'corbas', 'torino'),
+      line('filters', 'corbas', 'torino'),
+      line('panels', 'corbas', 'vienne'),
+      line('gearboxes', 'venissieux', 'torino'),
+      line('wheels', 'venissieux', 'torino'),
+    ],
+  );
+
+  it('gives each group the stops its lines use, a stop used by both going to both', () => {
+    const split = splitOrder(merged, ['gearboxes', 'wheels']);
+    if (!split.ok) throw new Error('refused');
+    expect(split.kept.stops.map((s) => s.id)).toEqual(['corbas', 'torino', 'vienne']);
+    expect(split.kept.lines.map((l) => l.id)).toEqual(['brakes', 'filters', 'panels']);
+    expect(split.moved.stops.map((s) => s.id)).toEqual(['venissieux', 'torino']);
+    expect(split.moved.lines.map((l) => l.id)).toEqual(['gearboxes', 'wheels']);
+    expect(orderShape(split.kept)).toBe('one-pickup');
+    expect(orderShape(split.moved)).toBe('one-pickup');
+    // The header goes to both.
+    expect(split.moved).toMatchObject({ customerId: 'monts-lait', customerReference: 'LML-88213' });
+    expect(checkOrder(split.kept, sites).review).toEqual([]);
+  });
+
+  it('keeps the wrong shape in a group that still mixes pickups and deliveries', () => {
+    const split = splitOrder(merged, ['wheels']);
+    if (!split.ok) throw new Error('refused');
+    expect(orderShape(split.kept)).toBe('several-both');
+    expect(orderShape(split.moved)).toBe('one-pickup');
+  });
+
+  it('refuses an empty group and a line of another order', () => {
+    expect(splitOrder(merged, [])).toEqual({
+      ok: false,
+      issues: [{ field: 'lines', code: 'split-group-empty' }],
+    });
+    expect(
+      splitOrder(
+        merged,
+        merged.lines.map((l) => l.id),
+      ),
+    ).toEqual({
+      ok: false,
+      issues: [{ field: 'lines', code: 'split-group-empty' }],
+    });
+    expect(splitOrder(merged, ['wheels', 'elsewhere'])).toEqual({
+      ok: false,
+      issues: [{ field: 'lines', code: 'unknown-value', params: { value: 'elsewhere' } }],
+    });
   });
 });

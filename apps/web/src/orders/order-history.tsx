@@ -2,8 +2,9 @@ import type { ReferenceListsJson } from '@timon/http';
 import { Banner, CardRow, CardStack } from '@timon/ui';
 import { errorText } from '../data.ts';
 import { m } from '../paraglide/messages.js';
+import { NumberLink } from './number-link.tsx';
 import { useOrderHistory } from './order-data.ts';
-import { eventLines, eventTime, eventTitle } from './order-labels.ts';
+import { eventLines, eventOther, eventTime, eventTitle } from './order-labels.ts';
 
 /** The history of an order, newest first (SPEC-004, Numbering and history). */
 export function OrderHistory({ id, lists }: { id: string; lists: ReferenceListsJson | undefined }) {
@@ -21,6 +22,8 @@ export function OrderHistory({ id, lists }: { id: string; lists: ReferenceListsJ
           <ol className="history">
             {history.data.events.map((event) => {
               const { time, year } = eventTime(event.at);
+              const title = eventTitle(event);
+              const other = eventOther(event);
               return (
                 <li key={event.id} className="history-entry">
                   <span className="history-time t-mono">
@@ -30,7 +33,7 @@ export function OrderHistory({ id, lists }: { id: string; lists: ReferenceListsJ
                   <span className="history-dot" aria-hidden="true" />
                   <div className="history-body">
                     <p className="history-title">
-                      <strong>{eventTitle(event)}</strong>{' '}
+                      <strong>{other ? <NumberLink text={title} {...other} /> : title}</strong>{' '}
                       <span className="muted">{m.author_not_recorded()}</span>
                     </p>
                     {eventLines(event, lists).map((line) => (

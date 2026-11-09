@@ -138,6 +138,16 @@
   gap: var(--space-3);
 }
 
+/*
+ * The actions of a row sit side by side, and one under the other when their column is short of
+ * room: buttons give way, so that the words of the other columns never have to.
+ */
+.row-actions {
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  row-gap: var(--space-1);
+}
+
 /* Resource form */
 
 .capabilities {
@@ -1018,5 +1028,73 @@
 
   .history-dot {
     display: none;
+  }
+}
+
+/* SPEC-004, Splitting an order: each group's stops, then its goods lines with the button that
+   moves them. Below form-2, a line's button goes under its text. */
+.split-group {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.split-stops,
+.split-lines {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.split-stops li {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: var(--space-3);
+  padding-block: var(--space-1);
+}
+
+.split-site {
+  overflow-wrap: break-word;
+}
+
+.split-line {
+  display: grid;
+  grid-template-columns: 2rem minmax(0, 1fr);
+  align-items: center;
+  gap: var(--space-2) var(--space-3);
+  padding-block: var(--space-3);
+  border-top: 1px solid var(--color-line);
+}
+
+.split-line > .t-button,
+.split-line > button {
+  grid-column: 2;
+  justify-self: start;
+}
+
+.split-number {
+  color: var(--color-ink-muted);
+}
+
+.split-description {
+  margin: 0;
+  font-weight: 600;
+  overflow-wrap: break-word;
+}
+
+.split-line-body p {
+  margin: 0;
+  overflow-wrap: break-word;
+}
+
+@container (width >= 480px) {
+  .split-line {
+    grid-template-columns: 2rem minmax(0, 1fr) auto;
+  }
+
+  .split-line > .t-button,
+  .split-line > button {
+    grid-column: auto;
   }
 }

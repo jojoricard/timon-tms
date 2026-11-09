@@ -27,9 +27,12 @@ type Status = 'to-plan' | 'to-review';
 export function OrdersPage({
   search,
   setSearch,
+  imported,
 }: {
   search: OrdersSearch;
   setSearch: SetSearch<OrdersSearch>;
+  /** What an import has just written. */
+  imported?: { count: number; toReview: number } | undefined;
 }) {
   const list = useOrders(search);
   const lists = useReferenceLists().data;
@@ -65,11 +68,23 @@ export function OrdersPage({
             : ''
         }
         actions={
-          <Link className="t-button" data-variant="primary" to="/orders/new">
-            {m.action_new_order()}
-          </Link>
+          <>
+            <Link className="t-button" to="/orders/import">
+              {m.action_import()}
+            </Link>
+            <Link className="t-button" data-variant="primary" to="/orders/new">
+              {m.action_new_order()}
+            </Link>
+          </>
         }
       />
+      {imported ? (
+        <Banner tone="ok">
+          {imported.toReview > 0
+            ? m.orders_imported_review({ count: imported.count, toReview: imported.toReview })
+            : m.orders_imported({ count: imported.count })}
+        </Banner>
+      ) : null}
 
       <div className="toolbar">
         <div className="toolbar-start">

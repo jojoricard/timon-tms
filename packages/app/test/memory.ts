@@ -289,10 +289,12 @@ export function memoryPorts(
         const order = orders.find((o) => o.id === orderId);
         return order ? withHistory(order) : undefined;
       },
-      findByReference: async (customerId, reference, exceptId) =>
+      findByReference: async (customerId, reference, exceptFamily) =>
         activeUsing(
           (o) =>
-            o.customerId === customerId && o.customerReference === reference && o.id !== exceptId,
+            o.customerId === customerId &&
+            o.customerReference === reference &&
+            (o.splitRootId ?? o.id) !== exceptFamily,
         ),
       create: async (order, year, event) => {
         assertActive(order);
@@ -307,6 +309,7 @@ export function memoryPorts(
           createdAt: at,
           updatedAt: at,
           historyCount: 0,
+          splitRootId: null,
         };
         orders.push(created);
         record(created.id, [event]);
@@ -324,6 +327,43 @@ export function memoryPorts(
         orders[index] = { ...existing, ...order, version: version + 1, updatedAt: at };
         record(orderId, list);
         return withHistory(orders[index]);
+      },
+      split: async (orderId, version, kept, moved, year, entries) => {
+        const index = orderIndex(orderId);
+        const existing = current(orders[index], version);
+        if (!existing) return undefined;
+        assertActive(kept);
+        assertActive(moved);
+        const root = existing.splitRootId ?? existing.id;
+        const created = await ports.orders.create(moved, year, {
+          at,
+          kind: 'created',
+          origin: 'split',
+          status: moved.status,
+          source: existing.number,
+          fileName: null,
+          fileLines: [],
+        });
+        events.pop();
+        const written = entries({
+          kept: { id: existing.id, number: existing.number },
+          moved: { id: created.id, number: created.number },
+        });
+        const movedIndex = orderIndex(created.id);
+        orders[movedIndex] = { ...(orders[movedIndex] as StoredOrder), splitRootId: root };
+        orders[index] = {
+          ...existing,
+          ...kept,
+          splitRootId: root,
+          version: version + 1,
+          updatedAt: at,
+        };
+        record(orderId, written.kept);
+        record(created.id, written.moved);
+        return {
+          kept: withHistory(orders[index]),
+          moved: withHistory(orders[movedIndex] as StoredOrder),
+        };
       },
       cancel: async (orderId, version, reason, event) => {
         const index = orderIndex(orderId);
