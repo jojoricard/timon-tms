@@ -31,9 +31,7 @@ async function seeded(today: string) {
   };
 }
 
-// Each test seeds a whole haulier, orders included: more than the default time when the other
-// test files run alongside.
-describe('seed', { timeout: 40_000 }, () => {
+describe('seed', () => {
   it('writes the fleet of the mockups once', async () => {
     const { db, ports } = await seeded('2026-10-06');
     expect(await seed(db)).toBe(false);

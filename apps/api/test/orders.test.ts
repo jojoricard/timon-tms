@@ -1,12 +1,14 @@
 // biome-ignore-all lint/suspicious/noExplicitAny: response bodies are read loosely in these tests.
-import { createRepositories, seed } from '@timon/db';
+import { createRepositories, seedCustomers, seedOrders } from '@timon/db';
 import { createTestDatabase, offline, type TestDatabase } from '@timon/db/testing';
 import { createApp } from '@timon/http';
 import { Temporal } from 'temporal-polyfill';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
-// SPEC-004 through the HTTP API, on the demo haulier, on PGlite in-process and on PostgreSQL 18
-// when TEST_DATABASE_URL is set (CI). Today is Monday 9 November 2026, 10:00 in Paris.
+// SPEC-004 through the HTTP API, on the customers and sites of the demo haulier, on PGlite
+// in-process and on PostgreSQL 18 when TEST_DATABASE_URL is set (CI). Neither the fleet nor the
+// units are seeded: orders do not use them yet. The demo orders are seeded only for the list.
+// Today is Monday 9 November 2026, 10:00 in Paris.
 
 let database: TestDatabase;
 let app: ReturnType<typeof createApp>;
@@ -32,7 +34,7 @@ let sites: Record<string, any>;
 
 beforeAll(async () => {
   database = await createTestDatabase();
-  await seed(database.db, today);
+  await seedCustomers(createRepositories(database.db, { now: () => now }));
   app = createApp({ ...createRepositories(database.db, { now: () => now }), geocoder: offline });
   const list = (await call('GET', '/customers')).body.customers;
   customers = Object.fromEntries(list.map((c: any) => [c.code, c.id]));
@@ -97,8 +99,8 @@ const codes = (issues: { field: string; code: string }[]) =>
 
 describe('entering an order', () => {
   it('criterion 1: one pickup, two deliveries, the next CMD-2026- number, to plan', async () => {
-    const seeded = (await call('GET', '/orders?to=2026-11-15')).body.orders as any[];
-    const last = Math.max(...seeded.map((o) => Number(o.number.slice(-6))));
+    const before = (await call('GET', '/orders?to=2026-11-15')).body.orders as any[];
+    const last = Math.max(0, ...before.map((o) => Number(o.number.slice(-6))));
     const { status, body } = await call(
       'POST',
       '/orders',
@@ -383,6 +385,8 @@ describe('an existing order', () => {
 });
 
 describe('the list of orders', () => {
+  beforeAll(() => seedOrders(createRepositories(database.db, { now: () => now }), today));
+
   it('shows the orders to plan and to review from today, by first pickup', async () => {
     const { body } = await call('GET', '/orders?to=2026-11-09');
     expect(body.day).toBe('2026-11-09');
@@ -417,9 +421,17 @@ describe('the list of orders', () => {
 });
 
 describe('rule 8: archiving a customer or a site an order uses', () => {
+  let used: { number: string };
+  beforeAll(async () => {
+    const { status, body } = await call('POST', '/orders', {
+      ...order([stop('d', 'delivery', vienne, '2026-11-10', '12:00', '13:00')]),
+      customerId: customers['RHONE-AGRO'],
+    });
+    expect(status).toBe(201);
+    used = body;
+  });
+
   it('criterion 15: archiving the Silo de Vienne is refused and names the order', async () => {
-    const used = (await call('GET', '/orders?to=2026-11-15&q=RAS')).body.orders;
-    expect(used.length).toBeGreaterThan(0);
     const site = sites[vienne];
     const { status, body } = await call(
       'POST',
@@ -429,9 +441,7 @@ describe('rule 8: archiving a customer or a site an order uses', () => {
     );
     expect(status).toBe(409);
     expect(body.error).toBe('in-use');
-    expect(body.orders.map((o: any) => o.number)).toEqual(
-      expect.arrayContaining(used.map((o: any) => o.number)),
-    );
+    expect(body.orders.map((o: any) => o.number)).toContain(used.number);
     expect((await call('GET', `/sites/${site.id}`)).body.site.archived).toBe(false);
   });
 
@@ -444,6 +454,6 @@ describe('rule 8: archiving a customer or a site an order uses', () => {
     );
     expect(status).toBe(409);
     expect(body.error).toBe('in-use');
-    expect(body.orders.length).toBeGreaterThan(0);
+    expect(body.orders.map((o: any) => o.number)).toContain(used.number);
   });
 });
