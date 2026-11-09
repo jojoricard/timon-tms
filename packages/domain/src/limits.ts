@@ -37,6 +37,9 @@ export const textLimits = {
     instructions: 2000,
   },
   unit: { name: 100 },
+  order: { customerReference: 100, notes: 2000, cancelReason: 500 },
+  stop: { bookingReference: 100 },
+  goods: { description: 200 },
 } as const;
 
 export type TextLimits = typeof textLimits;
