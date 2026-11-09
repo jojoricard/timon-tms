@@ -497,6 +497,9 @@ export const transportOrder = pgTable(
     tailLift: boolean('tail_lift').notNull().default(false),
     status: text({ enum: orderStatuses }).notNull(),
     cancelReason: text('cancel_reason'),
+    // SPEC-004: the order a family was split from, the same for every order split from it; its
+    // orders share the customer's reference without a warning.
+    splitRootId: uuid('split_root_id').references((): AnyPgColumn => transportOrder.id),
     // ADR-005: 1 at creation, plus one at every write; a write names the version it read.
     version: integer().notNull().default(1),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
@@ -609,7 +612,7 @@ export const orderEvent = pgTable(
       .notNull()
       .references(() => transportOrder.id),
     at: timestamp({ withTimezone: true }).notNull(),
-    kind: text({ enum: ['created', 'changed', 'status'] }).notNull(),
+    kind: text({ enum: ['created', 'changed', 'status', 'split'] }).notNull(),
     authorId: uuid('author_id'),
     details: jsonb().notNull(),
   },

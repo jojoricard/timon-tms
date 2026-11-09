@@ -59,3 +59,5 @@ export type OrderRequirementJson = z.infer<typeof orderSchemas.Requirement>;
 export type OrderWarningJson = z.infer<typeof orderSchemas.Warning>;
 export type OrderEventJson = z.infer<typeof orderSchemas.OrderEvent>;
 export type OrderHistoryJson = z.infer<typeof orderSchemas.OrderHistory>;
+export type SplitOrdersJson = z.infer<typeof orderSchemas.SplitOrders>;
+export type OrderImportCheckJson = z.infer<typeof orderSchemas.OrderImportCheck>;

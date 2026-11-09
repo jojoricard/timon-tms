@@ -64,6 +64,7 @@ export const Problem = z
       'not-started',
       'ended',
       'cancelled',
+      'not-splittable',
     ]),
     message: z.string().optional(),
     params: Params.optional(),
@@ -257,6 +258,7 @@ export const ImportGuide = z
         kind: z.enum([
           'text',
           'date',
+          'time',
           'weight',
           'number',
           'metres',

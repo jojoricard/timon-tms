@@ -97,6 +97,13 @@ export const NewOrderInput = OrderInput.extend({
   duplicatedFrom: z.uuid().optional(),
 }).openapi('NewOrderInput');
 
+/** The goods lines that go to the new order; the others stay. */
+export const SplitInput = z.object({ lines: z.array(key).max(200) }).openapi('SplitOrderInput');
+
+export const OrderImportInput = z
+  .object({ csv: z.string(), fileName: z.string().max(255) })
+  .openapi('OrderImportInput');
+
 export const CancelInput = z
   .object({ reason: z.string().max(textLimits.order.cancelReason) })
   .openapi('CancelOrderInput');
@@ -269,10 +276,20 @@ export const OrderEvent = z
       origin: z.enum(orderOrigins),
       status: OrderStatus,
       source: z.string().nullable(),
+      /** The order it was duplicated or split from; null before it was recorded. */
+      sourceId: z.uuid().nullable(),
       fileName: z.string().nullable(),
       fileLines: z.array(z.number().int()),
     }),
     z.object({ ...EventBase, kind: z.literal('changed'), changes: z.array(OrderChange) }),
+    /** Lines of this order, numbered from 1 as they were, moved to the order `other`. */
+    z.object({
+      ...EventBase,
+      kind: z.literal('split'),
+      other: z.string(),
+      otherId: z.uuid(),
+      lines: z.array(z.number().int()),
+    }),
     z.object({
       ...EventBase,
       kind: z.literal('status'),
@@ -284,3 +301,49 @@ export const OrderEvent = z
   .openapi('OrderEvent');
 
 export const OrderHistory = z.object({ events: z.array(OrderEvent) }).openapi('OrderHistory');
+
+export const SplitOrders = z.object({ kept: Order, moved: Order }).openapi('SplitOrders');
+
+const ImportWarning = z
+  .object({
+    code: z.enum([...orderWarningCodes, 'no-reference']),
+    stopId: z.string().nullable(),
+    params: Params,
+  })
+  .openapi('OrderImportWarning');
+
+export const OrderImportCheck = z
+  .object({
+    problem: z
+      .object({ code: z.string(), params: z.record(z.string(), z.unknown()).optional() })
+      .nullable(),
+    rows: z.array(
+      z.object({
+        line: z.number().int(),
+        cells: z.record(z.string(), z.string()),
+        issues: z.array(Issue),
+      }),
+    ),
+    orders: z.array(
+      z.object({
+        reference: z.string().nullable(),
+        customer: z.object({ code: z.string(), name: z.string() }).nullable(),
+        lines: z.array(z.number().int()),
+        pickups: z.number().int(),
+        deliveries: z.number().int(),
+        goodsLines: z.number().int(),
+        result: z.enum(['ready', 'to-review', 'errors']),
+        warnings: z.array(ImportWarning),
+        review: z.array(Issue),
+      }),
+    ),
+    summary: z.object({
+      lines: z.number().int(),
+      orders: z.number().int(),
+      ready: z.number().int(),
+      toReview: z.number().int(),
+      withErrors: z.number().int(),
+    }),
+    ready: z.boolean(),
+  })
+  .openapi('OrderImportCheck');
