@@ -247,6 +247,36 @@ input:is([type="date"], [type="time"], [type="datetime-local"]):focus-within {
   outline-offset: 2px;
 }
 
+/*
+ * In a card narrower than form-2 (a panel or a dialog, both containers), the options go one under
+ * the other, full width, and a long label takes a second line inside its option.
+ */
+@container (width < 480px) {
+  .t-segmented-options {
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+  }
+
+  .t-segmented-options span {
+    display: flex;
+    height: auto;
+    min-height: var(--control-height);
+    padding-block: var(--space-2);
+    margin-left: 0;
+    margin-top: -1px;
+  }
+
+  .t-segmented-options label:first-child span {
+    margin-top: 0;
+    border-radius: var(--radius-sm) var(--radius-sm) 0 0;
+  }
+
+  .t-segmented-options label:last-child span {
+    border-radius: 0 0 var(--radius-sm) var(--radius-sm);
+  }
+}
+
 /* Checkbox and toggle chips */
 
 .t-checkbox {

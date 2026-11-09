@@ -1072,9 +1072,10 @@ function Goods({
       <div className="panel-title-row">
         <h2 id="goods-title">
           {m.section_goods()}{' '}
-          <span className="t-field-hint">
-            {totals}
-            {floor > 0 ? ` · ${m.floor_metres_total({ metres: floorMetres(floor) })}` : ''}
+          <span className="t-field-hint goods-totals">
+            {[totals, floor > 0 ? m.floor_metres_total({ metres: floorMetres(floor) }) : '']
+              .filter(Boolean)
+              .join(' · ')}
           </span>
         </h2>
         <Button variant="link" onClick={onAdd}>

@@ -320,6 +320,29 @@ describe('totals (rule 5)', () => {
   });
 });
 
+describe('totals of lines being entered', () => {
+  it('count an empty or invalid quantity, weight or floor metres as nothing', () => {
+    const entering = simple(
+      stop('d', 'delivery', 'Silo de Vienne', '2026-11-10', '12:00', '13:00'),
+      [
+        line('l1', 'p', 'd', {
+          quantity: Number.NaN,
+          weightKg: Number.NaN,
+          floorDm: Number.NaN,
+        }),
+        line('l2', 'p', 'd', { quantity: -3, weightKg: 0, floorDm: -5 }),
+        line('l3', 'p', 'd', { quantity: 2.5, weightKg: 1_200, floorDm: 16 }),
+      ],
+    );
+    expect(orderTotals(entering)).toEqual({
+      weightKg: 1_200,
+      floorDm: 16,
+      quantities: { 'euro-pallet': 0, pallet: 0, parcel: 0, bulk: 0 },
+    });
+    expect(orderWarnings(entering, sites, [])).toEqual([]);
+  });
+});
+
 describe('warnings', () => {
   const meyzieu = (start: string, end: string, extra: Partial<OrderStop> = {}) =>
     simple(

@@ -176,6 +176,17 @@ describe('seed', () => {
         new Set(['MONTS-LAIT', 'PHARMALP', 'VERCORS-FRO', 'ALPES-FROID']),
       );
       expect(requirements('adr')).toEqual(new Set(['RHONE-AGRO']));
+
+      // Each stop booked has a booking reference of its own.
+      const references: string[] = [];
+      for (const summary of orders) {
+        const order = await getOrder(ports, summary.id);
+        for (const stop of order?.details.stops ?? []) {
+          if (stop.bookingReference) references.push(stop.bookingReference);
+        }
+      }
+      expect(references.length).toBeGreaterThan(50);
+      expect(new Set(references).size).toBe(references.length);
     },
   );
 });

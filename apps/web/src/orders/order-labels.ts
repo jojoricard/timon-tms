@@ -63,7 +63,7 @@ export function temperatureRange(min: number, max: number): string {
 }
 
 /**
- * "26 Euro pallets · 14,300 kg": pallets of both kinds count as pallets, Euro pallets alone keep
+ * "26 Euro pallets · 14,300 kg", or nothing while no line has a value: pallets of both kinds count as pallets, Euro pallets alone keep
  * their name; parcels apart; bulk shows its weight only.
  */
 export function goodsSummary(totals: OrderTotals): string {
@@ -80,7 +80,8 @@ export function goodsParts(totals: OrderTotals): string[] {
     parts.push(packagingLabel('pallet', q.pallet + q['euro-pallet']));
   }
   if (q.parcel > 0) parts.push(packagingLabel('parcel', q.parcel));
-  parts.push(kilograms(totals.weightKg));
+  // Nothing until a line has a weight: an order being entered shows no "0 kg".
+  if (totals.weightKg > 0) parts.push(kilograms(totals.weightKg));
   return parts;
 }
 

@@ -94,6 +94,22 @@ test('criterion 1: one pickup and two deliveries get the next number, to plan', 
   );
 });
 
+test('a new order shows no goods totals until a line has a value, never NaN', async ({ page }) => {
+  await open(page, '/orders/new');
+  const totals = page.locator('.goods-totals');
+  await expect(totals).toHaveText('');
+  const line = page.getByRole('group', { name: 'Line 1' });
+  await line.getByLabel('Quantity').fill('abc');
+  await line.getByLabel('Floor metres').fill('x');
+  await expect(totals).toHaveText('');
+  await line.getByLabel('Gross weight (kg)').fill('5000');
+  await expect(totals).toHaveText('5,000 kg');
+  await line.getByLabel('Quantity').fill('10');
+  await line.getByLabel('Floor metres').fill('4');
+  await expect(totals).toHaveText('10 Euro pallets · 5,000 kg · 4.0 floor metres');
+  await expect(page.getByText('NaN')).toHaveCount(0);
+});
+
 test('criterion 2: a site not located cannot be saved, and the form says why', async ({ page }) => {
   await newOrder(page, workday(), [dockC, '12:00', '13:00']);
   await page.getByRole('button', { name: 'Create' }).click();

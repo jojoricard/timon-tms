@@ -317,6 +317,10 @@ export type OrderTotals = {
   readonly quantities: Readonly<Record<Packaging, number>>;
 };
 
+/** A value being entered counts once it is a whole number above zero; until then, as nothing. */
+const counted = (value: number | null) =>
+  value !== null && Number.isInteger(value) && value > 0 ? value : 0;
+
 /**
  * Rule 5: with one pickup everything is on board when leaving, with one delivery when arriving,
  * so the load is the sum of the lines.
@@ -326,9 +330,9 @@ export function orderTotals(order: Pick<OrderDetails, 'lines'>): OrderTotals {
   let weightKg = 0;
   let floorDm = 0;
   for (const line of order.lines) {
-    quantities[line.packaging] += line.quantity;
-    weightKg += line.weightKg;
-    floorDm += line.floorDm ?? 0;
+    quantities[line.packaging] += counted(line.quantity);
+    weightKg += counted(line.weightKg);
+    floorDm += counted(line.floorDm);
   }
   return { weightKg, floorDm, quantities };
 }

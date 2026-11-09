@@ -497,7 +497,8 @@ function build(
       startMinute: parseTime(spec.start) ?? 0,
       endMinute: parseTime(spec.end) ?? 0,
       bookingMade: booked,
-      bookingReference: booked ? `RDV-${String(51_000 + serial * 7).slice(-5)}` : null,
+      // A reference of its own for each stop booked.
+      bookingReference: booked ? `RDV-${51_000 + serial * 10 + index}` : null,
     };
   });
   const lines = template.lines.map(
