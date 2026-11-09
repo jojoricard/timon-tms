@@ -9,8 +9,10 @@ import { expect, type Page, test } from '@playwright/test';
 type Screen = {
   name: string;
   path: string;
-  /** Opens the first record of the list, for a form. */
-  open?: { url: RegExp };
+  /** Opens the first record of the list, or of its rows that match `row`, for a form. */
+  open?: { url: RegExp; row?: RegExp };
+  /** Opens the split screen of the order. */
+  split?: boolean;
   /** Opens the change dialog of the unit. */
   dialog?: boolean;
   /** Opens this tab of the record. */
@@ -33,6 +35,13 @@ const screens: Screen[] = [
     tab: /^(History|Historique)/,
   },
   { name: 'new order', path: '/orders/new' },
+  { name: 'order import', path: '/orders/import' },
+  {
+    name: 'order split',
+    path: '/orders?status=to-review',
+    open: { url: /\/orders\/[0-9a-f-]{36}$/, row: /Transalpina/ },
+    split: true,
+  },
   { name: 'drivers', main: true, path: '/resources/drivers', table: true },
   { name: 'power units', main: true, path: '/resources/power-units', table: true },
   { name: 'trailers', main: true, path: '/resources/trailers', table: true },
@@ -75,15 +84,26 @@ const screens: Screen[] = [
 /** Waits until the screen shows its data: a table row, or a form field. */
 async function settle(page: Page) {
   await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
-  await expect(page.locator('main :is(tbody tr, input, select)').first()).toBeVisible();
+  await expect(
+    page.locator('main :is(tbody tr, input, select, .split-line)').first(),
+  ).toBeVisible();
 }
 
 async function visit(page: Page, screen: Screen) {
   await page.goto(screen.path);
   await settle(page);
   if (screen.open) {
-    await page.locator('main table tbody .row-link').first().click();
+    const rows = page.locator('main table tbody tr');
+    await (screen.open.row ? rows.filter({ hasText: screen.open.row }) : rows)
+      .locator('.row-link')
+      .first()
+      .click();
     await expect(page).toHaveURL(screen.open.url);
+    await settle(page);
+  }
+  if (screen.split) {
+    await page.getByRole('link', { name: /^(Split|Scinder)$/ }).click();
+    await expect(page).toHaveURL(/\/split$/);
     await settle(page);
   }
   if (screen.tab) {
@@ -196,7 +216,7 @@ for (const width of [1280, 390]) {
     test.use({ viewport: { width, height: width < 640 ? 844 : 900 } });
 
     test('no screen scrolls sideways; wide tables scroll in their frame', async ({ page }) => {
-      // Twenty-one screens in a row: more than the time one screen is given.
+      // Twenty-three screens in a row: more than the time one screen is given.
       test.setTimeout(180_000);
       await start(page);
 

@@ -3,8 +3,10 @@ import {
   InUseError,
   type NewOrderEvent,
   type OrderRecord,
+  type OrderRef,
   type Ports,
   type SiteRecord,
+  StaleVersionError,
   setCustomerArchived,
   setSiteArchived,
 } from '@timon/app';
@@ -326,5 +328,138 @@ describe('history', () => {
       ['created', now.toString(), null],
     ]);
     expect(history[1]).toMatchObject({ origin: 'hand', status: 'to-plan' });
+  });
+});
+
+describe('splitting', () => {
+  /** Two pickups and two deliveries, one line from each pickup to each delivery. */
+  async function merged() {
+    const { customer, pickup, delivery } = await fixtures();
+    const base = record(customer.id, pickup.id, delivery.id);
+    const second = record(customer.id, delivery.id, pickup.id);
+    const order = await ports.orders.create(
+      {
+        ...base,
+        status: 'to-review',
+        stops: [...base.stops, ...second.stops],
+        lines: [...base.lines, ...second.lines],
+      },
+      2026,
+      created,
+    );
+    const [p1, d1, p2, d2] = order.stops;
+    const [l1, l2] = order.lines;
+    const group = (stops: OrderRecord['stops'], lines: OrderRecord['lines']): OrderRecord => ({
+      ...base,
+      status: 'to-plan',
+      stops,
+      lines,
+    });
+    const copy = <T extends { id: string }>(x: T, ids: Map<string, string>) => {
+      const id = uuid();
+      ids.set(x.id, id);
+      return { ...x, id };
+    };
+    const ids = new Map<string, string>();
+    const movedStops = [p2, d2].map((s) => copy(s as NonNullable<typeof s>, ids));
+    const movedLines = [l2].map((l) => ({
+      ...(l as NonNullable<typeof l>),
+      id: uuid(),
+      fromStopId: ids.get(l?.fromStopId ?? '') ?? '',
+      toStopId: ids.get(l?.toStopId ?? '') ?? '',
+    }));
+    return {
+      order,
+      kept: group([p1, d1] as OrderRecord['stops'], [l1] as OrderRecord['lines']),
+      moved: group(movedStops, movedLines),
+    };
+  }
+
+  const events = ({ moved }: { kept: OrderRef; moved: OrderRef }) => ({
+    kept: [{ at: now, kind: 'split', other: moved.number, otherId: moved.id, lines: [2] } as const],
+    moved: [{ ...created, origin: 'split', source: 'CMD-2026-000001' } as NewOrderEvent],
+  });
+
+  it('writes both groups in one transaction, the second numbered next, one family', async () => {
+    const { order, kept, moved } = await merged();
+    const split = await ports.orders.split(order.id, 1, kept, moved, 2026, events);
+    expect(split?.kept).toMatchObject({
+      id: order.id,
+      number: 'CMD-2026-000001',
+      version: 2,
+      status: 'to-plan',
+      splitRootId: order.id,
+    });
+    expect(split?.kept.lines).toHaveLength(1);
+    expect(split?.moved).toMatchObject({
+      number: 'CMD-2026-000002',
+      version: 1,
+      splitRootId: order.id,
+    });
+    expect((await ports.orders.history(order.id))[0]).toMatchObject({
+      kind: 'split',
+      other: 'CMD-2026-000002',
+      lines: [2],
+    });
+    expect(await ports.orders.history(split?.moved.id ?? '')).toMatchObject([
+      { kind: 'created', origin: 'split' },
+    ]);
+  });
+
+  it('refused on a stale version, writes nothing and takes no number', async () => {
+    const { order, kept, moved } = await merged();
+    await expect(ports.orders.split(order.id, 7, kept, moved, 2026, events)).rejects.toThrow(
+      StaleVersionError,
+    );
+    expect((await ports.orders.get(order.id))?.lines).toHaveLength(2);
+    expect(await ports.orders.list({ statuses: ['to-plan', 'to-review'] })).toHaveLength(1);
+    const next = await ports.orders.create(
+      record(kept.customerId, kept.stops[0]?.siteId ?? '', kept.stops[1]?.siteId ?? ''),
+      2026,
+      created,
+    );
+    expect(next.number).toBe('CMD-2026-000002');
+  });
+
+  it('twice at the same time on one version: one wins, the other is stale', async () => {
+    const { order, kept, moved } = await merged();
+    const results = await Promise.allSettled([
+      ports.orders.split(order.id, 1, kept, moved, 2026, events),
+      ports.orders.split(order.id, 1, kept, { ...moved }, 2026, events),
+    ]);
+    expect(results.map((r) => r.status).sort()).toEqual(['fulfilled', 'rejected']);
+    expect(await ports.orders.list({ statuses: ['to-plan', 'to-review'] })).toHaveLength(2);
+  });
+
+  it('a family is kept through a second split, and the reference search leaves it out', async () => {
+    const { order, kept, moved } = await merged();
+    const first = await ports.orders.split(order.id, 1, kept, moved, 2026, events);
+    if (!first) throw new Error('not split');
+    const again = await ports.orders.split(
+      first.moved.id,
+      1,
+      { ...moved, lines: moved.lines, stops: moved.stops },
+      record(kept.customerId, kept.stops[0]?.siteId ?? '', kept.stops[1]?.siteId ?? ''),
+      2026,
+      events,
+    );
+    expect(again?.moved.splitRootId).toBe(order.id);
+    expect(again?.kept.splitRootId).toBe(order.id);
+    expect(await ports.orders.findByReference(kept.customerId, 'LML-88213', order.id)).toEqual([]);
+    const apart = await ports.orders.create(
+      record(kept.customerId, kept.stops[0]?.siteId ?? '', kept.stops[1]?.siteId ?? ''),
+      2026,
+      created,
+    );
+    expect(
+      (await ports.orders.findByReference(kept.customerId, 'LML-88213', order.id)).map(
+        (o) => o.number,
+      ),
+    ).toEqual([apart.number]);
+    expect(
+      (await ports.orders.findByReference(kept.customerId, 'LML-88213', apart.id)).map(
+        (o) => o.number,
+      ),
+    ).toEqual(['CMD-2026-000001', 'CMD-2026-000002', 'CMD-2026-000003']);
   });
 });

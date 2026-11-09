@@ -359,7 +359,9 @@ describe('an existing order', () => {
     expect(copy.body).toMatchObject({ status: 'to-plan', customerId: o.customerId });
     expect(copy.body.number).not.toBe(o.number);
     const history = (await call('GET', `/orders/${copy.body.id}/history`)).body.events;
-    expect(history).toMatchObject([{ kind: 'created', origin: 'duplicate', source: o.number }]);
+    expect(history).toMatchObject([
+      { kind: 'created', origin: 'duplicate', source: o.number, sourceId: o.id },
+    ]);
   });
 
   it('a reference already used by another order of the customer warns', async () => {
