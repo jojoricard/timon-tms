@@ -675,5 +675,266 @@
   "sites_empty": "Aucun site ne correspond.",
   "rule_formats_driver": "Dates au format jj/mm/aaaa ou aaaa-mm-jj",
   "problem_one_column": "Colonnes manquantes : {columns}. Le fichier se lit comme une seule colonne : ses colonnes sont-elles séparées par un point-virgule, une virgule ou une tabulation ?",
-  "issue_opening_unreadable": "{day} : « {value} » ne se lit pas ; écrivez les horaires ainsi : 06:00-12:00/14:00-18:00, ou laissez la case vide si fermé"
+  "issue_opening_unreadable": "{day} : « {value} » ne se lit pas ; écrivez les horaires ainsi : 06:00-12:00/14:00-18:00, ou laissez la case vide si fermé",
+  "action_add_delivery": "Ajouter une livraison",
+  "action_add_line": "Ajouter une ligne",
+  "action_add_pickup": "Ajouter un chargement",
+  "action_cancel_order": "Annuler la commande",
+  "action_duplicate": "Dupliquer",
+  "action_keep_order": "Garder la commande",
+  "action_new_order": "Nouvelle commande",
+  "all_customers": "Tous les clients",
+  "all_sites_group": "Carnet d'adresses",
+  "author_not_recorded": "Auteur non enregistré",
+  "body_type_any": "Indifférente",
+  "booking_detail": "Rendez-vous : {detail}.",
+  "change_booking_made": "Rendez-vous pris : {where}.",
+  "change_booking_undone": "Rendez-vous retiré : {where}.",
+  "change_field": "{field} : {from} devient {to}.",
+  "change_line": "Ligne {n}, {field} : {from} devient {to}.",
+  "change_line_added": "Ligne {n} ajoutée : {description}, {goods}.",
+  "change_line_removed": "Ligne {n} retirée : {description}.",
+  "change_stop": "{where} : {field} {from} devient {to}.",
+  "change_stop_added": "Arrêt ajouté : {where}, créneau {slot}.",
+  "change_stop_removed": "Arrêt retiré : {where}.",
+  "change_ticked": "{field} {ticked}.",
+  "choose": "Choisir…",
+  "closed_on": "Fermé le {day}.",
+  "col_customer_reference": "Client et référence",
+  "col_first_pickup": "Premier chargement",
+  "col_goods": "Marchandises",
+  "col_last_delivery": "Dernière livraison",
+  "col_number": "Numéro",
+  "col_requirements": "Exigences",
+  "col_warnings": "Alertes",
+  "confirm_cancel_order_text": "Elle quitte les commandes à planifier et passe en lecture seule. Elle n'est jamais supprimée et peut être dupliquée.",
+  "confirm_cancel_order_title": "Annuler {number} ?",
+  "count_deliveries": [
+    {
+      "declarations": ["input count", "local countPlural = count: plural"],
+      "selectors": ["countPlural"],
+      "match": {
+        "countPlural=one": "{count} livraison",
+        "countPlural=*": "{count} livraisons"
+      }
+    }
+  ],
+  "count_orders": [
+    {
+      "declarations": ["input count", "local countPlural = count: plural"],
+      "selectors": ["countPlural"],
+      "match": {
+        "countPlural=one": "{count} commande",
+        "countPlural=*": "{count} commandes"
+      }
+    }
+  ],
+  "count_pickups": [
+    {
+      "declarations": ["input count", "local countPlural = count: plural"],
+      "selectors": ["countPlural"],
+      "match": {
+        "countPlural=one": "{count} chargement",
+        "countPlural=*": "{count} chargements"
+      }
+    }
+  ],
+  "count_warnings": [
+    {
+      "declarations": ["input count", "local countPlural = count: plural"],
+      "selectors": ["countPlural"],
+      "match": {
+        "countPlural=one": "{count} alerte",
+        "countPlural=*": "{count} alertes"
+      }
+    }
+  ],
+  "date_range_to": "au",
+  "delivery_at": "livraison à {site}",
+  "pickup_at": "chargement à {site}",
+  "duplicate_banner": "Copie de {number} : saisissez les dates des arrêts, puis créez la commande.",
+  "event_cancelled": "Annulée",
+  "event_changed": "Modifiée",
+  "event_created_demo": "Créée par le générateur de démonstration",
+  "event_created_duplicate": "Créée par duplication",
+  "event_created_hand": "Créée à la main",
+  "event_created_import": "Créée par import",
+  "event_duplicated_from": "Copie de {number}.",
+  "event_file": "Fichier {file}, lignes {lines}.",
+  "event_reason": "Motif : {reason}",
+  "event_status": "Statut modifié",
+  "event_status_change": "Statut : {from} devient {to}.",
+  "event_status_is": "Statut : {status}.",
+  "field_adr_class": "Classe ADR",
+  "field_booking_made": "Rendez-vous pris",
+  "field_booking_reference": "Référence du rendez-vous",
+  "field_cancel_reason": "Motif",
+  "field_customer": "Client",
+  "field_customer_reference": "Référence client",
+  "field_date": "Date",
+  "field_description": "Désignation",
+  "field_floor_metres": "Mètres de plancher",
+  "field_from_date": "Premier chargement à partir du",
+  "field_to_date": "Premier chargement jusqu'au",
+  "field_from_stop": "Chargement",
+  "field_to_stop": "Livraison",
+  "field_from_time": "De",
+  "field_to_time": "À",
+  "field_packaging": "Conditionnement",
+  "field_quantity": "Quantité",
+  "field_shape": "Forme",
+  "field_slot": "Créneau",
+  "field_temperature_min": "Température min. (°C)",
+  "field_temperature_max": "Température max. (°C)",
+  "field_un_number": "Numéro ONU",
+  "field_weight": "Poids brut (kg)",
+  "first_pickup_on": "premier chargement le {date} à {time}",
+  "floor_metres_total": "{metres} mètres de plancher",
+  "from_today": "à partir d'aujourd'hui",
+  "from_date": "à partir du {date}",
+  "goods_hint": "Chaque ligne part d'un chargement et va à une livraison de cette commande. Les totaux additionnent les lignes.",
+  "history_author_text": "Chaque entrée a un auteur. Il reste vide tant que personne ne se connecte à Timon ; les entrées déjà enregistrées gardent leur date.",
+  "history_author_title": "Auteur",
+  "history_recorded_text": "La création, à la main, par import avec son fichier, ou par le générateur de démonstration ; chaque modification avec les champs modifiés, avant et après ; chaque changement de statut avec son motif ; une division et une duplication.",
+  "history_recorded_title": "Ce qui est enregistré",
+  "in_use": [
+    {
+      "declarations": ["input count", "input orders", "local countPlural = count: plural"],
+      "selectors": ["countPlural"],
+      "match": {
+        "countPlural=one": "Utilisé par la commande {orders}, à planifier ou à revoir : annulez-la ou modifiez-la d'abord.",
+        "countPlural=*": "Utilisé par les commandes {orders}, à planifier ou à revoir : annulez-les ou modifiez-les d'abord."
+      }
+    }
+  ],
+  "issue_archived": "{field} archivé",
+  "issue_delivery_before_pickup": "la livraison finit avant le début du chargement à {site}, à {start}",
+  "issue_delivery_required": "la commande doit avoir une livraison",
+  "issue_lines_required": "la commande doit avoir une ligne de marchandise",
+  "issue_pickup_required": "la commande doit avoir un chargement",
+  "issue_several_pickups_and_deliveries": "{pickups} chargements et {deliveries} livraisons : une commande a un seul chargement ou une seule livraison",
+  "issue_site_not_located": "le site {site} n'est pas localisé : localisez-le d'abord dans le carnet d'adresses",
+  "issue_stop_without_goods": "aucune ligne de marchandise n'utilise cet arrêt",
+  "issue_temperature_out_of_range": "un nombre entier de −30 à +30 °C",
+  "issue_temperature_range_invalid": "le minimum dépasse le maximum",
+  "issue_un_number_invalid": "un numéro ONU a quatre chiffres",
+  "line_label": "Ligne {n}",
+  "nav_orders": "Commandes",
+  "new_order": "Nouvelle commande",
+  "newest_first": "les plus récentes en premier",
+  "no": "Non",
+  "yes": "Oui",
+  "no_booking_needed": "Pas de rendez-vous",
+  "notes_hint": "pour les exploitants, pas pour le conducteur",
+  "open_on": "Ouvert {ranges} le {day}.",
+  "order_cancelled_banner": "Cette commande est annulée ({reason}). Elle est en lecture seule ; dupliquez-la pour la saisir à nouveau.",
+  "order_cancelled_read_only": "Cette commande est annulée : elle est en lecture seule.",
+  "order_status_cancelled": "Annulée",
+  "order_status_filter_label": "Statut",
+  "order_status_to_plan": "À planifier",
+  "order_status_to_review": "À revoir",
+  "order_tabs_label": "Commande",
+  "orders_caption": "Commandes, groupées par jour du premier chargement",
+  "orders_empty": "Aucune commande à planifier à partir de cette date.",
+  "orders_footer": [
+    {
+      "declarations": ["input count", "local countPlural = count: plural"],
+      "selectors": ["countPlural"],
+      "match": {
+        "countPlural=one": "{count} commande affichée · commandes annulées sur demande · une commande est annulée, jamais supprimée",
+        "countPlural=*": "{count} commandes affichées · commandes annulées sur demande · une commande est annulée, jamais supprimée"
+      }
+    }
+  ],
+  "orders_no_match": "Aucune commande ne correspond.",
+  "orders_subtitle": "{toPlan} à planifier · {toReview} à revoir · {from}",
+  "orders_title": "Commandes",
+  "other_sites_group": "Autres sites",
+  "packaging_bulk": "vrac",
+  "packaging_euro_pallet": [
+    {
+      "declarations": ["input count", "local countPlural = count: plural"],
+      "selectors": ["countPlural"],
+      "match": {
+        "countPlural=one": "{count} palette Europe",
+        "countPlural=*": "{count} palettes Europe"
+      }
+    }
+  ],
+  "packaging_pallet": [
+    {
+      "declarations": ["input count", "local countPlural = count: plural"],
+      "selectors": ["countPlural"],
+      "match": {
+        "countPlural=one": "{count} palette",
+        "countPlural=*": "{count} palettes"
+      }
+    }
+  ],
+  "packaging_parcel": [
+    {
+      "declarations": ["input count", "local countPlural = count: plural"],
+      "selectors": ["countPlural"],
+      "match": {
+        "countPlural=one": "{count} colis",
+        "countPlural=*": "{count} colis"
+      }
+    }
+  ],
+  "reference_is": "Référence {reference}",
+  "requirement_adr": "ADR {classes}",
+  "requirement_atp": "Attestation ATP",
+  "requirement_body_type": "Carrosserie",
+  "requirement_max_length": "Longueur max. {metres} m",
+  "requirement_max_weight": "Poids max. {weight}",
+  "requirement_no_semi_trailer": "Pas de semi-remorque",
+  "requirement_side_loading": "Chargement latéral",
+  "requirement_tail_lift": "Hayon",
+  "requirement_tail_lift_or_crane": "Hayon ou grue",
+  "requirements_empty": "Aucune pour l'instant : elles viennent des marchandises, de la commande et des sites.",
+  "requirements_hint": "ce qu'un ensemble doit offrir pour la réaliser",
+  "review_shape": "{pickups} et {deliveries}",
+  "review_site_not_located": "Site non localisé",
+  "search_orders": "Numéro ou référence client",
+  "section_goods": "Marchandises",
+  "section_order": "Commande",
+  "section_stops": "Arrêts",
+  "section_warnings": "Alertes",
+  "shape_one_delivery": "Plusieurs chargements, une livraison",
+  "shape_one_pickup": "Un chargement, plusieurs livraisons",
+  "shape_remove_deliveries": "Gardez une seule livraison avant de choisir cette forme.",
+  "shape_remove_pickups": "Gardez un seul chargement avant de choisir cette forme.",
+  "sorted_by_first_pickup": "Triées par premier chargement",
+  "source_equipment": "Équipements de protection de {sites}",
+  "source_line": "Ligne {n}",
+  "source_lines": "Lignes {lines}",
+  "source_order": "Coché sur la commande",
+  "source_temperature_goods": "Marchandises sous température dirigée",
+  "source_tightest": "la plage la plus étroite",
+  "stop_delivery": "Livraison",
+  "stop_pickup": "Chargement",
+  "stops_hint": "heures dans le fuseau de chaque site",
+  "tab_history": "Historique",
+  "tab_order": "Commande",
+  "temperature_range": "{min} à {max} °C",
+  "ticked": "coché",
+  "unticked": "décoché",
+  "to_review_banner": "À revoir : {reasons}. Corrigez, puis enregistrez : la commande passe à planifier.",
+  "unit_kg": "{kg} kg",
+  "usual_sites_group": "Sites habituels du client",
+  "warning_booking": "{where} : le site demande un rendez-vous, pas encore pris.",
+  "warning_booking_short": "Rendez-vous à prendre",
+  "warning_closed": "{where} : le site est fermé de {start} à {end} le {day}.",
+  "warning_closed_short": "Fermé {start}–{end}",
+  "warning_floor": "{metres} mètres de plancher dépassent les {max} m du plateau d'une semi-remorque.",
+  "warning_floor_short": "{metres} m de plancher",
+  "warning_outside_hours": "{where} : {start}–{end} est en dehors des heures d'ouverture le {day}.",
+  "warning_outside_hours_short": "Hors heures d'ouverture",
+  "warning_reference": "La référence client est déjà utilisée par {orders}.",
+  "warning_reference_short": "Référence déjà utilisée",
+  "warning_weight": "{weight} dépassent les {max} de charge utile habituelle d'une semi-remorque.",
+  "warnings_empty": "Aucune.",
+  "warnings_hint": "jamais bloquantes",
+  "warning_temperature": "Pas de plage de température commune : ces lignes demandent une carrosserie multi-température ou deux commandes.",
+  "warning_temperature_short": "Pas de température commune"
 }

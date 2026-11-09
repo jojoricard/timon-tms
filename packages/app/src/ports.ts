@@ -1,13 +1,18 @@
 import type {
   ContactDetails,
   CustomerDetails,
+  GoodsLine,
   OpenPeriod,
+  OrderChange,
+  OrderDetails,
+  OrderStatus,
   Period,
   Resource,
   ResourceBooking,
   ResourceDetails,
   ResourceKind,
   SiteDetails,
+  StopKind,
   Temporal,
 } from '@timon/domain';
 import type { Geocoder } from './geocoding.ts';
@@ -61,6 +66,31 @@ export class StaleVersionError extends Error {
     super(`The record is at version ${version}`);
     this.version = version;
   }
+}
+
+/** An order, as other records name it. */
+export type OrderRef = { readonly id: string; readonly number: string };
+
+/**
+ * Raised by a repository when archiving a customer or a site that an order to plan or to review
+ * uses (SPEC-004 rule 8). Carries those orders.
+ */
+export class InUseError extends Error {
+  override readonly name = 'InUseError';
+  readonly orders: readonly OrderRef[];
+
+  constructor(orders: readonly OrderRef[]) {
+    super(`Used by ${orders.map((o) => o.number).join(', ')}`);
+    this.orders = orders;
+  }
+}
+
+/**
+ * Raised by a repository when an order names a customer or a site archived since the use case
+ * read it (SPEC-004 rule 8).
+ */
+export class ArchivedReferenceError extends Error {
+  override readonly name = 'ArchivedReferenceError';
 }
 
 /** Raised by a repository when the resource already holds a document of that type. */
@@ -250,7 +280,7 @@ export interface CustomerRepository {
   update(id: string, version: number, customer: CustomerInput): Promise<StoredCustomer | undefined>;
   /**
    * @throws StaleVersionError; SiretTakenError when restoring a SIRET another active customer
-   * now has.
+   * now has; InUseError when archiving a customer an order to plan or to review uses.
    */
   setArchived(id: string, version: number, archived: boolean): Promise<StoredCustomer | undefined>;
 }
@@ -276,8 +306,104 @@ export interface SiteRepository {
   createMany(sites: readonly SiteRecord[]): Promise<number>;
   /** @throws StaleVersionError, OpeningOverlapError */
   update(id: string, version: number, site: SiteRecord): Promise<StoredSite | undefined>;
-  /** @throws StaleVersionError */
+  /** @throws StaleVersionError; InUseError when an order to plan or to review uses the site. */
   setArchived(id: string, version: number, archived: boolean): Promise<StoredSite | undefined>;
+}
+
+/** A stop as stored: its slot as instants, read back in the site's time zone. */
+export type StopRecord = {
+  readonly id: string;
+  readonly kind: StopKind;
+  readonly siteId: string;
+  readonly period: Period;
+  readonly bookingMade: boolean;
+  readonly bookingReference: string | null;
+};
+
+/** An order ready to store: every stop has a full slot, every line its two stops. */
+export type OrderRecord = Omit<OrderDetails, 'stops' | 'lines'> & {
+  readonly status: Exclude<OrderStatus, 'cancelled'>;
+  readonly stops: readonly StopRecord[];
+  readonly lines: readonly GoodsLine[];
+};
+
+export type StoredOrder = Omit<OrderRecord, 'status'> & {
+  readonly id: string;
+  readonly number: string;
+  readonly status: OrderStatus;
+  readonly cancelReason: string | null;
+  readonly version: number;
+  readonly createdAt: Temporal.Instant;
+  readonly updatedAt: Temporal.Instant;
+  readonly historyCount: number;
+};
+
+/** How an order came to exist. */
+export const orderOrigins = ['hand', 'import', 'demo', 'duplicate'] as const;
+export type OrderOrigin = (typeof orderOrigins)[number];
+
+/** What the history of an order records (SPEC-004, Numbering and history). */
+export type OrderEventDetails =
+  | {
+      readonly kind: 'created';
+      readonly origin: OrderOrigin;
+      readonly status: OrderStatus;
+      /** The order it was duplicated from. */
+      readonly source: string | null;
+      readonly fileName: string | null;
+      readonly fileLines: readonly number[];
+    }
+  | { readonly kind: 'changed'; readonly changes: readonly OrderChange[] }
+  | {
+      readonly kind: 'status';
+      readonly from: OrderStatus;
+      readonly to: OrderStatus;
+      readonly reason: string | null;
+    };
+
+export type NewOrderEvent = OrderEventDetails & { readonly at: Temporal.Instant };
+
+export type OrderEvent = NewOrderEvent & {
+  readonly id: string;
+  /** Empty until people sign in. */
+  readonly authorId: string | null;
+};
+
+export interface OrderRepository {
+  /** The orders of the given statuses, of one customer when named. */
+  list(filter: {
+    statuses: readonly OrderStatus[];
+    customerId?: string | undefined;
+  }): Promise<StoredOrder[]>;
+  get(id: string): Promise<StoredOrder | undefined>;
+  /** The customer's orders, not cancelled, with this reference, other than `exceptId`. */
+  findByReference(customerId: string, reference: string, exceptId?: string): Promise<OrderRef[]>;
+  /**
+   * Gives the order the next number of the company for `year`, never reused, safe under
+   * concurrent creation. @throws ArchivedReferenceError
+   */
+  create(order: OrderRecord, year: number, event: NewOrderEvent): Promise<StoredOrder>;
+  /** All or nothing, in one transaction, numbered in turn. @throws ArchivedReferenceError */
+  createMany(
+    orders: readonly { order: OrderRecord; event: NewOrderEvent }[],
+    year: number,
+  ): Promise<number>;
+  /** Stops and lines replaced. @throws StaleVersionError, ArchivedReferenceError */
+  update(
+    id: string,
+    version: number,
+    order: OrderRecord,
+    events: readonly NewOrderEvent[],
+  ): Promise<StoredOrder | undefined>;
+  /** @throws StaleVersionError */
+  cancel(
+    id: string,
+    version: number,
+    reason: string,
+    event: NewOrderEvent,
+  ): Promise<StoredOrder | undefined>;
+  /** Newest first. */
+  history(id: string): Promise<OrderEvent[]>;
 }
 
 /** The current time; tests fix it. */
@@ -293,6 +419,7 @@ export type Ports = {
   readonly units: UnitRepository;
   readonly customers: CustomerRepository;
   readonly sites: SiteRepository;
+  readonly orders: OrderRepository;
   readonly geocoder: Geocoder;
   readonly clock: Clock;
 };

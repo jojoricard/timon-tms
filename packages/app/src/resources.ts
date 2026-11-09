@@ -30,6 +30,7 @@ export type FieldIssue =
       readonly field: string;
       readonly code:
         | 'unknown-value'
+        | 'archived'
         | 'opening-unreadable'
         | 'invalid-date'
         | 'invalid-number'

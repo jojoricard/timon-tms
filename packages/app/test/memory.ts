@@ -1,10 +1,13 @@
 import { overlapsOpen, plateKey, type ResourceBooking, Temporal } from '@timon/domain';
 import {
+  ArchivedReferenceError,
   CustomerCodeTakenError,
   type CustomerInput,
   DocumentTypeTakenError,
   type Geocoder,
+  InUseError,
   type NewResource,
+  type OrderEvent,
   PlateTakenError,
   type Ports,
   type ReferenceLists,
@@ -13,6 +16,7 @@ import {
   StaleVersionError,
   type StoredCustomer,
   type StoredDocument,
+  type StoredOrder,
   type StoredResource,
   type StoredSite,
   type StoredUnit,
@@ -80,6 +84,9 @@ export function memoryPorts(
   const sites: StoredSite[] = [];
   const bookings: ResourceBooking[] = [];
   const units: StoredUnit[] = [];
+  const orders: StoredOrder[] = [];
+  const events: (OrderEvent & { orderId: string })[] = [];
+  const counters = new Map<number, number>();
   let next = 0;
   const id = (prefix: string) => `${prefix}-${++next}`;
   const at = Temporal.Instant.from(now);
@@ -178,6 +185,32 @@ export function memoryPorts(
   };
   const unitIndex = (unitId: string) => units.findIndex((u) => u.id === unitId);
 
+  // Orders: rule 8 of SPEC-004, as the locks of the database.
+  const activeUsing = (match: (o: StoredOrder) => boolean) =>
+    orders
+      .filter((o) => o.status !== 'cancelled' && match(o))
+      .map((o) => ({ id: o.id, number: o.number }));
+  const assertActive = (order: { customerId: string; stops: readonly { siteId: string }[] }) => {
+    if (customers.find((c) => c.id === order.customerId)?.archived) {
+      throw new ArchivedReferenceError();
+    }
+    if (order.stops.some((stop) => sites.find((s) => s.id === stop.siteId)?.archived)) {
+      throw new ArchivedReferenceError();
+    }
+  };
+  const record = (orderId: string, list: readonly Omit<OrderEvent, 'id' | 'authorId'>[]) => {
+    for (const event of list) {
+      events.push({ ...event, id: id('event'), authorId: null, orderId } as OrderEvent & {
+        orderId: string;
+      });
+    }
+  };
+  const withHistory = (order: StoredOrder): StoredOrder => ({
+    ...order,
+    historyCount: events.filter((e) => e.orderId === order.id).length,
+  });
+  const orderIndex = (orderId: string) => orders.findIndex((o) => o.id === orderId);
+
   const ports: Ports = {
     clock: { now: () => at },
     units: {
@@ -245,6 +278,73 @@ export function memoryPorts(
       },
     },
     geocoder,
+    orders: {
+      list: async ({ statuses, customerId }) =>
+        orders
+          .filter(
+            (o) => statuses.includes(o.status) && (!customerId || o.customerId === customerId),
+          )
+          .map(withHistory),
+      get: async (orderId) => {
+        const order = orders.find((o) => o.id === orderId);
+        return order ? withHistory(order) : undefined;
+      },
+      findByReference: async (customerId, reference, exceptId) =>
+        activeUsing(
+          (o) =>
+            o.customerId === customerId && o.customerReference === reference && o.id !== exceptId,
+        ),
+      create: async (order, year, event) => {
+        assertActive(order);
+        const sequence = (counters.get(year) ?? 0) + 1;
+        counters.set(year, sequence);
+        const created: StoredOrder = {
+          ...order,
+          id: id('order'),
+          number: `CMD-${year}-${String(sequence).padStart(6, '0')}`,
+          cancelReason: null,
+          version: 1,
+          createdAt: at,
+          updatedAt: at,
+          historyCount: 0,
+        };
+        orders.push(created);
+        record(created.id, [event]);
+        return withHistory(created);
+      },
+      createMany: async (list, year) => {
+        for (const { order, event } of list) await ports.orders.create(order, year, event);
+        return list.length;
+      },
+      update: async (orderId, version, order, list) => {
+        const index = orderIndex(orderId);
+        const existing = current(orders[index], version);
+        if (!existing) return undefined;
+        assertActive(order);
+        orders[index] = { ...existing, ...order, version: version + 1, updatedAt: at };
+        record(orderId, list);
+        return withHistory(orders[index]);
+      },
+      cancel: async (orderId, version, reason, event) => {
+        const index = orderIndex(orderId);
+        const existing = current(orders[index], version);
+        if (!existing) return undefined;
+        orders[index] = {
+          ...existing,
+          status: 'cancelled',
+          cancelReason: reason,
+          version: version + 1,
+          updatedAt: at,
+        };
+        record(orderId, [event]);
+        return withHistory(orders[index]);
+      },
+      history: async (orderId) =>
+        events
+          .filter((e) => e.orderId === orderId)
+          .reverse()
+          .map(({ orderId: _, ...event }) => event),
+    },
     customers: {
       list: async ({ includeArchived }) => customers.filter((c) => includeArchived || !c.archived),
       get: async (customerId) => customers.find((c) => c.id === customerId),
@@ -286,6 +386,8 @@ export function memoryPorts(
         const index = customers.findIndex((c) => c.id === customerId);
         const existing = current(customers[index], version);
         if (!existing) return undefined;
+        const using = activeUsing((o) => o.customerId === customerId);
+        if (archived && using.length > 0) throw new InUseError(using);
         const updated = { ...existing, archived, version: version + 1 };
         const conflict = customerConflict(updated);
         if (conflict) throw conflict;
@@ -320,6 +422,8 @@ export function memoryPorts(
         const index = sites.findIndex((s) => s.id === siteId);
         const existing = current(sites[index], version);
         if (!existing) return undefined;
+        const using = activeUsing((o) => o.stops.some((s) => s.siteId === siteId));
+        if (archived && using.length > 0) throw new InUseError(using);
         sites[index] = { ...existing, archived, version: version + 1 };
         return withCustomerIds(sites[index]);
       },
@@ -423,5 +527,5 @@ export function memoryPorts(
       },
     },
   };
-  return { ports, resources, bookings, customers, sites, units };
+  return { ports, resources, bookings, customers, sites, units, orders };
 }

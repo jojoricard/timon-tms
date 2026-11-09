@@ -98,6 +98,18 @@ test('deleting a document asks first, and Cancel keeps it', async ({ page }) => 
 });
 
 test('archiving a customer and a site asks first', async ({ page }) => {
+  // A customer with no order is archived once confirmed.
+  await open(page, '/customers/new', '/api/reference-lists');
+  await page.getByLabel('Legal name').fill('Client sans commande');
+  await page.getByLabel('Code', { exact: true }).fill('SANS-CMD');
+  await page.getByRole('button', { name: 'Create' }).click();
+  await expect(page.getByRole('heading', { level: 1, name: 'Client sans commande' })).toBeVisible();
+  await page.getByRole('button', { name: 'Archive' }).click();
+  await expect(confirmation(page)).toHaveAccessibleName(/^Archive Client sans commande/);
+  await confirmation(page).getByRole('button', { name: 'Archive' }).click();
+  await expect(page.getByRole('button', { name: 'Restore' })).toBeVisible();
+  await expect(page.getByText('This customer is archived')).toBeVisible();
+
   await open(page, '/customers', '/api/customers');
   await page
     .getByRole('link', { name: /Dupont Matériaux/ })
@@ -107,7 +119,12 @@ test('archiving a customer and a site asks first', async ({ page }) => {
   await expect(confirmation(page)).toHaveAccessibleName(/^Archive Dupont Matériaux/);
   await expect(confirmation(page)).toContainText('Its usual sites stay active.');
   await confirmation(page).getByRole('button', { name: 'Archive' }).click();
-  await expect(page.getByRole('button', { name: 'Restore' })).toBeVisible();
+  // SPEC-004 rule 8: every demo customer has orders to plan, so the archiving is refused and the
+  // orders are named.
+  await expect(page.getByRole('alert')).toContainText(
+    /^Used by the orders CMD-\d{4}-\d{6}(, CMD-\d{4}-\d{6})*, to plan or to review: cancel or change them first\.$/,
+  );
+  await expect(page.getByRole('button', { name: 'Archive' })).toBeVisible();
 
   await open(page, '/customers/sites', '/api/sites');
   await page.locator('main table tbody .row-link').first().click();

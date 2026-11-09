@@ -11,6 +11,7 @@ import { type LocatedBy, Temporal, type Weekday } from '@timon/domain';
 import { and, asc, eq, inArray, isNull, ne, notInArray, sql } from 'drizzle-orm';
 import type { Database } from './database.ts';
 import { translateErrors } from './errors.ts';
+import { assertUnused } from './order-repository.ts';
 import {
   contact,
   customer,
@@ -195,20 +196,25 @@ export function customerRepository(db: Database): CustomerRepository {
       );
       return updated ? get(id) : undefined;
     },
+    // SPEC-004 rule 8: archiving waits for the orders being written with the customer.
     setArchived: async (id, version, archived) => {
-      const rows = await translateErrors(() =>
-        db
-          .update(customer)
-          .set({
-            archivedAt: archived ? sql`now()` : null,
-            version: nextVersion(customer),
-            updatedAt: sql`now()`,
-          })
-          .where(atVersion(customer, id, version))
-          .returning({ id: customer.id }),
+      const done = await translateErrors(() =>
+        db.transaction(async (tx) => {
+          if (archived) await assertUnused(tx, { customerId: id });
+          const rows = await tx
+            .update(customer)
+            .set({
+              archivedAt: archived ? sql`now()` : null,
+              version: nextVersion(customer),
+              updatedAt: sql`now()`,
+            })
+            .where(atVersion(customer, id, version))
+            .returning({ id: customer.id });
+          if (rows.length === 0) return missingOrStale(tx, customer, id);
+          return true;
+        }),
       );
-      if (rows.length === 0) return missingOrStale(db, customer, id);
-      return get(id);
+      return done ? get(id) : undefined;
     },
   };
 }
@@ -359,18 +365,23 @@ export function siteRepository(db: Database): SiteRepository {
       );
       return updated ? get(id) : undefined;
     },
+    // SPEC-004 rule 8: archiving waits for the orders being written with the site.
     setArchived: async (id, version, archived) => {
-      const rows = await db
-        .update(site)
-        .set({
-          archivedAt: archived ? sql`now()` : null,
-          version: nextVersion(site),
-          updatedAt: sql`now()`,
-        })
-        .where(atVersion(site, id, version))
-        .returning({ id: site.id });
-      if (rows.length === 0) return missingOrStale(db, site, id);
-      return get(id);
+      const done = await db.transaction(async (tx) => {
+        if (archived) await assertUnused(tx, { siteId: id });
+        const rows = await tx
+          .update(site)
+          .set({
+            archivedAt: archived ? sql`now()` : null,
+            version: nextVersion(site),
+            updatedAt: sql`now()`,
+          })
+          .where(atVersion(site, id, version))
+          .returning({ id: site.id });
+        if (rows.length === 0) return missingOrStale(tx, site, id);
+        return true;
+      });
+      return done ? get(id) : undefined;
     },
   };
 }

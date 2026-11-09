@@ -53,8 +53,15 @@ test('criteria 1 and 2: a unit is composed from free resources; a C1 driver is g
 test('criterion 4: no semi-trailer behind a rigid truck, no trailer behind a light van', async ({
   page,
 }) => {
-  await open(page, '/resources/power-units', '/api/reference-lists');
-  await page.getByRole('link', { name: 'MN-345-OP' }).click();
+  // The demo's rigid trucks are all in units with no end: a new unit cannot start with them. A
+  // free one is created first.
+  await open(page, '/resources/power-units/new', '/api/reference-lists');
+  await page.getByLabel('Registration plate').fill('RT-404-AB');
+  await page.getByRole('radio', { name: 'Rigid truck' }).check();
+  await page.getByRole('radio', { name: 'N3' }).check();
+  await page.getByLabel(/^Gross vehicle weight/).fill('19000');
+  await page.getByRole('button', { name: 'Create' }).click();
+  await expect(page.getByRole('heading', { level: 1, name: /^Rigid truck/ })).toBeVisible();
   await page.getByRole('link', { name: 'New unit with this vehicle' }).click();
   const semi = page.getByRole('radio', { name: /SR-4475/ });
   await expect(semi).toBeDisabled();
@@ -122,8 +129,9 @@ test('criterion 14: a tractor in a unit with no end cannot start another; the un
   await expect(units).toContainText('In the unit H. Perrin, with no end');
   await expect(units.getByRole('link', { name: 'New unit with this vehicle' })).toHaveCount(0);
 
+  // A vehicle in no unit offers it.
   await open(page, '/resources/power-units', '/api/reference-lists');
-  await page.getByRole('link', { name: 'MN-345-OP' }).click();
+  await page.getByRole('link', { name: 'JK-318-LM' }).click();
   await expect(page.getByRole('link', { name: 'New unit with this vehicle' })).toBeVisible();
 });
 

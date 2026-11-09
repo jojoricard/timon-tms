@@ -136,3 +136,34 @@ test('a restore from the archived list, after the record changed elsewhere, asks
   await list.getByLabel('Show archived').uncheck();
   await expect(table.getByRole('row', { name: /Camille Dupuis/ })).toBeVisible();
 });
+
+test('an order changed in another page refuses the save; cancelling from the old version too', async ({
+  page: a,
+  context,
+}) => {
+  await open(a, '/orders', '/api/orders');
+  await a.locator('main tbody .row-link').first().click();
+  await expect(a.getByLabel('Customer', { exact: true })).toBeEditable();
+
+  const b = await context.newPage();
+  await open(b, new URL(a.url()).pathname, '/api/reference-lists');
+  await b.getByRole('textbox', { name: 'Notes' }).fill('Quai 4, appeler avant.');
+  await b.getByRole('button', { name: 'Save changes' }).click();
+  await expect(b.getByText('Saved.')).toBeVisible();
+
+  await a.getByRole('textbox', { name: 'Notes' }).fill('Quai 2.');
+  await a.getByRole('button', { name: 'Save changes' }).click();
+  await expect(staleDialog(a)).toBeVisible();
+  await staleDialog(a).getByRole('button', { name: 'Stay on this page' }).click();
+  await expect(a.getByRole('textbox', { name: 'Notes' })).toHaveValue('Quai 2.');
+
+  // The one-click cancelling names the version too.
+  await a.getByRole('button', { name: 'Cancel order' }).click();
+  const dialog = a.getByRole('alertdialog', { name: /^Cancel CMD-/ });
+  await dialog.getByLabel('Reason').fill('Doublon');
+  await dialog.getByRole('button', { name: 'Cancel order' }).click();
+  await expect(staleDialog(a)).toBeVisible();
+  await staleDialog(a).getByRole('button', { name: 'Reload' }).click();
+  await expect(a.getByRole('textbox', { name: 'Notes' })).toHaveValue('Quai 4, appeler avant.');
+  await expect(a.locator('.t-page-title .t-badge').first()).toHaveText('To plan');
+});

@@ -13,6 +13,8 @@ type Screen = {
   open?: { url: RegExp };
   /** Opens the change dialog of the unit. */
   dialog?: boolean;
+  /** Opens this tab of the record. */
+  tab?: RegExp;
   /** A list whose table is wider than a phone. */
   table?: boolean;
   /** A main list: its table fits its frame at 1,280 px. */
@@ -22,6 +24,15 @@ type Screen = {
 };
 
 const screens: Screen[] = [
+  { name: 'orders', main: true, path: '/orders', table: true },
+  { name: 'order form', path: '/orders', open: { url: /\/orders\/[0-9a-f-]{36}$/ } },
+  {
+    name: 'order history',
+    path: '/orders',
+    open: { url: /\/orders\/[0-9a-f-]{36}$/ },
+    tab: /^(History|Historique)/,
+  },
+  { name: 'new order', path: '/orders/new' },
   { name: 'drivers', main: true, path: '/resources/drivers', table: true },
   { name: 'power units', main: true, path: '/resources/power-units', table: true },
   { name: 'trailers', main: true, path: '/resources/trailers', table: true },
@@ -74,6 +85,10 @@ async function visit(page: Page, screen: Screen) {
     await page.locator('main table tbody .row-link').first().click();
     await expect(page).toHaveURL(screen.open.url);
     await settle(page);
+  }
+  if (screen.tab) {
+    await page.getByRole('link', { name: screen.tab }).click();
+    await expect(page.locator('main .history-entry').first()).toBeVisible();
   }
   if (screen.dialog) {
     await page.getByRole('button', { name: 'Change driver or trailer' }).click();
@@ -134,6 +149,41 @@ async function start(page: Page) {
   await ready;
 }
 
+/**
+ * The options of the screen's segmented controls that overflow: a label wider or taller than its
+ * option (a long label wraps and runs out of an option of fixed height), a label past the edges of
+ * its option, or an option past the edges of its control.
+ */
+const segmentedOverflow = (page: Page) =>
+  page.evaluate(() => {
+    const found: string[] = [];
+    const outside = (inner: DOMRect, outer: DOMRect) =>
+      inner.left < outer.left - 0.5 ||
+      inner.right > outer.right + 0.5 ||
+      inner.top < outer.top - 0.5 ||
+      inner.bottom > outer.bottom + 0.5;
+    for (const control of document.querySelectorAll('.t-segmented-options')) {
+      const box = control.getBoundingClientRect();
+      for (const option of control.querySelectorAll<HTMLElement>('span')) {
+        const text = option.textContent?.trim() ?? '';
+        const rect = option.getBoundingClientRect();
+        if (
+          option.scrollWidth !== option.clientWidth ||
+          option.scrollHeight !== option.clientHeight
+        ) {
+          found.push(`"${text}" overflows its option`);
+        }
+        const range = document.createRange();
+        range.selectNodeContents(option);
+        if ([...range.getClientRects()].some((r) => outside(r, rect))) {
+          found.push(`"${text}" runs past its option`);
+        }
+        if (outside(rect, box)) found.push(`"${text}" runs out of its control`);
+      }
+    }
+    return found;
+  });
+
 /** How far the page reaches past the window, in pixels: 0 when nothing sticks out. */
 const sideways = (page: Page) =>
   page.evaluate(() => {
@@ -146,7 +196,7 @@ for (const width of [1280, 390]) {
     test.use({ viewport: { width, height: width < 640 ? 844 : 900 } });
 
     test('no screen scrolls sideways; wide tables scroll in their frame', async ({ page }) => {
-      // Seventeen screens in a row: more than the time one screen is given.
+      // Twenty-one screens in a row: more than the time one screen is given.
       test.setTimeout(180_000);
       await start(page);
 
@@ -154,6 +204,9 @@ for (const width of [1280, 390]) {
         await test.step(screen.name, async () => {
           await visit(page, screen);
           expect(await sideways(page), `${screen.name} scrolls sideways`).toBe(0);
+          if (width < 640) {
+            expect(await segmentedOverflow(page), `${screen.name}: segmented controls`).toEqual([]);
+          }
           if (width < 640 && screen.table) {
             const { frame, scroller } = table(page);
             expect(await overflow(page), `${screen.name}: the table scrolls`).toBeGreaterThan(0);

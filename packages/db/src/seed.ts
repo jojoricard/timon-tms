@@ -10,8 +10,9 @@ import {
 import { count } from 'drizzle-orm';
 import type { Database } from './database.ts';
 import { createRepositories } from './repositories.ts';
-import { customer, documentType, resource, unit } from './schema.ts';
+import { customer, documentType, resource, transportOrder, unit } from './schema.ts';
 import { moreauEquipment, seedCustomers } from './seed-customers.ts';
+import { seedOrders } from './seed-orders.ts';
 import { seedUnits } from './seed-units.ts';
 
 // The haulier of the mockups, south of Lyon: 18 drivers, 12 power units, 15 trailers. Dates
@@ -389,9 +390,9 @@ function build(lists: ReferenceLists, shift: number) {
 }
 
 /**
- * Writes the demo haulier: resources, then customers and sites, then units. Each part is
- * skipped when it already exists, so it is safe to run at every start of the demo, and on a
- * database seeded before customers or units existed.
+ * Writes the demo haulier: resources, then customers and sites, then units, then orders. Each
+ * part is skipped when it already exists, so it is safe to run at every start of the demo, and
+ * on a database seeded before customers, units or orders existed.
  */
 export async function seed(
   db: Database,
@@ -401,9 +402,11 @@ export async function seed(
   const [resources] = await db.select({ n: count() }).from(resource);
   const [customers] = await db.select({ n: count() }).from(customer);
   const [units] = await db.select({ n: count() }).from(unit);
+  const [orders] = await db.select({ n: count() }).from(transportOrder);
   const writeResources = (resources?.n ?? 0) === 0;
   const writeCustomers = (customers?.n ?? 0) === 0;
   const writeUnits = (units?.n ?? 0) === 0;
+  const writeOrders = (orders?.n ?? 0) === 0;
 
   if (writeResources) {
     // A list entry of this company, not one Timon provides: it has a name, not a code.
@@ -424,5 +427,6 @@ export async function seed(
   }
   if (writeCustomers) await seedCustomers(repositories);
   if (writeUnits) await seedUnits(repositories, today);
-  return writeResources || writeCustomers || writeUnits;
+  if (writeOrders) await seedOrders(repositories, today);
+  return writeResources || writeCustomers || writeUnits || writeOrders;
 }

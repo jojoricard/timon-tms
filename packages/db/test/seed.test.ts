@@ -1,14 +1,16 @@
 import {
   customerSummary,
+  getOrder,
   listCustomers,
   listExpiries,
+  listOrders,
   listResources,
   listSites,
   resourceSummary,
   unitsAt,
   unitsOfResource,
 } from '@timon/app';
-import { isInCountry, Temporal } from '@timon/domain';
+import { checkOrder, isInCountry, Temporal } from '@timon/domain';
 import { afterEach, describe, expect, it } from 'vitest';
 import { createRepositories, seed } from '../src/index.ts';
 import { createTestDatabase, offline, type TestDatabase } from '../src/testing.ts';
@@ -124,4 +126,67 @@ describe('seed', () => {
     const { ports } = await seeded('2027-03-15');
     expect((await unitsAt(ports)).units).toHaveLength(11);
   });
+
+  // From a Monday and from a Saturday: the weekend falls at the end, then at the start.
+  it.each(['2026-11-09', '2026-11-14'])(
+    'writes about 60 orders over the seven days from %s, each checked against the rules',
+    async (today) => {
+      const { ports } = await seeded(today);
+      const end = Temporal.PlainDate.from(today).add({ days: 6 });
+      const { orders, counts } = await listOrders(ports, { to: end });
+      expect(orders.length).toBeGreaterThanOrEqual(55);
+      expect(orders.length).toBeLessThanOrEqual(65);
+      expect(counts.cancelled).toBe(0);
+      expect(orders.every((o) => o.firstPickup && o.firstPickup.date.toString() >= today)).toBe(
+        true,
+      );
+
+      const sites = new Map(
+        (await listSites(ports, { includeArchived: true })).sites.map((s) => [s.id, s]),
+      );
+      for (const summary of orders) {
+        const order = await getOrder(ports, summary.id);
+        if (!order) throw new Error(summary.number);
+        const { blocking, review } = checkOrder(order.details, sites);
+        expect(blocking, order.number).toEqual([]);
+        expect(order.status, order.number).toBe(review.length > 0 ? 'to-review' : 'to-plan');
+      }
+
+      // One with several pickups and deliveries, one with the unlocated site of Saint-Priest.
+      const review = orders.filter((o) => o.status === 'to-review');
+      expect(review.map((o) => [o.customer?.code, o.review.map((i) => i.code)])).toEqual([
+        ['LUMIERE-EM', ['site-not-located']],
+        ['TRANSALP-IT', ['several-pickups-and-deliveries']],
+      ]);
+      // A few with warnings, as the mockup shows.
+      const warned = orders.filter((o) => o.warnings.length > 0);
+      expect(warned.map((o) => o.warnings.map((w) => w.code).join(' ')).sort()).toEqual([
+        'outside-opening-hours',
+        'site-closed booking-to-make',
+        'weight-over',
+      ]);
+      // Chilled goods for the dairy and the pharmaceutical warehouse, ADR for the supplier.
+      const requirements = (code: string) =>
+        new Set(
+          orders
+            .filter((o) => o.requirements.some((r) => r.code === code))
+            .map((o) => o.customer?.code),
+        );
+      expect(requirements('temperature')).toEqual(
+        new Set(['MONTS-LAIT', 'PHARMALP', 'VERCORS-FRO', 'ALPES-FROID']),
+      );
+      expect(requirements('adr')).toEqual(new Set(['RHONE-AGRO']));
+
+      // Each stop booked has a booking reference of its own.
+      const references: string[] = [];
+      for (const summary of orders) {
+        const order = await getOrder(ports, summary.id);
+        for (const stop of order?.details.stops ?? []) {
+          if (stop.bookingReference) references.push(stop.bookingReference);
+        }
+      }
+      expect(references.length).toBeGreaterThan(50);
+      expect(new Set(references).size).toBe(references.length);
+    },
+  );
 });

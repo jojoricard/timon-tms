@@ -25,6 +25,7 @@ import {
 import { periodOf, type ResourceBooking } from '@timon/domain';
 import { bodyLimit } from 'hono/body-limit';
 import { customerApi } from './customer-routes.ts';
+import { orderApi } from './order-routes.ts';
 import {
   Booking,
   DocumentInput,
@@ -280,6 +281,7 @@ export function createApp(ports: Ports) {
   const api = app
     .route('/', customerApi(ports))
     .route('/', unitApi(ports))
+    .route('/', orderApi(ports))
     .openapi(routes.summary, async (c) => {
       const { day, active, units, expiries } = await resourceSummary(ports);
       return c.json({ day: day.toString(), active, units, expiries }, 200);

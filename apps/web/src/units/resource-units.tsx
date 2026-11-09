@@ -43,7 +43,8 @@ export function ResourceUnits({ resource }: { resource: ResourceJson }) {
               {m.action_change_from_date()}
             </button>
           ) : null}
-          {resource.archived ? null : endless ? (
+          {/* Offered once the units are known: a unit with no end disables it (SPEC-003). */}
+          {resource.archived || !units.data ? null : endless ? (
             <Button disabled aria-describedby="new-unit-reason">
               {newUnitLabel[resource.kind]()}
             </Button>

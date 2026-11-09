@@ -36,7 +36,16 @@ export type Issue = {
     | 'licence-missing'
     | 'licence-not-supported'
     | 'not-to-the-minute'
-    | 'end-not-after-start';
+    | 'end-not-after-start'
+    | 'pickup-required'
+    | 'delivery-required'
+    | 'stop-without-goods'
+    | 'delivery-before-pickup'
+    | 'several-pickups-and-deliveries'
+    | 'site-not-located'
+    | 'un-number-invalid'
+    | 'temperature-out-of-range'
+    | 'temperature-range-invalid';
   readonly params?: Readonly<Record<string, string | number>>;
 };
 

@@ -22,6 +22,7 @@ import { and, asc, eq, inArray, isNull, ne, sql } from 'drizzle-orm';
 import { customerRepository, siteRepository } from './customer-repositories.ts';
 import type { Database } from './database.ts';
 import { translateErrors } from './errors.ts';
+import { orderRepository } from './order-repository.ts';
 import {
   bodyType,
   capability,
@@ -55,6 +56,7 @@ export function createRepositories(db: Database, clock: Clock = systemClock): Re
     units: unitRepository(db),
     customers: customerRepository(db),
     sites: siteRepository(db),
+    orders: orderRepository(db),
     clock,
   };
 }
