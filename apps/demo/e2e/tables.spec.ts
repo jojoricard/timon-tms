@@ -73,8 +73,8 @@ async function actionsStay(page: Page, frameSelector: string, scrolls: boolean) 
 }
 
 test('the actions of a table in a form stay in view at the end of their row', async ({ page }) => {
-  // The documents scrolled in their card at 1,100 px; long words now wrap and they fit. The usual
-  // sites scroll at every width.
+  // The documents scrolled in their card at 1,100 px; they fit now that Edit and Remove go one
+  // under the other when short of room, no word being split. The usual sites scroll at every width.
   await page.setViewportSize({ width: 1100, height: 900 });
   await open(page, '/resources/drivers');
   await page.getByRole('link', { name: 'Karim Benali' }).click();

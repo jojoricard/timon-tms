@@ -73,9 +73,12 @@ function OrderPreview({ check, fileName }: { check: Check; fileName: string }) {
                 ) : group.result === 'to-review' ? (
                   <>
                     <StatusBadge tone="warning">{m.order_status_to_review()}</StatusBadge>
-                    <span className="t-field-hint check-note">
-                      {group.review.map(reviewLabel).join(' · ')}
-                    </span>
+                    {/* Under the badge, one line per reason, as in the status column of the list. */}
+                    {group.review.map((issue) => (
+                      <span key={issue.code} className="t-secondary">
+                        {reviewLabel(issue)}
+                      </span>
+                    ))}
                   </>
                 ) : (
                   <StatusBadge tone="ok">{m.check_ready()}</StatusBadge>

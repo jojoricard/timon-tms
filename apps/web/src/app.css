@@ -138,6 +138,16 @@
   gap: var(--space-3);
 }
 
+/*
+ * The actions of a row sit side by side, and one under the other when their column is short of
+ * room: buttons give way, so that the words of the other columns never have to.
+ */
+.row-actions {
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  row-gap: var(--space-1);
+}
+
 /* Resource form */
 
 .capabilities {
@@ -1045,7 +1055,7 @@
 }
 
 .split-site {
-  overflow-wrap: anywhere;
+  overflow-wrap: break-word;
 }
 
 .split-line {
@@ -1070,12 +1080,12 @@
 .split-description {
   margin: 0;
   font-weight: 600;
-  overflow-wrap: anywhere;
+  overflow-wrap: break-word;
 }
 
 .split-line-body p {
   margin: 0;
-  overflow-wrap: anywhere;
+  overflow-wrap: break-word;
 }
 
 @container (width >= 480px) {

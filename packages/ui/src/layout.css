@@ -16,11 +16,16 @@ body {
 }
 
 /*
- * A word longer than its column, a name typed without spaces, breaks inside its cell: the column
- * keeps its share of the table. Codes, plates, dates and times stay on one line (.t-mono).
+ * Text in a cell breaks between words; a word breaks only when it is longer than its column.
+ * `break-word`, unlike `anywhere`, leaves a column at least as wide as its longest word, so the
+ * table never squeezes a text column until "Distribution" splits. The cap keeps one long unbroken
+ * token, a name typed without spaces, from widening its column past that: it bounds only the
+ * least width of the cell, and the column still takes its share of the table when there is room.
+ * Codes, plates, dates and times stay on one line (.t-mono).
  */
 .t-table :is(td, tbody th) {
-  overflow-wrap: anywhere;
+  overflow-wrap: break-word;
+  max-width: 16rem;
 }
 
 /* A card sizes the grids inside it: its width, not the window's, sets their columns. */
