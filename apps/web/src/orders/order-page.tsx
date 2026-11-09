@@ -54,6 +54,7 @@ import { changed, useLeaveGuard } from '../leave-guard.tsx';
 import { m } from '../paraglide/messages.js';
 import { PageHeader } from '../resources/section.tsx';
 import { useSubmit } from '../submit.ts';
+import { NumberLink } from './number-link.tsx';
 import { orderKeys, useOrder, useRefreshOrders } from './order-data.ts';
 import { OrderHistory } from './order-history.tsx';
 import {
@@ -79,10 +80,13 @@ export function OrderPage({
   id,
   duplicateOf,
   tab = 'order',
+  splitInto,
 }: {
   id?: string;
   duplicateOf?: string | undefined;
   tab?: OrderTab;
+  /** The order a split has just made from this one. */
+  splitInto?: string | undefined;
 }) {
   const order = useOrder(id ?? duplicateOf);
   const [notice, setNotice] = useState<string>();
@@ -107,6 +111,7 @@ export function OrderPage({
       order={existing}
       source={duplicateOf ? order.data : undefined}
       tab={existing ? tab : 'order'}
+      splitInto={splitInto}
       notice={notice}
       onNotice={setNotice}
     />
@@ -344,12 +349,14 @@ function OrderForm({
   order,
   source,
   tab,
+  splitInto,
   notice,
   onNotice: setNotice,
 }: {
   order: OrderJson | undefined;
   source: OrderJson | undefined;
   tab: OrderTab;
+  splitInto?: string | undefined;
   notice: string | undefined;
   onNotice: (notice: string | undefined) => void;
 }) {
@@ -557,6 +564,11 @@ function OrderForm({
         actions={
           order ? (
             <>
+              {order.status === 'to-review' && order.shape === 'several-both' ? (
+                <Link className="t-button" to="/orders/$id/split" params={{ id: order.id }}>
+                  {m.action_split()}
+                </Link>
+              ) : null}
               <Link className="t-button" to="/orders/new" search={{ from: order.id }}>
                 {m.action_duplicate()}
               </Link>
@@ -636,6 +648,7 @@ function OrderForm({
           {source ? (
             <Banner tone="ok">{m.duplicate_banner({ number: source.number })}</Banner>
           ) : null}
+          {splitInto ? <SplitBanner id={splitInto} /> : null}
           {order?.status === 'to-review' && order.review.length > 0 ? (
             <Banner tone="warning">
               {m.to_review_banner({ reasons: order.review.map(reviewLabel).join(' · ') })}
@@ -1307,5 +1320,20 @@ function CancelDialog({
         </div>
       </form>
     </Dialog>
+  );
+}
+
+/** After a split: the new order, by its number, one click away. */
+function SplitBanner({ id }: { id: string }) {
+  const other = useOrder(id).data;
+  if (!other) return null;
+  return (
+    <Banner tone="ok">
+      <NumberLink
+        text={m.split_done({ number: other.number })}
+        number={other.number}
+        id={other.id}
+      />
+    </Banner>
   );
 }

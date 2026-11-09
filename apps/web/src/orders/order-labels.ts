@@ -366,6 +366,7 @@ export function changeText(change: Change, lists: ReferenceListsJson | undefined
 export function eventTitle(event: OrderEventJson): string {
   switch (event.kind) {
     case 'created':
+      if (event.origin === 'split') return m.event_created_split({ number: event.source ?? '' });
       return {
         hand: m.event_created_hand,
         import: m.event_created_import,
@@ -374,9 +375,24 @@ export function eventTitle(event: OrderEventJson): string {
       }[event.origin]();
     case 'changed':
       return m.event_changed();
+    case 'split':
+      return m.event_split({
+        count: event.lines.length,
+        lines: event.lines.join(', '),
+        number: event.other,
+      });
     case 'status':
       return event.to === 'cancelled' ? m.event_cancelled() : m.event_status();
   }
+}
+
+/** The other order a history entry names, when it can be opened: a split, a copy. */
+export function eventOther(event: OrderEventJson): { number: string; id: string } | null {
+  if (event.kind === 'split') return { number: event.other, id: event.otherId };
+  if (event.kind === 'created' && event.source && event.sourceId) {
+    return { number: event.source, id: event.sourceId };
+  }
+  return null;
 }
 
 /** What a history entry says, sentence by sentence. */
@@ -394,6 +410,8 @@ export function eventLines(event: OrderEventJson, lists: ReferenceListsJson | un
     }
     case 'changed':
       return event.changes.map((c) => changeText(c, lists));
+    case 'split':
+      return [];
     case 'status':
       return [
         m.event_status_change({

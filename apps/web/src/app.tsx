@@ -35,8 +35,10 @@ import {
   text,
   type UnitsSearch,
 } from './list-search.ts';
+import { OrderImportPage } from './orders/order-import-page.tsx';
 import { OrderPage } from './orders/order-page.tsx';
 import { OrdersPage } from './orders/orders-page.tsx';
+import { SplitPage } from './orders/split-page.tsx';
 import { m } from './paraglide/messages.js';
 import { getLocale } from './paraglide/runtime.js';
 import { ExpiriesPage } from './resources/expiries-page.tsx';
@@ -374,27 +376,54 @@ const isoDate = (value: unknown) =>
 const uuid = (value: unknown) =>
   typeof value === 'string' && /^[0-9a-f-]{36}$/i.test(value) ? value : undefined;
 
+/** After an import, how many orders it wrote and how many of them are to review. */
+type OrdersRouteSearch = OrdersSearch & { imported?: number; toReview?: number };
+
 const ordersRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/orders',
-  validateSearch: (search: Record<string, unknown>): OrdersSearch =>
-    clean<OrdersSearch>({
+  validateSearch: (search: Record<string, unknown>): OrdersRouteSearch =>
+    clean<OrdersRouteSearch>({
       q: text(search.q),
       status: oneOf(search.status, ['to-plan', 'to-review'] as const),
       cancelled: flag(search.cancelled),
       from: isoDate(search.from),
       to: isoDate(search.to),
       customer: uuid(search.customer),
+      imported: count(search.imported) || undefined,
+      toReview: count(search.toReview) || undefined,
     }),
   component: localised(function Orders() {
-    const search = ordersRoute.useSearch();
+    const { imported, toReview, ...search } = ordersRoute.useSearch();
     const navigate = ordersRoute.useNavigate();
     const setSearch: SetSearch<OrdersSearch> = (patch, options) =>
       navigate({
-        search: (current) => applySearch<OrdersSearch>(current, patch),
+        search: (current) =>
+          applySearch<OrdersRouteSearch>(current, patch, ['imported', 'toReview']),
         replace: options?.replace === true,
       });
-    return <OrdersPage search={search} setSearch={setSearch} />;
+    return (
+      <OrdersPage
+        search={search}
+        setSearch={setSearch}
+        imported={imported ? { count: imported, toReview: toReview ?? 0 } : undefined}
+      />
+    );
+  }),
+});
+
+const orderImportRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/orders/import',
+  component: localised(OrderImportPage),
+});
+
+const orderSplitRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/orders/$id/split',
+  component: localised(function Split() {
+    const { id } = orderSplitRoute.useParams();
+    return <SplitPage key={id} id={id} />;
   }),
 });
 
@@ -410,15 +439,21 @@ const newOrderRoute = createRoute({
   }),
 });
 
+/** `split` names the order a split has just made from this one. */
+type OrderRouteSearch = { tab?: 'history'; split?: string };
+
 const orderRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/orders/$id',
-  validateSearch: (search: Record<string, unknown>): { tab?: 'history' } =>
-    clean<{ tab?: 'history' }>({ tab: oneOf(search.tab, ['history'] as const) }),
+  validateSearch: (search: Record<string, unknown>): OrderRouteSearch =>
+    clean<OrderRouteSearch>({
+      tab: oneOf(search.tab, ['history'] as const),
+      split: uuid(search.split),
+    }),
   component: localised(function Order() {
     const { id } = orderRoute.useParams();
-    const { tab } = orderRoute.useSearch();
-    return <OrderPage key={id} id={id} tab={tab ?? 'order'} />;
+    const { tab, split } = orderRoute.useSearch();
+    return <OrderPage key={id} id={id} tab={tab ?? 'order'} splitInto={split} />;
   }),
 });
 
@@ -427,6 +462,8 @@ const router = createRouter({
     indexRoute,
     ordersRoute,
     newOrderRoute,
+    orderImportRoute,
+    orderSplitRoute,
     orderRoute,
     expiriesRoute,
     unitsRoute,
