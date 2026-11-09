@@ -2,7 +2,7 @@
 title: "Orders"
 subtitle: "Functional specification"
 reference: TIMON-SPEC-004
-version: "1.0"
+version: "1.1"
 date: "November 9, 2026"
 status: "Accepted"
 ---
@@ -65,6 +65,7 @@ An order's requirements are what a unit must offer to run it. They come from thr
 | --- | --- |
 | ADR: certificate for the driver, approval for the vehicle | A goods line with dangerous goods |
 | Temperature control, ATP certificate, the tightest range of the lines | A goods line with a temperature |
+| Temperature control for each range, with its lines | Goods lines that share no range |
 | Body type, side loading, tail lift | Ticked on the order |
 | Tail lift or crane | A stop at a site without a loading dock |
 | Protective equipment, maximum length and weight, semi-trailers accepted | The sites of the stops (SPEC-002) |
@@ -96,13 +97,16 @@ Warnings, shown on the order and in the list, never blocking:
 - a site that requires a booking, with the booking not ticked;
 - a total gross weight over 25,000 kg, the usual payload of a semi-trailer;
 - more than 13.6 floor metres in total, the length of a semi-trailer's deck;
-- a customer's reference already used by another order of the same customer that is not cancelled.
+- goods lines with no common temperature range: they need a multi-temperature body or two orders;
+- a customer's reference already used by another order of the same customer that is not cancelled, unless both orders come from the split of one order.
 
 The capacity of the unit itself is checked by the planning, against the vehicle chosen.
 
 ## Splitting an order
 
 A to-review order with several pickups and several deliveries has a **Split** action. The dispatcher sorts its goods lines into two groups; each group takes the stops its lines use and must have a single pickup or a single delivery. The first group stays in the original order, which keeps its number; the second becomes a new order. Both histories record the split. If a group still has the wrong shape, it is split again. Nothing is split automatically.
+
+The orders split from one order, however many times, form a family: each records the order the family was first split from. They share the customer's reference, so the warning of a reference already used leaves out the orders of the same family.
 
 ## Numbering and history
 
@@ -135,7 +139,7 @@ The same path as SPEC-001 and SPEC-002: download a CSV template, upload a file, 
 | un_number, adr_class, temperature_min, temperature_max | Optional |
 | body_type, side_loading, tail_lift, notes | Optional, order level |
 
-An unknown customer or site, a missing slot or an invalid value is an error on its line, listed with its line number; nothing is imported until the file is free of errors. An order with several pickups and several deliveries, or with a site that is not located, is imported as to review. The screen lists the accepted values of each column; the template is UTF-8 with a byte order mark. A file holds up to 2,000 lines.
+A site is found by its exact name once the spaces around it are trimmed; two active sites with that name are an error on the line, never a guess. A line without a customer's reference is an order of its own, shown in the preview with the warning "No reference: one order per line". An unknown customer or site, a missing slot or an invalid value is an error on its line, listed with its line number; nothing is imported until the file is free of errors. An order with several pickups and several deliveries, or with a site that is not located, is imported as to review. The screen lists the accepted values of each column; the template is UTF-8 with a byte order mark. A file holds up to 2,000 lines.
 
 ## Demo data
 
