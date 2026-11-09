@@ -6,6 +6,12 @@ All notable changes to this project are documented here. The format follows [Kee
 
 ### Added
 
+- Orders (SPEC-004, #8), first part: an order is one pickup and several deliveries, or several pickups and one delivery, with goods lines tied to their stops; slots in each site's time zone, stored as half-open periods; the shape, a delivery before its pickup, missing fields and a site not located refused by the domain, the API and the form; warnings for a slot outside the opening hours or during a closure, a booking to make, lines with no common temperature range, over 25,000 kg, over 13.6 floor metres and a customer's reference already used, never blocking
+- Requirements computed from the goods, the order and the sites, each with its source: ADR, the tightest temperature range (each range with its lines when they share none) and ATP, body type, side loading, tail lift, tail lift or crane at a site without a dock, protective equipment and access limits
+- Numbers `CMD-<year>-<sequence>` per company, taken from a counter row locked until the order is written, never given twice; statuses to plan, to review and cancelled; cancelling asks a reason and leaves the order read only; duplication opens a new order with the dates to set
+- History of each order, newest first: creation, every change with the fields changed old and new, every change of status with its reason, the author empty until authentication (migration 0016)
+- Archiving a customer or a site used by an order to plan or to review is refused, naming the orders; the archiving locks the record and the order write reads it shared, so neither wins over the other
+- Orders screen grouped by day of first pickup, with filters in the address; order form with live requirements and warnings; history tab; an Orders entry in the application bar; about 60 demo orders over the next seven days, two of them to review
 - SPEC-004 orders, with the mockups of its five screens: stops, goods and requirements, the shape rule, statuses to plan, to review and cancelled, checks and warnings on saving, splitting a merged order, numbering and history, CSV import and demo data (#8)
 - ADR-005 concurrent edits: a version per record, sent in If-Match on every write, a stale save refused with 412 and a reload offered, no merge and no lock (#44)
 - Units (SPEC-003, #7): a power unit with a driver, a trailer or both, over a half-open period to the minute in Europe/Paris, open-ended or not; a resource in one unit at a time, enforced by an exclusion constraint on the members, on PostgreSQL and PGlite
