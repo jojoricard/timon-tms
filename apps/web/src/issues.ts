@@ -99,6 +99,20 @@ const fieldLabels: Record<string, () => string> = {
   reason: m.field_cancel_reason,
   stops: m.section_stops,
   lines: m.section_goods,
+  // Order import columns
+  customerCode: m.field_customer_code,
+  pickupSite: m.field_pickup_site,
+  pickupDate: m.field_pickup_date,
+  pickupFrom: m.field_pickup_from,
+  pickupTo: m.field_pickup_to,
+  deliverySite: m.field_delivery_site,
+  deliveryDate: m.field_delivery_date,
+  deliveryFrom: m.field_delivery_from,
+  deliveryTo: m.field_delivery_to,
+  floorM: m.field_floor_m,
+  bodyType: m.field_body_type,
+  sideLoading: m.field_side_loading,
+  tailLift: m.field_tail_lift,
 };
 
 const contactFields: Record<string, () => string> = {
@@ -221,6 +235,18 @@ export function issueText(
         : m.issue_unknown_value({ field, value: text(params.value) });
     case 'invalid-date':
       return m.issue_invalid_date({ field, value: text(params.value) });
+    case 'invalid-time':
+      return m.issue_invalid_time({ field, value: text(params.value) });
+    case 'site-ambiguous':
+      return m.issue_site_ambiguous({
+        field,
+        value: text(params.value),
+        count: Number(params.count),
+      });
+    case 'header-disagrees':
+      return m.issue_header_disagrees({ field, line: Number(params.line) });
+    case 'split-group-empty':
+      return m.issue_split_group_empty();
     case 'invalid-number':
       return m.issue_invalid_number({ field, value: text(params.value) });
     case 'issued-after-expiry':

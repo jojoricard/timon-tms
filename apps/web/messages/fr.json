@@ -936,5 +936,137 @@
   "warnings_empty": "Aucune.",
   "warnings_hint": "jamais bloquantes",
   "warning_temperature": "Pas de plage de température commune : ces lignes demandent une carrosserie multi-température ou deux commandes.",
-  "warning_temperature_short": "Pas de température commune"
+  "warning_temperature_short": "Pas de température commune",
+  "accepts_time": "Une heure : hh:mm, sur 24 heures",
+  "action_import_orders": [
+    {
+      "declarations": ["input count", "local countPlural = count: plural"],
+      "selectors": ["countPlural"],
+      "match": {
+        "countPlural=one": "Importer {count} commande",
+        "countPlural=*": "Importer {count} commandes"
+      }
+    }
+  ],
+  "action_split": "Scinder",
+  "action_split_into_two": "Scinder en deux commandes",
+  "col_goods_lines": "Lignes de marchandises",
+  "col_lines": "Lignes",
+  "col_result": "Résultat",
+  "col_shape": "Forme",
+  "confirm_split_title": "Scinder {number} en deux commandes ?",
+  "confirm_split_text": [
+    {
+      "declarations": ["input count", "local countPlural = count: plural"],
+      "selectors": ["countPlural"],
+      "match": {
+        "countPlural=one": "La ligne de droite devient une nouvelle commande, avec le numéro suivant. Les deux historiques gardent la trace de la scission.",
+        "countPlural=*": "Les {count} lignes de droite deviennent une nouvelle commande, avec le numéro suivant. Les deux historiques gardent la trace de la scission."
+      }
+    }
+  ],
+  "count_errors": [
+    {
+      "declarations": ["input count", "local countPlural = count: plural"],
+      "selectors": ["countPlural"],
+      "match": {
+        "countPlural=one": "{count} erreur",
+        "countPlural=*": "{count} erreurs"
+      }
+    }
+  ],
+  "count_goods_lines": [
+    {
+      "declarations": ["input count", "local countPlural = count: plural"],
+      "selectors": ["countPlural"],
+      "match": {
+        "countPlural=one": "{count} ligne de marchandises",
+        "countPlural=*": "{count} lignes de marchandises"
+      }
+    }
+  ],
+  "download_order_template": "Télécharger le modèle de commandes",
+  "event_created_split": "Scindée de {number}",
+  "event_split": [
+    {
+      "declarations": ["input count", "local countPlural = count: plural"],
+      "selectors": ["countPlural"],
+      "match": {
+        "countPlural=one": "Scission : ligne {lines} déplacée vers {number}",
+        "countPlural=*": "Scission : lignes {lines} déplacées vers {number}"
+      }
+    }
+  ],
+  "field_customer_code": "Code client",
+  "field_delivery_date": "Date de livraison",
+  "field_delivery_from": "Début de livraison",
+  "field_delivery_site": "Site de livraison",
+  "field_delivery_to": "Fin de livraison",
+  "field_floor_m": "Mètres de plancher",
+  "field_pickup_date": "Date de chargement",
+  "field_pickup_from": "Début de chargement",
+  "field_pickup_site": "Site de chargement",
+  "field_pickup_to": "Fin de chargement",
+  "field_side_loading": "Chargement latéral",
+  "field_tail_lift": "Hayon",
+  "import_title_orders": "Importer des commandes",
+  "imported_from": "importée de {file}",
+  "issue_header_disagrees": "{field} diffère de la ligne {line}, qui ouvre la même commande",
+  "issue_invalid_time": "{field} : « {value} » n'est pas une heure au format hh:mm",
+  "issue_site_ambiguous": "{field} : {count} sites actifs s'appellent « {value} » ; renommez-en un",
+  "issue_split_group_empty": "chaque groupe doit avoir au moins une ligne de marchandises",
+  "order_import_caption": "Commandes de {file}",
+  "order_import_errors_text": "Rien n'est importé tant que le fichier a des erreurs. Ajoutez les clients ou les sites manquants, ou corrigez le fichier, puis choisissez-le à nouveau.",
+  "order_import_ready": "Toutes les lignes sont valides. Les commandes à plusieurs chargements et plusieurs livraisons, ou avec un site non localisé, sont importées à revoir.",
+  "orders_imported": [
+    {
+      "declarations": ["input count", "local countPlural = count: plural"],
+      "selectors": ["countPlural"],
+      "match": {
+        "countPlural=one": "{count} commande importée.",
+        "countPlural=*": "{count} commandes importées."
+      }
+    }
+  ],
+  "orders_imported_review": [
+    {
+      "declarations": ["input count", "local countPlural = count: plural"],
+      "selectors": ["countPlural"],
+      "match": {
+        "countPlural=one": "{count} commande importée, {toReview} à revoir.",
+        "countPlural=*": "{count} commandes importées, {toReview} à revoir."
+      }
+    }
+  ],
+  "rule_order_grouping": "Une ligne par ligne de marchandises ; les lignes avec le même code client et la même référence forment une commande et doivent avoir la même carrosserie, le même chargement latéral, le même hayon et les mêmes notes",
+  "rule_order_references": "Les clients par leur code, les sites par leur nom exact dans le carnet d'adresses ; une ligne sans référence est une commande à elle seule",
+  "rule_order_review": "Une commande à plusieurs chargements et plusieurs livraisons, ou avec un site non localisé, est importée à revoir",
+  "split_banner": "Cette demande a {shape} : une commande a un seul chargement ou une seule livraison. Répartissez ses lignes de marchandises en deux groupes ; chaque groupe prend les arrêts de ses lignes. Rien n'est scindé avant votre confirmation.",
+  "split_cancelled": "Cette commande est annulée : elle ne peut pas être scindée.",
+  "split_done": "Scindée : la nouvelle commande est {number}.",
+  "split_from": "De",
+  "split_move_left": "← Remettre",
+  "split_move_left_label": "Remettre {line} dans {number}",
+  "split_move_right": "Déplacer →",
+  "split_move_right_label": "Déplacer {line} vers la nouvelle commande",
+  "split_new_hint": "reçoit le numéro suivant à la scission",
+  "split_new_order": "Nouvelle commande",
+  "split_no_line": "Aucune ligne",
+  "split_not_splittable": "Seule une commande à revoir avec plusieurs chargements et plusieurs livraisons peut être scindée.",
+  "split_note": "Les deux commandes passent à planifier s'il ne reste rien à corriger. Les deux historiques gardent la trace de la scission, avec le numéro de l'autre commande. Un groupe qui a toujours une forme incorrecte peut être scindé à nouveau.",
+  "split_shape_one_delivery": "{pickups} chargements, une livraison",
+  "split_shape_one_one": "Un chargement, une livraison",
+  "split_shape_one_pickup": "Un chargement, {deliveries} livraisons",
+  "split_stays_hint": "garde son numéro et son historique",
+  "split_stays_in": "Reste dans {number}",
+  "split_title": "Scinder {number}",
+  "split_to": "Vers",
+  "split_valid_shape": "Forme valide",
+  "split_wrong_shape": "Forme incorrecte",
+  "summary_orders": "Commandes",
+  "summary_ready": "Prêtes",
+  "summary_to_review": "À revoir",
+  "summary_with_errors": "En erreur",
+  "template_text_orders": "Une ligne par ligne de marchandises ; noms de colonnes en anglais ou en français. Dates au format jj/mm/aaaa ou aaaa-mm-jj, heures au format hh:mm.",
+  "warning_no_reference": "Sans référence : une commande par ligne"
 }
