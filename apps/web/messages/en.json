@@ -625,5 +625,266 @@
   "sites_empty": "No site matches.",
   "rule_formats_driver": "Dates as dd/mm/yyyy or yyyy-mm-dd",
   "problem_one_column": "Missing columns: {columns}. The file reads as a single column: are its columns separated by a semicolon, a comma or a tab?",
-  "issue_opening_unreadable": "{day}: “{value}” cannot be read; write hours as 06:00-12:00/14:00-18:00, or leave the cell empty when closed"
+  "issue_opening_unreadable": "{day}: “{value}” cannot be read; write hours as 06:00-12:00/14:00-18:00, or leave the cell empty when closed",
+  "action_add_delivery": "Add a delivery",
+  "action_add_line": "Add a line",
+  "action_add_pickup": "Add a pickup",
+  "action_cancel_order": "Cancel order",
+  "action_duplicate": "Duplicate",
+  "action_keep_order": "Keep the order",
+  "action_new_order": "New order",
+  "all_customers": "All customers",
+  "all_sites_group": "Address book",
+  "author_not_recorded": "Author not recorded",
+  "body_type_any": "Any",
+  "booking_detail": "Booking: {detail}.",
+  "change_booking_made": "Booking made: {where}.",
+  "change_booking_undone": "Booking no longer made: {where}.",
+  "change_field": "{field}: {from} to {to}.",
+  "change_line": "Line {n}, {field}: {from} to {to}.",
+  "change_line_added": "Line {n} added: {description}, {goods}.",
+  "change_line_removed": "Line {n} removed: {description}.",
+  "change_stop": "{where}: {field} {from} to {to}.",
+  "change_stop_added": "Stop added: {where}, slot {slot}.",
+  "change_stop_removed": "Stop removed: {where}.",
+  "change_ticked": "{field} {ticked}.",
+  "choose": "Choose…",
+  "closed_on": "Closed on {day}.",
+  "col_customer_reference": "Customer and reference",
+  "col_first_pickup": "First pickup",
+  "col_goods": "Goods",
+  "col_last_delivery": "Last delivery",
+  "col_number": "Number",
+  "col_requirements": "Requirements",
+  "col_warnings": "Warnings",
+  "confirm_cancel_order_text": "It leaves the orders to plan and becomes read only. It is never deleted, and can be duplicated.",
+  "confirm_cancel_order_title": "Cancel {number}?",
+  "count_deliveries": [
+    {
+      "declarations": ["input count", "local countPlural = count: plural"],
+      "selectors": ["countPlural"],
+      "match": {
+        "countPlural=one": "{count} delivery",
+        "countPlural=*": "{count} deliveries"
+      }
+    }
+  ],
+  "count_orders": [
+    {
+      "declarations": ["input count", "local countPlural = count: plural"],
+      "selectors": ["countPlural"],
+      "match": {
+        "countPlural=one": "{count} order",
+        "countPlural=*": "{count} orders"
+      }
+    }
+  ],
+  "count_pickups": [
+    {
+      "declarations": ["input count", "local countPlural = count: plural"],
+      "selectors": ["countPlural"],
+      "match": {
+        "countPlural=one": "{count} pickup",
+        "countPlural=*": "{count} pickups"
+      }
+    }
+  ],
+  "count_warnings": [
+    {
+      "declarations": ["input count", "local countPlural = count: plural"],
+      "selectors": ["countPlural"],
+      "match": {
+        "countPlural=one": "{count} warning",
+        "countPlural=*": "{count} warnings"
+      }
+    }
+  ],
+  "date_range_to": "to",
+  "delivery_at": "delivery at {site}",
+  "pickup_at": "pickup at {site}",
+  "duplicate_banner": "Copy of {number}: set the dates of the stops, then create the order.",
+  "event_cancelled": "Cancelled",
+  "event_changed": "Changed",
+  "event_created_demo": "Created by the demo generator",
+  "event_created_duplicate": "Created by duplication",
+  "event_created_hand": "Created by hand",
+  "event_created_import": "Created by import",
+  "event_duplicated_from": "Copy of {number}.",
+  "event_file": "File {file}, lines {lines}.",
+  "event_reason": "Reason: {reason}",
+  "event_status": "Status changed",
+  "event_status_change": "Status {from} to {to}.",
+  "event_status_is": "Status {status}.",
+  "field_adr_class": "ADR class",
+  "field_booking_made": "Booking made",
+  "field_booking_reference": "Booking reference",
+  "field_cancel_reason": "Reason",
+  "field_customer": "Customer",
+  "field_customer_reference": "Customer's reference",
+  "field_date": "Date",
+  "field_description": "Description",
+  "field_floor_metres": "Floor metres",
+  "field_from_date": "First pickup from",
+  "field_to_date": "First pickup until",
+  "field_from_stop": "Pickup",
+  "field_to_stop": "Delivery",
+  "field_from_time": "From",
+  "field_to_time": "To",
+  "field_packaging": "Packaging",
+  "field_quantity": "Quantity",
+  "field_shape": "Shape",
+  "field_slot": "Slot",
+  "field_temperature_min": "Temperature min (°C)",
+  "field_temperature_max": "Temperature max (°C)",
+  "field_un_number": "UN number",
+  "field_weight": "Gross weight (kg)",
+  "first_pickup_on": "first pickup {date} {time}",
+  "floor_metres_total": "{metres} floor metres",
+  "from_today": "from today",
+  "from_date": "from {date}",
+  "goods_hint": "Each line leaves from a pickup and goes to a delivery of this order. The totals add up the lines.",
+  "history_author_text": "Each entry has an author. It stays empty until people sign in to Timon; the entries already recorded keep their date.",
+  "history_author_title": "Author",
+  "history_recorded_text": "The creation, by hand, by import with its file, or by the demo generator; every change with the fields changed, old and new; every change of status with its reason; a split and a duplication.",
+  "history_recorded_title": "What is recorded",
+  "in_use": [
+    {
+      "declarations": ["input count", "input orders", "local countPlural = count: plural"],
+      "selectors": ["countPlural"],
+      "match": {
+        "countPlural=one": "Used by the order {orders}, to plan or to review: cancel or change it first.",
+        "countPlural=*": "Used by the orders {orders}, to plan or to review: cancel or change them first."
+      }
+    }
+  ],
+  "issue_archived": "{field} is archived",
+  "issue_delivery_before_pickup": "the delivery ends before the pickup at {site} starts, at {start}",
+  "issue_delivery_required": "the order needs a delivery",
+  "issue_lines_required": "the order needs a goods line",
+  "issue_pickup_required": "the order needs a pickup",
+  "issue_several_pickups_and_deliveries": "{pickups} pickups and {deliveries} deliveries: an order has a single pickup or a single delivery",
+  "issue_site_not_located": "the site {site} is not located: locate it in the address book first",
+  "issue_stop_without_goods": "no goods line uses this stop",
+  "issue_temperature_out_of_range": "a whole number from −30 to +30 °C",
+  "issue_temperature_range_invalid": "the minimum is above the maximum",
+  "issue_un_number_invalid": "a UN number has four digits",
+  "line_label": "Line {n}",
+  "nav_orders": "Orders",
+  "new_order": "New order",
+  "newest_first": "newest first",
+  "no": "No",
+  "yes": "Yes",
+  "no_booking_needed": "No booking needed",
+  "notes_hint": "for the dispatchers, not shown to the driver",
+  "open_on": "Open {ranges} on {day}.",
+  "order_cancelled_banner": "This order is cancelled ({reason}). It is read only; duplicate it to enter it again.",
+  "order_cancelled_read_only": "This order is cancelled: it is read only.",
+  "order_status_cancelled": "Cancelled",
+  "order_status_filter_label": "Status",
+  "order_status_to_plan": "To plan",
+  "order_status_to_review": "To review",
+  "order_tabs_label": "Order",
+  "orders_caption": "Orders, grouped by the day of their first pickup",
+  "orders_empty": "No order to plan from this date.",
+  "orders_footer": [
+    {
+      "declarations": ["input count", "local countPlural = count: plural"],
+      "selectors": ["countPlural"],
+      "match": {
+        "countPlural=one": "{count} order shown · cancelled orders on request · an order is cancelled, never deleted",
+        "countPlural=*": "{count} orders shown · cancelled orders on request · an order is cancelled, never deleted"
+      }
+    }
+  ],
+  "orders_no_match": "No order matches.",
+  "orders_subtitle": "{toPlan} to plan · {toReview} to review · {from}",
+  "orders_title": "Orders",
+  "other_sites_group": "Other sites",
+  "packaging_bulk": "bulk",
+  "packaging_euro_pallet": [
+    {
+      "declarations": ["input count", "local countPlural = count: plural"],
+      "selectors": ["countPlural"],
+      "match": {
+        "countPlural=one": "{count} Euro pallet",
+        "countPlural=*": "{count} Euro pallets"
+      }
+    }
+  ],
+  "packaging_pallet": [
+    {
+      "declarations": ["input count", "local countPlural = count: plural"],
+      "selectors": ["countPlural"],
+      "match": {
+        "countPlural=one": "{count} pallet",
+        "countPlural=*": "{count} pallets"
+      }
+    }
+  ],
+  "packaging_parcel": [
+    {
+      "declarations": ["input count", "local countPlural = count: plural"],
+      "selectors": ["countPlural"],
+      "match": {
+        "countPlural=one": "{count} parcel",
+        "countPlural=*": "{count} parcels"
+      }
+    }
+  ],
+  "reference_is": "Reference {reference}",
+  "requirement_adr": "ADR {classes}",
+  "requirement_atp": "ATP certificate",
+  "requirement_body_type": "Body type",
+  "requirement_max_length": "Max length {metres} m",
+  "requirement_max_weight": "Max weight {weight}",
+  "requirement_no_semi_trailer": "No semi-trailer",
+  "requirement_side_loading": "Side loading",
+  "requirement_tail_lift": "Tail lift",
+  "requirement_tail_lift_or_crane": "Tail lift or crane",
+  "requirements_empty": "None yet: they come from the goods, the order and the sites.",
+  "requirements_hint": "what a unit must offer to run it",
+  "review_shape": "{pickups} and {deliveries}",
+  "review_site_not_located": "Site not located",
+  "search_orders": "Number or customer's reference",
+  "section_goods": "Goods",
+  "section_order": "Order",
+  "section_stops": "Stops",
+  "section_warnings": "Warnings",
+  "shape_one_delivery": "Several pickups, one delivery",
+  "shape_one_pickup": "One pickup, several deliveries",
+  "shape_remove_deliveries": "Keep one delivery before choosing this shape.",
+  "shape_remove_pickups": "Keep one pickup before choosing this shape.",
+  "sorted_by_first_pickup": "Sorted by first pickup",
+  "source_equipment": "Protective equipment of {sites}",
+  "source_line": "Line {n}",
+  "source_lines": "Lines {lines}",
+  "source_order": "Ticked on the order",
+  "source_temperature_goods": "Temperature-controlled goods",
+  "source_tightest": "the tightest range",
+  "stop_delivery": "Delivery",
+  "stop_pickup": "Pickup",
+  "stops_hint": "times in each site's time zone",
+  "tab_history": "History",
+  "tab_order": "Order",
+  "temperature_range": "{min} to {max} °C",
+  "ticked": "ticked",
+  "unticked": "unticked",
+  "to_review_banner": "To review: {reasons}. Fix it, then save: the order becomes to plan.",
+  "unit_kg": "{kg} kg",
+  "usual_sites_group": "Usual sites of the customer",
+  "warning_booking": "{where}: the site requires a booking, not made yet.",
+  "warning_booking_short": "Booking to make",
+  "warning_closed": "{where}: the site is closed from {start} to {end} on {day}.",
+  "warning_closed_short": "Closed {start}–{end}",
+  "warning_floor": "{metres} floor metres is over the {max} m deck of a semi-trailer.",
+  "warning_floor_short": "{metres} floor m",
+  "warning_outside_hours": "{where}: {start}–{end} is outside the opening hours on {day}.",
+  "warning_outside_hours_short": "Outside opening hours",
+  "warning_reference": "The customer's reference is already used by {orders}.",
+  "warning_reference_short": "Reference already used",
+  "warning_weight": "{weight} is over the {max} a semi-trailer usually carries.",
+  "warnings_empty": "None.",
+  "warnings_hint": "never blocking",
+  "warning_temperature": "No common temperature range: these lines need a multi-temperature body or two orders.",
+  "warning_temperature_short": "No common temperature"
 }

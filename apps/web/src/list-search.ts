@@ -68,3 +68,13 @@ export type SitesSearch = {
   filter?: 'not-located' | 'booking' | 'protective-equipment';
   archived?: true;
 };
+
+export type OrdersSearch = {
+  q?: string;
+  status?: 'to-plan' | 'to-review';
+  cancelled?: true;
+  /** First pickup from this day, today by default; until `to`. */
+  from?: string;
+  to?: string;
+  customer?: string;
+};

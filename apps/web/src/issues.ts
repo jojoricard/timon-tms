@@ -79,6 +79,26 @@ const fieldLabels: Record<string, () => string> = {
   end: m.field_end,
   from: m.field_from,
   members: m.field_members,
+  // Orders
+  customerId: m.field_customer,
+  customerReference: m.field_customer_reference,
+  siteId: m.col_site,
+  date: m.field_date,
+  bookingReference: m.field_booking_reference,
+  description: m.field_description,
+  quantity: m.field_quantity,
+  packaging: m.field_packaging,
+  weightKg: m.field_weight,
+  floorDm: m.field_floor_metres,
+  unNumber: m.field_un_number,
+  adrClass: m.field_adr_class,
+  temperatureMin: m.field_temperature_min,
+  temperatureMax: m.field_temperature_max,
+  fromStopId: m.field_from_stop,
+  toStopId: m.field_to_stop,
+  reason: m.field_cancel_reason,
+  stops: m.section_stops,
+  lines: m.section_goods,
 };
 
 const contactFields: Record<string, () => string> = {
@@ -110,6 +130,9 @@ export function fieldLabel(
     const part = contact[2] ? contactFields[contact[2]]?.() : undefined;
     return part ? `${label}, ${inSentence(part)}` : label;
   }
+  // stops.1.siteId → "Site": the error shows under the field of its stop or line.
+  const part = /^(?:stops|lines)\.\d+\.(\w+)$/.exec(field);
+  if (part?.[1]) return fieldLabels[part[1]]?.() ?? part[1];
   const day = /^openings\.(\d)$/.exec(field);
   if (day) return capitalise(weekdayName(Number(day[1])));
   return fieldLabels[field]?.() ?? field;
@@ -136,7 +159,33 @@ export function issueText(
   const params = issue.params ?? {};
   switch (issue.code) {
     case 'required':
-      return m.issue_required({ field });
+      return issue.field === 'lines' ? m.issue_lines_required() : m.issue_required({ field });
+    case 'pickup-required':
+      return m.issue_pickup_required();
+    case 'delivery-required':
+      return m.issue_delivery_required();
+    case 'stop-without-goods':
+      return m.issue_stop_without_goods();
+    case 'delivery-before-pickup':
+      return m.issue_delivery_before_pickup({
+        site: text(params.site),
+        start: text(params.start),
+      });
+    case 'several-pickups-and-deliveries':
+      return m.issue_several_pickups_and_deliveries({
+        pickups: Number(params.pickups),
+        deliveries: Number(params.deliveries),
+      });
+    case 'site-not-located':
+      return m.issue_site_not_located({ site: text(params.site) });
+    case 'un-number-invalid':
+      return m.issue_un_number_invalid();
+    case 'temperature-out-of-range':
+      return m.issue_temperature_out_of_range();
+    case 'temperature-range-invalid':
+      return m.issue_temperature_range_invalid();
+    case 'archived':
+      return m.issue_archived({ field });
     case 'category-not-allowed':
       return m.issue_category_not_allowed({
         kind: inSentence(
@@ -299,6 +348,11 @@ export function failureText(error: unknown, lists?: ReferenceListsJson): string 
     }
     if (error.code === 'document-type-taken') return m.document_type_taken();
     if (error.code === 'archived') return m.archived_read_only();
+    if (error.code === 'cancelled') return m.order_cancelled_read_only();
+    if (error.code === 'in-use') {
+      const orders = (error.body as { orders?: { number: string }[] } | undefined)?.orders ?? [];
+      return m.in_use({ count: orders.length, orders: orders.map((o) => o.number).join(', ') });
+    }
     if (error.code === 'employee-number-taken') {
       const owner = (error.body as { owner?: EmployeeNumberOwnerJson } | undefined)?.owner;
       if (owner) return employeeNumberTakenText(owner);

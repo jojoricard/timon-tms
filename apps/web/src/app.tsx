@@ -27,6 +27,7 @@ import {
   clean,
   type ExpiriesSearch,
   flag,
+  type OrdersSearch,
   oneOf,
   type ResourceListSearch,
   type SetSearch,
@@ -34,6 +35,8 @@ import {
   text,
   type UnitsSearch,
 } from './list-search.ts';
+import { OrderPage } from './orders/order-page.tsx';
+import { OrdersPage } from './orders/orders-page.tsx';
 import { m } from './paraglide/messages.js';
 import { getLocale } from './paraglide/runtime.js';
 import { ExpiriesPage } from './resources/expiries-page.tsx';
@@ -50,6 +53,16 @@ function SectionLinks() {
   const path = useRouterState({ select: (state) => state.location.pathname });
   return (
     <>
+      <li>
+        <Link
+          to="/orders"
+          className="appbar-link"
+          activeOptions={{ exact: true }}
+          aria-current={path.startsWith('/orders') ? 'page' : undefined}
+        >
+          {m.nav_orders()}
+        </Link>
+      </li>
       <li>
         <Link
           to="/resources/$kind"
@@ -356,9 +369,65 @@ const customerRoute = createRoute({
   }),
 });
 
+const isoDate = (value: unknown) =>
+  typeof value === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(value) ? value : undefined;
+const uuid = (value: unknown) =>
+  typeof value === 'string' && /^[0-9a-f-]{36}$/i.test(value) ? value : undefined;
+
+const ordersRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/orders',
+  validateSearch: (search: Record<string, unknown>): OrdersSearch =>
+    clean<OrdersSearch>({
+      q: text(search.q),
+      status: oneOf(search.status, ['to-plan', 'to-review'] as const),
+      cancelled: flag(search.cancelled),
+      from: isoDate(search.from),
+      to: isoDate(search.to),
+      customer: uuid(search.customer),
+    }),
+  component: localised(function Orders() {
+    const search = ordersRoute.useSearch();
+    const navigate = ordersRoute.useNavigate();
+    const setSearch: SetSearch<OrdersSearch> = (patch, options) =>
+      navigate({
+        search: (current) => applySearch<OrdersSearch>(current, patch),
+        replace: options?.replace === true,
+      });
+    return <OrdersPage search={search} setSearch={setSearch} />;
+  }),
+});
+
+/** `from` names the order a new one copies (criterion 16). */
+const newOrderRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/orders/new',
+  validateSearch: (search: Record<string, unknown>): { from?: string } =>
+    clean<{ from?: string }>({ from: uuid(search.from) }),
+  component: localised(function NewOrder() {
+    const { from } = newOrderRoute.useSearch();
+    return <OrderPage key={from ?? 'new'} duplicateOf={from} />;
+  }),
+});
+
+const orderRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/orders/$id',
+  validateSearch: (search: Record<string, unknown>): { tab?: 'history' } =>
+    clean<{ tab?: 'history' }>({ tab: oneOf(search.tab, ['history'] as const) }),
+  component: localised(function Order() {
+    const { id } = orderRoute.useParams();
+    const { tab } = orderRoute.useSearch();
+    return <OrderPage key={id} id={id} tab={tab ?? 'order'} />;
+  }),
+});
+
 const router = createRouter({
   routeTree: rootRoute.addChildren([
     indexRoute,
+    ordersRoute,
+    newOrderRoute,
+    orderRoute,
     expiriesRoute,
     unitsRoute,
     newUnitRoute,
