@@ -16,7 +16,7 @@
     "@tanstack/react-router": "1.170.41",
     "@timon/domain": "workspace:*",
     "@timon/ui": "workspace:*",
-    "hono": "4.13.13",
+    "hono": "4.13.16",
     "leaflet": "1.9.4",
     "react": "19.3.0",
     "react-dom": "19.3.0"
