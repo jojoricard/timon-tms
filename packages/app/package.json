@@ -10,7 +10,7 @@
   },
   "dependencies": {
     "@timon/domain": "workspace:*",
-    "papaparse": "5.7.0"
+    "papaparse": "5.7.1"
   },
   "devDependencies": {
     "@types/papaparse": "5.5.2"
